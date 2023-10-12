@@ -1,0 +1,11 @@
+{
+    "type": "module",
+    "scripts": {
+        "build": "./node_modules/esbuild/bin/esbuild  --bundle --platform=node --format=esm --outfile=function-out.js --target=es2020 ./function.js"
+    },
+    "devDependencies": {
+        "esbuild": "^0.19.2"
+    },
+    "dependencies": {
+    }
+}
