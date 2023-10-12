@@ -6,6 +6,6 @@ a work-in-progress
 
 ## Environment variables
 
-GLIA_KEY_ID
-GLIA_KEY_SECRET
-GLIA_SITE_ID
+* GLIA_KEY_ID
+* GLIA_KEY_SECRET
+* GLIA_SITE_ID
