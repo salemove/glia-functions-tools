@@ -8,12 +8,12 @@ import createGfVersion from './utils/create-gf-version.js'
 import fetchTask from './utils/fetch-task.js';
 import deployGf from './utils/deploy-gf.js'
 
-const createAndDeployFunction = async (functionOutPath) => {
+const createAndDeployFunction = async (functionName, functionOutPath) => {
     const gliaBearerToken = await createBearerToken(process.env.GLIA_KEY_ID, process.env.GLIA_KEY_SECRET);
 
-    const newGliaFunction = await createGliaFunction(gliaBearerToken, process.env.GLIA_SITE_ID, 'new fn name', 'new fn description')
+    const newGliaFunction = await createGliaFunction(gliaBearerToken, process.env.GLIA_SITE_ID, functionName, 'new fn description 4')
 
-    const gfVersion = await createGfVersion(gliaBearerToken, newGliaFunction.id, functionOutPath, '2023-10-12')
+    const gfVersion = await createGfVersion(gliaBearerToken, newGliaFunction.id, functionOutPath)
 
     await new Promise(r => setTimeout(r, 9000));
 
@@ -25,4 +25,4 @@ const createAndDeployFunction = async (functionOutPath) => {
     return gfDeployment
 }
 
-createAndDeployFunction(argv.file)
+createAndDeployFunction(argv.name, argv.file)

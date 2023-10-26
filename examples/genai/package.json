@@ -1,18 +1,20 @@
 {
     "name": "salesforce",
+    "type": "module",
     "version": "1.0.0",
     "description": "",
     "main": "function.js",
     "scripts": {
-      "build": "./node_modules/esbuild/bin/esbuild  --bundle --platform=node --format=esm --outfile=function-out.js --target=es2020 ./function.js",
-      "test": "echo \"Error: no test specified\" && exit 1"
+        "build": "./node_modules/esbuild/bin/esbuild  --bundle --platform=node --format=esm --outfile=function-out.js --target=es2020 ./function.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
     },
     "author": "",
     "license": "ISC",
     "dependencies": {
-      "ramda": "^0.29.1"
+        "openai": "^4.14.0",
+        "ramda": "^0.29.1"
     },
     "devDependencies": {
-      "esbuild": "^0.19.4"
+        "esbuild": "^0.19.4"
     }
-  }  
+}
