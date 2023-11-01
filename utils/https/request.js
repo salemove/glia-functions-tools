@@ -6,6 +6,7 @@ const request = async(url, options, data) => {
     const req = https.request(url, options, (res) => {
       if (res.statusCode < 200 || res.statusCode > 299) {
         console.log(`this request failed: ${url} ${JSON.stringify(options)} ${JSON.stringify(data)}`)
+        console.log('Error message: ', res.statusMessage)
         return reject(new Error(`HTTP status code ${res.statusCode}`))
       }
 

@@ -1,9 +1,7 @@
-import createBearerToken from './promises/createBearerToken.js'
 import request from './https/request.js';
 
-const listFunctions = async (id, secret) => {
-    const bearer = await createBearerToken(id, secret);
-    const result = await request(`https://api.glia.com/functions?site_ids[]=${process.env.GLIA_SITE_ID}`, {
+const listFunctions = async (bearer, siteId) => {
+    const result = await request(`https://api.glia.com/functions?site_ids[]=${siteId}`, {
         method: 'GET',
         headers: {
             'Accept': 'application/vnd.salemove.v1+json',

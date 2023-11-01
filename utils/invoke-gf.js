@@ -1,8 +1,7 @@
 import createBearerToken from './promises/createBearerToken.js'
 import request from './https/request.js';
 
-const invokeGliaFunction = async (id, secret, invocationUri) => {
-    const bearer = await createBearerToken(id, secret);
+const invokeGliaFunction = async (bearer, invocationUri) => {
     const result = await request(`https://api.glia.com${invocationUri}`, {
         method: 'POST',
         headers: {
@@ -10,7 +9,7 @@ const invokeGliaFunction = async (id, secret, invocationUri) => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${bearer}`
         },
-        timeout: 5000, // in ms
+        timeout: 50000, // in ms
     },
     {
         foo: "bar"
@@ -20,8 +19,10 @@ const invokeGliaFunction = async (id, secret, invocationUri) => {
     return JSON.parse(result)
 };
 
-invokeGliaFunction(
-    process.env.GLIA_KEY_ID,
-    process.env.GLIA_KEY_SECRET,
-    '' // latest version
-)
+export default invokeGliaFunction;
+
+// invokeGliaFunction(
+//     process.env.GLIA_KEY_ID,
+//     process.env.GLIA_KEY_SECRET,
+//     '' // latest version
+// )

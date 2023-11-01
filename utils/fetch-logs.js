@@ -1,8 +1,7 @@
 import createBearerToken from './promises/createBearerToken.js'
 import request from './https/request.js';
 
-const fetchGfLogs = async (id, secret, functionId) => {
-    const bearer = await createBearerToken(id, secret);
+const fetchGfLogs = async (bearer, functionId) => {
     const result = await request(`https://api.glia.com/functions/${functionId}/logs`, {
         method: 'GET',
         headers: {
