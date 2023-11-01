@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <title>ChatGPT Bootstrap Interface</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+        <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    </head>
+    <body>
+        <div class="container mt-5">
+            <div class="card">
+                <div class="card-body">
+                    <div id="chat-box" style="height: 400px; overflow-y: scroll;">
+                        <!-- Chat messages will appear here -->
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <input type="text" id="user-input" class="form-control" placeholder="Type your message...">
+                    <button class="btn btn-primary mt-2" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+        <script>
+            async function sendMessage() {
+                const userInput = document.getElementById('user-input').value;
+                if (userInput === '') return;  // Prevent empty messages
+
+                appendMessage(userInput, 'user');
+                document.getElementById('user-input').value = '';
+
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: userInput }),
+                });
+
+                const responseData = await response.json();
+                appendMessage(responseData.reply, 'chatgpt');
+            }
+            function appendMessage(message, sender) {
+                const chatBox = document.getElementById('chat-box');
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add(sender === 'user' ? 'text-right' : 'text-left');
+                messageDiv.textContent = message;
+                chatBox.appendChild(messageDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;  // Scroll to the bottom
+            }
+        </script>
+    </body>
+</html>
