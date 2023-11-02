@@ -1,7 +1,7 @@
 import createBearerToken from './promises/createBearerToken.js'
 import request from './https/request.js';
 
-const invokeGliaFunction = async (bearer, invocationUri) => {
+const invokeGliaFunction = async (bearer, invocationUri, data) => {
     const result = await request(`https://api.glia.com${invocationUri}`, {
         method: 'POST',
         headers: {
@@ -11,9 +11,7 @@ const invokeGliaFunction = async (bearer, invocationUri) => {
         },
         timeout: 50000, // in ms
     },
-    {
-        foo: "bar"
-    }
+    data
     )
     console.log(result)
     return JSON.parse(result)
