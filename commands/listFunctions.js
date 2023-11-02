@@ -7,7 +7,6 @@ import listFunctions from '../utils/list-functions.js';
 const listFunctionsCommand = async () => {
     const gliaBearerToken = await createBearerToken(process.env.GLIA_KEY_ID, process.env.GLIA_KEY_SECRET);
     const functions = await listFunctions(gliaBearerToken, process.env.GLIA_SITE_ID)
-    console.log(functions)
     return functions
 }
 

@@ -7,7 +7,8 @@ import fs from 'fs/promises'
 
 const fetchLogsCommand = async (functionId) => {
     const gliaBearerToken = await createBearerToken(process.env.GLIA_KEY_ID, process.env.GLIA_KEY_SECRET);
-    const logs = await fetchGfLogs(gliaBearerToken, functionId);
+    const logsRequestUrl = `https://api.glia.com/functions/${functionId}/logs`
+    const logs = await fetchGfLogs(gliaBearerToken, logsRequestUrl);
     await fs.writeFile('./logs.json', JSON.stringify(logs))
     return logs
 }
