@@ -2,9 +2,11 @@
     "type": "module",
     "main": "./index.js",
     "scripts": {
-        "build": "./node_modules/esbuild/bin/esbuild --bundle --platform=node --format=esm --outfile=function-out.js --target=es2020 ./function.js"
+        "build": "./node_modules/esbuild/bin/esbuild --minify --bundle --platform=node --format=esm --outfile=function-out.js --log-level=silent --target=es2020"
     },
     "devDependencies": {
+        "@inquirer/prompts": "^3.2.0",
+        "chalk": "^5.3.0",
         "commander": "^11.1.0",
         "esbuild": "^0.19.2"
     },
