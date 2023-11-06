@@ -17,7 +17,6 @@ const createGliaFunction = async (siteId, name, description) => {
         name: name,
         description: description
     })
-    console.log(newFunction)
     return JSON.parse(newFunction)
 };
 
