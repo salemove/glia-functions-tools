@@ -1,7 +1,4 @@
 // example script to create a function, function version, and deploy a version
-
-import { execSync } from 'child_process';
-
 import createBearerToken from './utils/promises/createBearerToken.js';
 import createGliaFunction from './utils/create-gf.js'; 
 import createGfVersion from './utils/create-gf-version.js'
@@ -15,7 +12,7 @@ import deployGf from './utils/deploy-gf.js'
 import invokeGf from './utils/invoke-gf.js'
 
 import * as fs from 'fs';
-import { Command } from 'commander';
+import { execSync } from 'child_process';
 import { input, select, confirm, editor } from '@inquirer/prompts';
 import chalk from 'chalk';
 
@@ -23,10 +20,15 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const separator = '============================='
-
 const CLIIntro = () => {
 
-	console.log(chalk.hex('#7C19DE').bold('Glia Functions CLI'))
+	console.log(chalk.hex('#7C19DE').bold(` #####                     #######                                                   
+#     # #      #   ##      #       #    # #    #  ####  ##### #  ####  #    #  ####  
+#       #      #  #  #     #       #    # ##   # #    #   #   # #    # ##   # #      
+#  #### #      # #    #    #####   #    # # #  # #        #   # #    # # #  #  ####  
+#     # #      # ######    #       #    # #  # # #        #   # #    # #  # #      # 
+#     # #      # #    #    #       #    # #   ## #    #   #   # #    # #   ## #    # 
+ #####  ###### # #    #    #        ####  #    #  ####    #   #  ####  #    #  ####  `))
 	console.log(chalk.italic('v0.1.0'))
 	console.log(separator)
 
