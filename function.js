@@ -6,5 +6,5 @@ export async function onInvoke(request, env) {
     } catch(e) { 
         console.log('input is not a json'); 
     };
-    return new Response(requestJson.payload);
+    return Response.JSON(requestJson.payload);
 }
