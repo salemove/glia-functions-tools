@@ -36,29 +36,38 @@ const CLIIntro = () => {
 
 const CLIMainMenu = async () => {
 
+	let choices = [
+		{
+      name: 'Setup project',
+      value: 'setup',
+      description: 'Setup the environment for further requests and generate a bearer token',
+    }
+	]
+
+	if (process.env.GLIA_SITE_ID) {
+		choices.push({
+      name: 'Authenticate CLI',
+      value: 'auth',
+      description: '(Re)Generate a new bearer token',
+    })
+	}
+
+	if (process.env.GLIA_BEARER_TOKEN) {
+		choices.push({
+      name: 'Manage & build functions',
+      value: 'build',
+      description: 'Build or update a function',
+    })
+	}
+
+	choices.push({
+	  name: '(Exit)',
+	  value: 'exit'
+  })	
+
 	select({
 	  message: 'Select action:',
-	  choices: [
-	    {
-	      name: 'Setup project',
-	      value: 'setup',
-	      description: 'Setup the environment for further requests and generate a bearer token',
-	    },
-	    {
-	      name: 'Authenticate CLI',
-	      value: 'auth',
-	      description: '(Re)Generate a new bearer token',
-	    },
-	    {
-	      name: 'Manage & build functions',
-	      value: 'build',
-	      description: 'Build or update a function',
-	    },
-	    {
-	      name: '(Exit)',
-	      value: 'exit'
-	    }
-	  ]
+	  choices
 	})
 	.then(answer => {
 		switch(answer) {
