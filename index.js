@@ -224,14 +224,41 @@ const CLINewVersion = async (functionSelect) => {
 		default: './function.js'
 	});
 
-	let compatibilityDateYesterday = new Date()
-	compatibilityDateYesterday.setDate(compatibilityDateYesterday.getDate() - 40); // @TODO manually going in past because the current date doesn't work
-
 	const compatibilityDate = await input({	
 		name: 'compatibilityDate',
 		message: 'Compatibility date (YYYY-MM-DD format):',
-		default: compatibilityDateYesterday.toISOString().split('T')[0]
+		default: 'latest'
 	});
+
+	const passEnvVariables = await confirm({
+		message: 'Add custom environment variables?',
+		default: false
+	})
+
+	let environmentVariables = false;
+	if (passEnvVariables) {
+
+		environmentVariables = await editor({
+		  message: 'Enter environment variables as JSON:',
+			default: '{\n\n}',
+			postfix: '.js'
+		});
+
+		try {
+
+			console.log(JSON.parse(environmentVariables))
+			console.log('> Appending environment variables.');
+
+		} catch(err) {
+
+			console.log(chalk.red('> Invalid JSON format.'));
+			console.log('> Canceled.');
+			CLIFunctionDetailsMenu(functionSelect);
+			return false;
+
+		}
+
+	}
 
 	const confirmDetails = await (confirm({ message: 'Proceed with above details?' }));
 
@@ -240,7 +267,11 @@ const CLINewVersion = async (functionSelect) => {
 		execSync('npm run build ' + fileSelect);
 		console.log('> File bundled.');
 
-		const gfVersion = await createGfVersion(functionSelect, './function-out.js', compatibilityDate);
+		const gfVersion = await createGfVersion(
+			functionSelect, './function-out.js', 
+			compatibilityDate === 'latest' ? false : compatibilityDate,
+			!environmentVariables ? false : JSON.parse(environmentVariables)
+		);
 		console.log('> Function version creation tasked enqueued.');
 		console.log('>', chalk.green('Done.'));
 
