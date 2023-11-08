@@ -10,7 +10,7 @@ const request = async(url, options, data) => {
         const resString = Buffer.concat(body).toString()
 
         if (res.statusCode < 200 || res.statusCode > 299) {
-          reject(resString)
+          reject({ status: res.statusCode, body: JSON.parse(resString) })
         } else {
           resolve(resString)
         }
