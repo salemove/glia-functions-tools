@@ -201,7 +201,14 @@ const CLINewFunction = async () => {
 	const confirmDetails = await (confirm({ message: 'Proceed with above details?' }));
 
 	if (confirmDetails) {
-		const newGliaFunction = await createGliaFunction(process.env.GLIA_SITE_ID, functionName, functionDescription);
+
+		try {
+			const newGliaFunction = await createGliaFunction(process.env.GLIA_SITE_ID, functionName, functionDescription);
+		} catch(error) {
+			console.log(error.status, error.body.error_details);
+			console.log(chalk.red('> Network error.'));
+			return false;
+		}
 
 		console.log('> New Glia Function successfully created.');
 		console.log('>', chalk.green('Done.'));
@@ -267,11 +274,19 @@ const CLINewVersion = async (functionSelect) => {
 		execSync('npm run build ' + fileSelect);
 		console.log('> File bundled.');
 
-		const gfVersion = await createGfVersion(
-			functionSelect, './function-out.js', 
-			compatibilityDate === 'latest' ? false : compatibilityDate,
-			!environmentVariables ? false : JSON.parse(environmentVariables)
-		);
+		try {
+			const gfVersion = await createGfVersion(
+				functionSelect, './function-out.js', 
+				compatibilityDate === 'latest' ? false : compatibilityDate,
+				!environmentVariables ? false : JSON.parse(environmentVariables)
+			);
+
+		} catch(error) {
+			console.log(error.status, error.body.error_details);
+			console.log(chalk.red('> Network error.'));
+			return false;
+		}
+
 		console.log('> Function version creation tasked enqueued.');
 		console.log('>', chalk.green('Done.'));
 
@@ -288,7 +303,14 @@ const CLINewVersion = async (functionSelect) => {
 
 const CLIDeployFunction = async (functionSelect, versionSelect) => {
 
-	const gfDeployment = await deployGf(functionSelect, versionSelect);
+	try {
+		const gfDeployment = await deployGf(functionSelect, versionSelect);
+	} catch(error) {
+		console.log(error.status, error.body.error_details);
+		console.log(chalk.red('> Network error.'));
+		return false;
+	}
+
 	console.log('> Deploying function version.');
 	console.log('> Writing audit logs.');
 	console.log('>', chalk.green('Done.'));
@@ -300,7 +322,15 @@ const CLIFunctionLogs = async (functionSelect) => {
 	console.log(separator)
 	console.log(chalk.bold('Function logs:'));
 
-	const version = await fetchGfLogs(functionSelect);
+	let version;
+	try {
+		version = await fetchGfLogs(functionSelect);
+	} catch(error) {
+		console.log(error.status, error.body.error_details);
+		console.log(chalk.red('> Network error.'));
+		return false;
+	}
+
 	console.log(version.logs);
 
 	CLIFunctionDetailsMenu(functionSelect);	
@@ -313,9 +343,16 @@ const CLIFunctionVersion = async (functionSelect, versionSelect) => {
 	console.log(separator)
 	console.log(chalk.bold('Function version details:'));
 
-	const version = await fetchVersion(functionSelect, versionSelect);
-	console.log(version);
+	let version;
+	try {
+		version = await fetchVersion(functionSelect, versionSelect);
+	} catch(error) {
+		console.log(error.status, error.body.error_details);
+		console.log(chalk.red('> Network error.'));
+		return false;
+	}
 
+	console.log(version);
 	console.log(separator)
 	select({
 	  message: 'Select action:',
@@ -344,8 +381,16 @@ const CLIFunctionVersion = async (functionSelect, versionSelect) => {
 
 const CLIFunctionVersions = async (functionSelect, current_version) => {
 
+	let versions;
+	try {
+		versions = await fetchVersions(functionSelect);
+	} catch(error) {
+		console.log(error.status, error.body.error_details);
+		console.log(chalk.red('> Network error.'));
+		return false;
+	}
+
 	let choices = []
-	const versions = await fetchVersions(functionSelect);
 	for (let item of versions.function_versions) {
 		choices.push({
 			name: `${current_version && current_version.id === item.id ? '(current)' : ''} ${item.id} (created at ${item.created_at})`,
@@ -404,7 +449,15 @@ const CLIFunctionInvoke = async (functionSelect, invocationUri) => {
 	}
 
 	console.log('> Invoking function.');
-	const response = await invokeGf(invocationUri, payload);
+
+	let response;
+	try {
+		response = await invokeGf(invocationUri, payload);
+	} catch(error) {
+		console.log(error.status, error.body.error_details);
+		console.log(chalk.red('> Network error.'));
+		return false;
+	}
 
 	console.log(separator);
 	console.log(chalk.bold('Function response:'));
@@ -420,7 +473,15 @@ const CLIFunctionDetailsMenu = async (functionSelect) => {
 	console.log(separator)
 	console.log(chalk.bold('Function details:'))
 
-	const functionDetails = await fetchGf(functionSelect)
+	let functionDetails;
+	try {
+		functionDetails = await fetchGf(functionSelect)
+	} catch(error) {
+		console.log(error.status, error.body.error_details);
+		console.log(chalk.red('> Network error.'));
+		return false;
+	}
+
 	console.log(functionDetails)
 	console.log(separator)
 
@@ -469,8 +530,16 @@ const CLIFunctionDetailsMenu = async (functionSelect) => {
 
 const CLIListFunctions = async () => {
 
+	let list;
+	try {
+		list = await listGliaFunctions();
+	} catch(error) {
+		console.log(error.status, error.body.error_details);
+		console.log(chalk.red('> Network error.'));
+		return false;
+	}
+
 	let choices = []
-	const list = await listGliaFunctions()
 	for (let item of list.functions) {
 		choices.push({
 			name: item.name,
