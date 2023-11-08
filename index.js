@@ -387,7 +387,19 @@ const CLIFunctionInvoke = async (functionSelect, invocationUri) => {
 		  message: 'Enter payload:',
 		});
 
-		console.log('> Appending custom payload.');
+		try {
+
+			console.log(JSON.parse(payload))
+			console.log('> Appending custom payload.');
+
+		} catch(err) {
+
+			console.log(chalk.red('> Invalid JSON format.'));
+			console.log('> Canceled.');
+			CLIFunctionDetailsMenu(functionSelect);
+			return false;
+
+		}
 
 	}
 
