@@ -149,7 +149,6 @@ const CLIAuth = async () => {
 	console.log('> New bearer token written to .env file.');
 	console.log('>', chalk.green('Done.'));
 
-	CLIMainMenu();
 	return false;
 };
 
@@ -205,7 +204,6 @@ const CLINewFunction = async () => {
 		try {
 			const newGliaFunction = await createGliaFunction(process.env.GLIA_SITE_ID, functionName, functionDescription);
 		} catch(error) {
-			console.log(error.status, error.body.error_details);
 			console.log(chalk.red('> Network error.'));
 			return false;
 		}
@@ -282,7 +280,6 @@ const CLINewVersion = async (functionSelect) => {
 			);
 
 		} catch(error) {
-			console.log(error.status, error.body.error_details);
 			console.log(chalk.red('> Network error.'));
 			return false;
 		}
@@ -306,7 +303,6 @@ const CLIDeployFunction = async (functionSelect, versionSelect) => {
 	try {
 		const gfDeployment = await deployGf(functionSelect, versionSelect);
 	} catch(error) {
-		console.log(error.status, error.body.error_details);
 		console.log(chalk.red('> Network error.'));
 		return false;
 	}
@@ -326,7 +322,6 @@ const CLIFunctionLogs = async (functionSelect) => {
 	try {
 		version = await fetchGfLogs(functionSelect);
 	} catch(error) {
-		console.log(error.status, error.body.error_details);
 		console.log(chalk.red('> Network error.'));
 		return false;
 	}
@@ -347,7 +342,6 @@ const CLIFunctionVersion = async (functionSelect, versionSelect) => {
 	try {
 		version = await fetchVersion(functionSelect, versionSelect);
 	} catch(error) {
-		console.log(error.status, error.body.error_details);
 		console.log(chalk.red('> Network error.'));
 		return false;
 	}
@@ -385,7 +379,6 @@ const CLIFunctionVersions = async (functionSelect, current_version) => {
 	try {
 		versions = await fetchVersions(functionSelect);
 	} catch(error) {
-		console.log(error.status, error.body.error_details);
 		console.log(chalk.red('> Network error.'));
 		return false;
 	}
@@ -454,7 +447,6 @@ const CLIFunctionInvoke = async (functionSelect, invocationUri) => {
 	try {
 		response = await invokeGf(invocationUri, payload);
 	} catch(error) {
-		console.log(error.status, error.body.error_details);
 		console.log(chalk.red('> Network error.'));
 		return false;
 	}
@@ -477,7 +469,6 @@ const CLIFunctionDetailsMenu = async (functionSelect) => {
 	try {
 		functionDetails = await fetchGf(functionSelect)
 	} catch(error) {
-		console.log(error.status, error.body.error_details);
 		console.log(chalk.red('> Network error.'));
 		return false;
 	}
@@ -534,7 +525,6 @@ const CLIListFunctions = async () => {
 	try {
 		list = await listGliaFunctions();
 	} catch(error) {
-		console.log(error.status, error.body.error_details);
 		console.log(chalk.red('> Network error.'));
 		return false;
 	}
