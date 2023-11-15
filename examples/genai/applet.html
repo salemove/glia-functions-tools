@@ -8,6 +8,12 @@
         <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+        <script type="text/javascript" src="//libs.glia.com/axon.js"></script>
+        <style>
+            .message { padding: 10px; margin: 5px; border-radius: 10px; }
+            .user-message { background-color: #dcf8c6; text-align: right; }
+            .chatgpt-message { background-color: #f0f0f0; text-align: left; }
+        </style>
     </head>
     <body>
         <div class="container mt-5">
@@ -25,31 +31,46 @@
         </div>
         <script>
             async function sendMessage() {
-                const userInput = document.getElementById('user-input').value;
-                if (userInput === '') return;  // Prevent empty messages
+                try {
+                    const api = await window.getGliaApi({version: 'v1'});
+                    const headers = await api.getRequestHeaders();
+                    const userInput = document.getElementById('user-input').value;
+                    if (userInput === '') return;  // Prevent empty messages
 
-                appendMessage(userInput, 'user');
-                document.getElementById('user-input').value = '';
+                    appendMessage(userInput, 'user');
+                    document.getElementById('user-input').value = '';
+                    headers['content-type'] = 'application/json';
+                    const requestBody = JSON.stringify({ content: userInput });
+                    const INVOCATION_URI = '';
+                    const response = await fetch(`https://api.glia.com${INVOCATION_URI}`, {
+                        method: 'POST',
+                        headers: headers,
+                        body: requestBody,
+                    });
 
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ message: userInput }),
-                });
-
-                const responseData = await response.json();
-                appendMessage(responseData.reply, 'chatgpt');
+                    const responseData = await response.json();
+                    appendMessage(responseData.output, 'chatgpt');
+                } catch(e) {
+                    appendMessage(`Error: ${e}`, 'chatgpt');
+                }
             }
+
             function appendMessage(message, sender) {
                 const chatBox = document.getElementById('chat-box');
                 const messageDiv = document.createElement('div');
-                messageDiv.classList.add(sender === 'user' ? 'text-right' : 'text-left');
+                messageDiv.classList.add('message');
+                messageDiv.classList.add(sender === 'user' ? 'user-message' : 'chatgpt-message');
                 messageDiv.textContent = message;
                 chatBox.appendChild(messageDiv);
                 chatBox.scrollTop = chatBox.scrollHeight;  // Scroll to the bottom
             }
+
+            document.getElementById('user-input').addEventListener('keypress', function(event) {
+                if (event.keyCode === 13) {  // Enter key
+                    event.preventDefault();  // Prevent default Enter key behavior
+                    sendMessage();
+                }
+            });
         </script>
     </body>
 </html>
