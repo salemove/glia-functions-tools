@@ -1,0 +1,28 @@
+{
+    "name": "bedrock-agent",
+    "type": "module",
+    "version": "1.0.0",
+    "description": "",
+    "main": "function.js",
+    "scripts": {
+        "build": "./node_modules/esbuild/bin/esbuild  --bundle --minify --tree-shaking=true --platform=browser --define:global=window --inject:config/esbuild.inject.js --format=esm --outfile=function-out.js --target=es2020 ./function.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "browser": {
+        "crypto": "crypto-browserify",
+        "stream": "stream-browserify"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@aws-sdk/client-bedrock-runtime": "^3.465.0",
+        "@aws-sdk/client-s3": "^3.462.0",
+        "buffer": "^6.0.3",
+        "crypto-browserify": "^3.12.0",
+        "process": "^0.11.10",
+        "stream-browserify": "^3.0.0"
+    },
+    "devDependencies": {
+        "esbuild": "^0.19.4"
+    }
+}
