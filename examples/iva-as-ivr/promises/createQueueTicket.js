@@ -1,6 +1,6 @@
 import request from '../https/request.js';
 
-const createQueueTicket = async (visitorToken, phoneNumber) => {
+const createQueueTicket = async (visitorToken, phoneNumber, siteId, queueId) => {
     const url = 'https://api.glia.com/queue_tickets';
 
     const options = {
@@ -9,8 +9,7 @@ const createQueueTicket = async (visitorToken, phoneNumber) => {
             'Accept': 'application/vnd.salemove.v1+json',
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${visitorToken}`
-        },
-        timeout: 10000, // in ms
+        }
     };
 
     const data = {
@@ -18,11 +17,13 @@ const createQueueTicket = async (visitorToken, phoneNumber) => {
         media_options: {
             phone_number: phoneNumber
         },
-        site_id: process.env.GLIA_TRANSFER_SITE_ID,
+        site_id: siteId,
         source: "visitor_integrator",
-        queue_ids: [process.env.GLIA_TRANSFER_QUEUE_ID]
+        queue_ids: [queueId]
     };
-    await request(url, options, data);
+    const result = await request(url, options, data);
+    const resultJson = await result.json();
+    return resultJson
 };
 
 export default createQueueTicket;

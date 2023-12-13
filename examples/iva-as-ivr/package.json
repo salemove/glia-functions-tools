@@ -5,12 +5,13 @@
     "description": "",
     "main": "function.js",
     "scripts": {
-        "build": "./node_modules/esbuild/bin/esbuild  --bundle --minify --tree-shaking=true --platform=node --format=esm --outfile=function-out.js --target=es2020 ./function.js",
+        "build": "./node_modules/esbuild/bin/esbuild  --bundle --platform=browser --inject:config/esbuild.inject.js --format=esm --outfile=function-out.js --target=es2020 ./function.js",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "author": "",
     "license": "ISC",
     "dependencies": {
+        "process": "^0.11.10",
         "uuid": "^9.0.1"
     },
     "devDependencies": {

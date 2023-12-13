@@ -12,7 +12,8 @@ const fetchEngagement = async (bearer, engagementId) => {
     }
     const url = `https://api.glia.com/engagements/${engagementId}`;
     const engagementResponse = await request(url, options);
-    return JSON.parse(engagementResponse);
+    const engagementJson = await engagementResponse.json()
+    return engagementJson;
 };
 
 export default fetchEngagement;
