@@ -10,7 +10,7 @@ const fetchLogsCommand = async (functionId) => {
     const logsRequestUrl = `https://api.glia.com/functions/${functionId}/logs`
     const logs = await fetchGfLogs(gliaBearerToken, logsRequestUrl);
     await fs.writeFile('./logs.json', JSON.stringify(logs))
-    process.stdout.write(JSON.stringify(logs, null, 2) + '\n');
+    process.stdout.write(JSON.stringify(logs, null, 2));
     return logs
 }
 
