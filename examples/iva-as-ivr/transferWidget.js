@@ -1,22 +1,9 @@
-import { transferToQueue, buildResponseBody } from './utils/gliaAi';
 
-const transferWidget = async (queueId) => {
-    const media = "audio";
-    const notifications = {
-        "success": "I am transferring you to one of our operators, please wait",
-        "failure": "I can't transfer you, the queue is closed at the moment",
-        "transfer_already_ongoing": "I am already transferring you, please wait"
-    };
-    // const responseBody = buildResponseBody(0.99, [transferToQueue(media, queueId, notifications)]);
-    const responseBody = buildResponseBody(0.99, [
-        {"type": "suggestion","content": "Transferring...","metadata": {"incident_id": "INC000011303513"}},
-        transferToQueue(media, queueId)
-    ]);
-    return {
-        statusCode: 200,
-        headers: {},
-        body: JSON.stringify(responseBody, null, 2)
-    }
+const transferWidget = async (queueId, media, successNotification, failureNotification, alreadyOngoingNotification, declinedNotification, timedOutNotification ) => {
+    console.log('invoking transfer to queue');
+    const transferResponse = {'messages':[{'type':'transfer','properties':{'version':'0','media':media,'queue_id':queueId,'notifications': {'success': successNotification, 'failure': failureNotification,'transfer_already_ongoing': alreadyOngoingNotification,'declined':declinedNotification,'timed_out': timedOutNotification}}}],'confidence_level':0.99}
+    console.log('response to Glia: ', JSON.stringify(transferResponse))
+    return new Response(JSON.stringify(transferResponse))
 }
 
 export default transferWidget;

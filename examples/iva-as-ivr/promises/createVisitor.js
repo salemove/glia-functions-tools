@@ -8,12 +8,12 @@ const createVisitor = async (bearerToken) => {
             'Accept': 'application/vnd.salemove.v1+json',
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${bearerToken}`
-        },
-        timeout: 1000, // in ms
+        }
     };
 
     const visitorResponse = await request(url, options);
-    return JSON.parse(visitorResponse);
+    const visitorResponseJson = await visitorResponse.json();
+    return visitorResponseJson;
 };
 
 export default createVisitor;

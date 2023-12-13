@@ -12,7 +12,8 @@ const updateVisitor = async (bearer, visitorId, siteId, data) => {
     }
     const url = `https://api.glia.com/sites/${siteId}/visitors/${visitorId}`;
     const visitorResponse = await request(url, options, data);
-    return JSON.parse(visitorResponse);
+    const visitorJson = await visitorResponse.json();
+    return visitorJson;
 };
 
 export default updateVisitor;

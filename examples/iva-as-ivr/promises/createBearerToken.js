@@ -6,8 +6,7 @@ const createBearerToken = async (id, secret) => {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/vnd.salemove.v1+json'
-        },
-        timeout: 1000, // in ms
+        }
     }
     const url = `https://api.glia.com/operator_authentication/tokens`;
     const data = {
@@ -15,7 +14,9 @@ const createBearerToken = async (id, secret) => {
         api_key_secret: secret
     }
     const bearerTokenResponse = await request(url, options, data);
-    return JSON.parse(bearerTokenResponse).token;
+    const bearerTokenJson = await bearerTokenResponse.json()
+    console.log(bearerTokenJson)
+    return bearerTokenJson.token;
 };
 
 export default createBearerToken;

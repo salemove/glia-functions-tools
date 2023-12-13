@@ -1,7 +1,5 @@
 const onlyDigits = (str) => {
-    console.log('str= ', str);
     const result = str.replace(/\D/g, '');
-    console.log('result= ', result);
     return result;
 }
 

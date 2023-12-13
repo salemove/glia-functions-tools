@@ -13,7 +13,7 @@ const redactEngagement = async (bearer, data) => {
     console.log('data for redaction request is ', data)
     const url = `https://api.glia.com/engagements/data_redaction_requests`;
     const redactEngagementResponse = await request(url, options, data);
-    return JSON.parse(redactEngagementResponse);
+    return redactEngagementResponse;
 };
 
 export default redactEngagement;
