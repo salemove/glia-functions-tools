@@ -1,3 +1,5 @@
 node_modules/
-function-out.js
 .env
+dist
+.wrangler
+function-out.js
