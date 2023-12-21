@@ -4,6 +4,9 @@ export async function onInvoke(request, env) {
       const requestJson = await request.json();
       const payload = JSON.parse(requestJson.payload);
 
+      // use an element in the events array
+      const event = payload.events[0];
+
       // TODO: Build out data mapping between Glia and Teams
       const mappingArray = [
         {
@@ -16,11 +19,11 @@ export async function onInvoke(request, env) {
       // TODO: Set Presence and Set Status Message
 
       // find the operator ID and operator email
-      const operatorId = payload.operator.id;
-      const operatorEmail = payload.operator.email;
+      const operatorId = event.operator.id;
+      const operatorEmail = event.operator.email;
 
       // find the availability status
-      const availabilityStatus = payload.availability_status;
+      const availabilityStatus = event.availability_status;
       console.log(`Agent ${operatorEmail} is ${availabilityStatus}`)
 
       // also check [engagements] ?
@@ -32,7 +35,7 @@ export async function onInvoke(request, env) {
       if (availabilityStatus == 'unavailable') {
         // handle case where the agent is unavailable
         // find the unavailability reason
-        const unavailabilityReasonCode = payload.unavailability_reason_code;
+        const unavailabilityReasonCode = event.unavailability_reason_code;
         console.log(`Agent ${operatorEmail} is unavailable due to ${unavailabilityReasonCode}`)
 
       }
