@@ -15,3 +15,4 @@ const fetchVersion = async (functionId, versionId) => {
 };
 
 export default fetchVersion
+
