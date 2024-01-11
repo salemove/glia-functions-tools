@@ -22,8 +22,6 @@ export async function onInvoke(request, env) {
         const messageId = payload.message_id;
 
         const bearer = await createBearerToken(env.GLIA_KEY_ID, env.GLIA_KEY_SECRET);
-        // const engagement = await fetchEngagement(bearer, engagementId);
-        // console.log('engagement= ', engagement);
         const visitor = await fetchVisitor(bearer, env.GLIA_TRANSFER_SITE_ID, payload.visitor_id);
 
         const setCustomAttributes = visitorData => {
