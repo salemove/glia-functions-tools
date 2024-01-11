@@ -4,16 +4,16 @@ const request = async(url, options, data) => {
 
   return new Promise((resolve, reject) => {
     const req = https.request(url, options, (res) => {
-      if (res.statusCode < 200 || res.statusCode > 299) {
-        console.log(`this request failed: ${url} ${JSON.stringify(options)} ${JSON.stringify(data)}`)
-        return reject(new Error(`HTTP status code ${res.statusCode}`))
-      }
-
       const body = []
       res.on('data', (chunk) => body.push(chunk))
       res.on('end', () => {
         const resString = Buffer.concat(body).toString()
-        resolve(resString)
+
+        if (res.statusCode < 200 || res.statusCode > 299) {
+          reject({ status: res.statusCode, body: JSON.parse(resString) })
+        } else {
+          resolve(resString)
+        }
       })
     })
 

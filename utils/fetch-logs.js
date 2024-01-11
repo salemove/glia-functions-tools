@@ -1,18 +1,15 @@
-import createBearerToken from './promises/createBearerToken.js'
 import request from './https/request.js';
 
-const fetchGfLogs = async (id, secret, functionId) => {
-    const bearer = await createBearerToken(id, secret);
-    const result = await request(`https://api.glia.com/functions/${functionId}/logs`, {
+const fetchGfLogs = async (functionId) => {
+    const result = await request(`${process.env.GLIA_API_URL}/functions/${functionId}/logs`, {
         method: 'GET',
         headers: {
             'Accept': 'application/vnd.salemove.v1+json',
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${bearer}`
+            'Authorization': `Bearer ${process.env.GLIA_BEARER_TOKEN}`
         },
         timeout: 9000, // in ms
     })
-    console.log(result)
     return JSON.parse(result)
 };
 
