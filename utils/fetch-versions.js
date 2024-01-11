@@ -1,9 +1,8 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-const fetchTask = async (taskPath) => {
-    const taskEndpoint = `${process.env.GLIA_API_URL}/${taskPath}`;
-    const response = await fetch(taskEndpoint, {
+const fetchVersions = async (functionId) => {
+    const response = await fetch(`${process.env.GLIA_API_URL}/functions/${functionId}/versions`, {
         method: 'GET',
         headers: {
             'Accept': 'application/vnd.salemove.v1+json',
@@ -15,4 +14,5 @@ const fetchTask = async (taskPath) => {
     return result
 };
 
-export default fetchTask
+export default fetchVersions
+
