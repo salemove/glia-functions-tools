@@ -3,8 +3,7 @@ import fs from 'fs/promises'
 
 const createGfVersion = async (bearer, functionId, functionPath, envVars) => {
     console.log('env vars: ', envVars)
-    const functionBuffer = await fs.readFile(functionPath);
-    const functionCodeStr = '' + functionBuffer;
+    const functionBuffer = await fs.readFile(functionPath, 'utf8');
     const version = await request(`https://api.glia.com/functions/${functionId}/versions`, {
         method: 'POST',
         headers: {
@@ -15,7 +14,7 @@ const createGfVersion = async (bearer, functionId, functionPath, envVars) => {
         timeout: 10000, // in ms
     },
     {
-        code: functionCodeStr, 
+        code: functionBuffer, 
         environment_variables: JSON.parse(envVars),
         // compatibility_date: '2023-09-10'
     })
