@@ -1,12 +1,18 @@
 {
     "type": "module",
+    "main": "./index.js",
     "scripts": {
-        "build": "./node_modules/esbuild/bin/esbuild  --bundle --platform=node --format=esm --outfile=function-out.js --target=es2020 ./function.js"
+        "build": "./node_modules/esbuild/bin/esbuild --minify --bundle --platform=node --format=esm --outfile=function-out.js --log-level=silent --target=es2020"
     },
     "devDependencies": {
         "esbuild": "^0.19.2"
     },
     "dependencies": {
         "yargs": "^17.7.2"
+        "@inquirer/prompts": "^3.2.0",
+        "chalk": "^5.3.0",
+        "commander": "^11.1.0",
+        "esbuild": "^0.19.2",
+        "dotenv": "^16.3.1"
     }
 }
