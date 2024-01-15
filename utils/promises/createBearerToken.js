@@ -1,6 +1,6 @@
 import request from '../https/request.js';
 
-const createBearerToken = async (id, secret) => {
+const createBearerToken = async (id, secret, api_url = 'https://api.glia.com') => {
     const options = {
         method: 'POST',
         headers: {
@@ -9,7 +9,7 @@ const createBearerToken = async (id, secret) => {
         },
         timeout: 10000, // in ms
     }
-    const url = `https://api.glia.com/operator_authentication/tokens`;
+    const url = `${api_url}/operator_authentication/tokens`;
     const data = {
         api_key_id: id, 
         api_key_secret: secret
