@@ -1,3 +1,9 @@
 node_modules/
-function-out.js
 .env
+.zip
+dist
+.wrangler
+function-out.js
+.vscode
+.DS_Store
+function-out.js

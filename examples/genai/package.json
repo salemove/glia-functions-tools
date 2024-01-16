@@ -1,0 +1,19 @@
+{
+    "name": "genai-function",
+    "type": "module",
+    "version": "1.0.0",
+    "description": "",
+    "main": "function.js",
+    "scripts": {
+        "build": "./node_modules/esbuild/bin/esbuild  --bundle --minify --tree-shaking=true --platform=node --format=esm --outfile=function-out.js --target=es2020 ./function.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "openai": "^4.14.0"
+    },
+    "devDependencies": {
+        "esbuild": "^0.19.4"
+    }
+}

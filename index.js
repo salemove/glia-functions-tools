@@ -1,4 +1,3 @@
-// example script to create a function, function version, and deploy a version
 import createBearerToken from './utils/promises/createBearerToken.js';
 import createGliaFunction from './utils/create-gf.js'; 
 import createGfVersion from './utils/create-gf-version.js'
