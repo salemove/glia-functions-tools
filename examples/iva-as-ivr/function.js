@@ -9,20 +9,21 @@ import updateVisitor from './promises/updateVisitor.js';
 import { onlyDigits } from './utils/helpers.js';
 import { returnSuggestionToVisitor } from './utils/gliaAi.js'
 import redactEngagement from './promises/redactEngagement.js'
+import transferAndSay from './transferAndSay.js';
 
 export async function onInvoke(request, env) {
     try {
         const requestJson = await request.json();
+        console.log('requestJson= ', requestJson);
         const payload = JSON.parse(requestJson.payload);
         console.log('function invoked!!!!')
-        console.log('requestJson= ', JSON.stringify(requestJson));
         console.log('utterance= ', payload.utterance)
         const utterance = onlyDigits(payload.utterance);
         const engagementId = payload.engagement_id;
         const messageId = payload.message_id;
 
         const bearer = await createBearerToken(env.GLIA_KEY_ID, env.GLIA_KEY_SECRET);
-        const visitor = await fetchVisitor(bearer, env.GLIA_TRANSFER_SITE_ID, payload.visitor_id);
+        const visitor = await fetchVisitor(bearer, env.GLIA_SITE_ID, payload.visitor_id);
 
         const setCustomAttributes = visitorData => {
             if (visitorData.custom_attributes[engagementId] == undefined) {
@@ -82,7 +83,7 @@ export async function onInvoke(request, env) {
 
         // trying to replace hard coded responses with responses configured by user in Glia Hub
         // AI Engine Additional Payload key (input / intentState) - value pairs (AI command response)
-        const response = payload.engine_settings[intentState]
+        const response = payload.engine_settings['Prompt-1-English']
         if (response) {
             console.log('response found in config - returning it')
             console.log('response returned to Glia= ', response)
@@ -117,8 +118,9 @@ export async function onInvoke(request, env) {
             case '12':
                 return callbackWidget(bearer, engagementId, visitor, env.GLIA_TRANSFER_SITE_ID, env.GLIA_TRANSFER_QUEUE_ID);
             case '9':
-                console.log('trying to validate I can return a transfer')
-                return new Response(JSON.stringify({'messages':[{'type':'transfer','properties':{'version':'0','media':'audio','queue_id':env.GLIA_TRANSFER_QUEUE_ID,'notifications': {'success': 'I am transferring you to John', 'failure': 'I can\'t transfer you to John at this time','transfer_already_ongoing': 'I am already transferring you to John','declined':'I am sorry, John is busy','timed_out': 'I am sorry, John seems to be away'}}}],'confidence_level':0.99}))
+                const englishIvaBearerToken = await createBearerToken(env.ENGLISH_BOT_KEY_ID, env.ENGLISH_BOT_KEY_SECRET)
+                const spanishIvaBearerToken = await createBearerToken(env.SPANISH_BOT_KEY_ID, env.SPANISH_BOT_KEY_SECRET)
+                return transferAndSay(englishIvaBearerToken, spanishIvaBearerToken, engagementId, env.GLIA_TRANSFER_QUEUE_ID, 'audio', 'transfer message', 'hola, mi nombre es John')
             default:
                 return transferWidget(env.GLIA_TRANSFER_QUEUE_ID, 'audio', 'Transferring you now', 'I am sorry but I cannot transfer you. Can I help you with anything else?', 'Hang on, I am transferring you to the queue', 'I am sorry but I cannot transfer you. Can I help you with anything else?', 'I am sorry but I cannot transfer you. Can I help you with anything else?');
         }
