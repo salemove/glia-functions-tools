@@ -1,12 +1,14 @@
 import request from './https/request.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const createGliaFunction = async (bearer, siteId, name, description) => {
-    const newFunction = await request('https://api.glia.com/functions', {
+const createGliaFunction = async (siteId, name, description) => {
+    const newFunction = await request(process.env.GLIA_API_URL + '/functions', {
         method: 'POST',
         headers: {
             'Accept': 'application/vnd.salemove.v1+json',
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${bearer}`
+            'Authorization': `Bearer ${process.env.GLIA_BEARER_TOKEN}`
         },
         timeout: 5000, // in ms
     },
@@ -15,7 +17,6 @@ const createGliaFunction = async (bearer, siteId, name, description) => {
         name: name,
         description: description
     })
-    console.log(newFunction)
     return JSON.parse(newFunction)
 };
 

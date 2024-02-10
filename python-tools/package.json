@@ -1,0 +1,22 @@
+{
+  "name": "js-fn",
+  "version": "1.0.0",
+  "description": "",
+  "main": "function.js",
+  "scripts": {
+    "build": "./node_modules/esbuild/bin/esbuild  --bundle --minify --tree-shaking=true --format=esm --outfile=function-out.js --target=es2020 ./function.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.465.0",
+    "@aws-sdk/client-s3": "^3.465.0",
+    "buffer": "^6.0.3",
+    "crypto-browserify": "^3.12.0",
+    "process": "^0.11.10",
+    "stream-browserify": "^3.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.19.4"
+  }  
+}

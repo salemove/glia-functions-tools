@@ -10,11 +10,15 @@ a work-in-progress
 * GLIA_KEY_SECRET
 * GLIA_SITE_ID
 
-## How to use
-
-### Build your code for Glia Functions
+## Build your code for Glia Functions
 
 Build the function: `npm run build`
+
+## How to use the CLI
+1. Clone repo and install dependencies `npm install`
+2. Run CLI `node .`
+
+## How to use the scripts
 
 ### List existing functions
 
@@ -38,3 +42,4 @@ Use the example script to create a function, version, and deploy: `node index.js
 ```
  node ./commands/invokeFunction.js --uri=$INVOCATION_URI
 ```
+
