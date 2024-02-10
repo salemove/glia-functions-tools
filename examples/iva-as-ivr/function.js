@@ -83,7 +83,7 @@ export async function onInvoke(request, env) {
 
         // trying to replace hard coded responses with responses configured by user in Glia Hub
         // AI Engine Additional Payload key (input / intentState) - value pairs (AI command response)
-        const response = payload.engine_settings['Prompt-1-English']
+        const response = payload.engine_settings[intentState]
         if (response) {
             console.log('response found in config - returning it')
             console.log('response returned to Glia= ', response)
