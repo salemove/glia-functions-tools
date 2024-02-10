@@ -1,19 +1,20 @@
 import request from './https/request.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const deployGf = async (bearer, functionId, versionId) => {
-    const deployment = await request(`https://api.glia.com/functions/${functionId}/deployments`, {
+const deployGf = async (functionId, versionId) => {
+    const deployment = await request(`${process.env.GLIA_API_URL}/functions/${functionId}/deployments`, {
         method: 'POST',
         headers: {
             'Accept': 'application/vnd.salemove.v1+json',
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${bearer}`
+            'Authorization': `Bearer ${process.env.GLIA_BEARER_TOKEN}`
         },
         timeout: 5000, // in ms
     },
     {
         version_id: versionId
     })
-    console.log(deployment)
     return JSON.parse(deployment)
 };
 
