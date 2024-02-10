@@ -2,7 +2,6 @@ import createBearerToken from './utils/promises/createBearerToken.js';
 import createGliaFunction from './utils/create-gf.js'; 
 import createGfVersion from './utils/create-gf-version.js'
 import listGliaFunctions from './utils/list-gfs.js'
-import fetchTask from './utils/fetch-task.js';
 import fetchVersion from './utils/fetch-version.js';
 import fetchVersions from './utils/fetch-versions.js';
 import fetchGf from './utils/fetch-function.js';
@@ -317,15 +316,14 @@ const CLIFunctionLogs = async (functionSelect) => {
 	console.log(separator)
 	console.log(chalk.bold('Function logs:'));
 
-	let version;
 	try {
-		version = await fetchGfLogs(functionSelect);
+		const logs = await fetchGfLogs(functionSelect);
+		process.stdout.write(JSON.stringify(logs, null, 2));
 	} catch(error) {
 		console.log(chalk.red('> Network error.'));
+		console.log(error)
 		return false;
 	}
-
-	console.log(version.logs);
 
 	CLIFunctionDetailsMenu(functionSelect);	
 	return false;
