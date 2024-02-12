@@ -10,7 +10,7 @@ const createAndDeployVersion = async (functionId, functionCodePath, envVars) => 
     const gliaBearerToken = await createBearerToken(process.env.GLIA_KEY_ID, process.env.GLIA_KEY_SECRET);
     const gfVersion = await createGfVersion(gliaBearerToken, functionId, functionCodePath, envVars)
     console.log('New version created: ', gfVersion)
-    await new Promise(r => setTimeout(r, 60000));
+    await new Promise(r => setTimeout(r, 150000));
     const gfVersionTask = await fetchTask(gliaBearerToken, gfVersion.self);
     console.log(gfVersionTask)
     const gfDeployment = await deployGf(gliaBearerToken, functionId, gfVersionTask.entity.id)
