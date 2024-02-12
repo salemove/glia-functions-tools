@@ -3,6 +3,9 @@ const onlyDigits = (str) => {
     return result;
 }
 
+const sleep = ms => {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 // const identity = i => i;
 // const leftToRightComposition = (f, g) => (x) => g(f(x));
 // const pipe = (functions) => functions.reduce(identity, leftToRightComposition);
@@ -13,5 +16,6 @@ const pipe = (...fns) =>
 
 export {
     onlyDigits,
+    sleep,
     pipe
 }
