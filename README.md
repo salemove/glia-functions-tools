@@ -33,13 +33,8 @@ node ./commands/createAndDeployVersion.js --id=$FUNCTION_ID --path='./function-o
 : "test"}'
 ```
 
-### Lazy developer's function to create a function and create and deploy a version
-
-Use the example script to create a function, version, and deploy: `node index.js --file=function-out.js`
-
 ### Invoke a function
 
 ```
  node ./commands/invokeFunction.js --uri=$INVOCATION_URI
 ```
-
