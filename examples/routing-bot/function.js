@@ -34,19 +34,19 @@ export async function onInvoke(request, env) {
               "type": "single_choice",
               "options": [
                 {
-                  "text": "Current Loan / Credit Card Support",
-                  "value": "existing_lending_support"
+                  "text": "Current Loan / Credit Card",
+                  "value": "existing_product"
                 },
                 {
                   "text": "New Loan / Credit Card",
-                  "value": "new_loan"
+                  "value": "new_product"
                 }
               ]
             }
           }
           responseBody = buildResponseBody(suggestion)
           return new Response(JSON.stringify(responseBody));
-        case "existing_lending_support":
+        case "existing_product":
           const transferLending = transferToQueue("text", queueId, {})
           responseBody = buildResponseBody(transferLending)
           return new Response(JSON.stringify(responseBody));
