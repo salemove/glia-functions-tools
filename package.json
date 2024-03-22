@@ -2,7 +2,8 @@
     "type": "module",
     "main": "./index.js",
     "scripts": {
-        "build": "./node_modules/esbuild/bin/esbuild --minify --bundle --platform=node --format=esm --outfile=function-out.js --log-level=silent --target=es2020"
+        "build": "./node_modules/esbuild/bin/esbuild --minify --bundle --platform=node --format=esm --outfile=function-out.js --log-level=silent --target=es2020",
+        "test": "jest"
     },
     "devDependencies": {
         "esbuild": "^0.19.2",
