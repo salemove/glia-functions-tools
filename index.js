@@ -1,13 +1,17 @@
-import createBearerToken from './utils/promises/createBearerToken.js';
-import createGliaFunction from './utils/create-gf.js'; 
-import createGfVersion from './utils/create-gf-version.js'
-import listGliaFunctions from './utils/list-gfs.js'
-import fetchVersion from './utils/fetch-version.js';
-import fetchVersions from './utils/fetch-versions.js';
-import fetchGf from './utils/fetch-function.js';
-import fetchGfLogs from './utils/fetch-logs.js';
-import deployGf from './utils/deploy-gf.js'
-import invokeGf from './utils/invoke-gf.js'
+import CLIIntro from './lib/cli/cliIntro.js';
+import CLIMainMenu from './lib/cli/cliMainMenu.js';
+import CLISetup from './lib/cli/cliSetup.js';
+import CLIAuth from './lib/cli/cliAuth.js';
+
+import createGliaFunction from './lib/utils/create-gf.js'; 
+import createGfVersion from './lib/utils/create-gf-version.js'
+import listGliaFunctions from './lib/utils/list-gfs.js'
+import fetchVersion from './lib/utils/fetch-version.js';
+import fetchVersions from './lib/utils/fetch-versions.js';
+import fetchGf from './lib/utils/fetch-function.js';
+import fetchGfLogs from './lib/utils/fetch-logs.js';
+import deployGf from './lib/utils/deploy-gf.js'
+import invokeGf from './lib/utils/invoke-gf.js'
 
 import * as fs from 'fs';
 import { execSync } from 'child_process';
@@ -18,137 +22,6 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const separator = '============================='
-const CLIIntro = () => {
-
-	console.log(chalk.hex('#7C19DE').bold(` #####                     #######                                                   
-#     # #      #   ##      #       #    # #    #  ####  ##### #  ####  #    #  ####  
-#       #      #  #  #     #       #    # ##   # #    #   #   # #    # ##   # #      
-#  #### #      # #    #    #####   #    # # #  # #        #   # #    # # #  #  ####  
-#     # #      # ######    #       #    # #  # # #        #   # #    # #  # #      # 
-#     # #      # #    #    #       #    # #   ## #    #   #   # #    # #   ## #    # 
- #####  ###### # #    #    #        ####  #    #  ####    #   #  ####  #    #  ####  `))
-	console.log(chalk.italic('v0.1.0'))
-	console.log(separator)
-
-}
-
-const CLIMainMenu = async () => {
-
-	let choices = [
-		{
-      name: 'Setup project',
-      value: 'setup',
-      description: 'Setup the environment for further requests and generate a bearer token',
-    }
-	]
-
-	if (process.env.GLIA_SITE_ID) {
-		choices.push({
-      name: 'Authenticate CLI',
-      value: 'auth',
-      description: '(Re)Generate a new bearer token',
-    })
-	}
-
-	if (process.env.GLIA_BEARER_TOKEN) {
-		choices.push({
-      name: 'Manage & build functions',
-      value: 'build',
-      description: 'Build or update a function',
-    })
-	}
-
-	choices.push({
-	  name: '(Exit)',
-	  value: 'exit'
-  })	
-
-	select({
-	  message: 'Select action:',
-	  choices
-	})
-	.then(answer => {
-		switch(answer) {
-
-			case 'setup': CLISetup(); return false;
-			case 'auth': CLIAuth();  return false;
-			case 'build': CLIBuildMenu(); return false;
-			case 'exit': return false;
-
-		}
-	})
-
-}
-
-const CLISetup = async () => {
-	
-	const APIKey = await input({	
-			name: 'APIKey',
-			message: 'API key:'
-		});
-
-	const APISecret = await	input({	
-			name: 'APISecret',
-			message: 'API secret:'
-		});
-		
-	const SiteID = await input({	
-			type: 'input',
-			name: 'SiteID',
-			message: 'Site ID:'
-		});
-
-	const Environment = await select({
-			message: 'Choose environment:',
-			choices: [{ 
-				name: 'Production',
-				value: 'production'
-			}, {
-				name: 'Beta',
-				value: 'beta'
-			}]
-		});
-
-	const confirmDetails = await (confirm({ message: 'Do you want to proceed with the above details? This will overwrite your current settings.' }))
-
-	if (confirmDetails) {
-	
-		let env = ``;
-		const url = Environment === 'beta' ? 'https://api.beta.glia.com' : 'https://api.glia.com';
-		env += `GLIA_KEY_ID = ${APIKey}\n`;
-		env += `GLIA_KEY_SECRET = ${APISecret}\n`;
-		env += `GLIA_SITE_ID = ${SiteID}\n`;
-		env += `GLIA_API_URL = ${url}\n`;
-
-		const token = await createBearerToken(APIKey, APISecret, url);
-		env += `GLIA_BEARER_TOKEN = ${token}\n`;
-
-		await fs.writeFileSync('.env', env);
-		
-		console.log('>', chalk.green('Done.'))
-		console.log('> Settings written to .env file.')
-
-		CLIMainMenu();
-		return false;
-
-	}
-
-};
-
-const CLIAuth = async () => {
-	const envBuffer = await fs.readFileSync('.env');
-  let env = '' + envBuffer;
-
-	const token = await createBearerToken(process.env.GLIA_KEY_ID, process.env.GLIA_KEY_SECRET, process.env.GLIA_API_URL);
-	env = env.replace(/GLIA_BEARER_TOKEN = (.*)\n/g, `GLIA_BEARER_TOKEN = ${token}\n`)
-
-	await fs.writeFileSync('.env', env);
-
-	console.log('> New bearer token written to .env file.');
-	console.log('>', chalk.green('Done.'));
-
-	return false;
-};
 
 const CLIBuildMenu = async () => {
 
@@ -176,7 +49,7 @@ const CLIBuildMenu = async () => {
 
 			case 'CLINewFunction': CLINewFunction(); return false;
 			case 'CLIListFunctions': CLIListFunctions(); return false;
-			case 'back': CLIMainMenu(); return false;
+			case 'back': CLIMainMenu(CLISetup, CLIAuth, CLIBuildMenu); return false;
 		
 		}
 	})
@@ -554,5 +427,5 @@ const CLIListFunctions = async () => {
 
 }
 
-CLIIntro();
-CLIMainMenu();
+CLIIntro(separator);
+CLIMainMenu(CLISetup, CLIAuth, CLIBuildMenu);
