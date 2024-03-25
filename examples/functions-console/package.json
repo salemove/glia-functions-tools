@@ -1,0 +1,18 @@
+{
+    "name": "functions-console",
+    "type": "module",
+    "version": "1.0.0",
+    "description": "",
+    "main": "function.js",
+    "scripts": {
+        "build": "./node_modules/esbuild/bin/esbuild  --bundle --format=esm --outfile=function-out.js --target=es2020 ./function.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+    },
+    "devDependencies": {
+        "esbuild": "^0.19.4"
+    }
+}
