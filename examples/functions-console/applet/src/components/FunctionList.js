@@ -2,6 +2,9 @@
 import React from 'react';
 
 const FunctionList = ({ functions, navigateTo }) => {
+  function findObjectById(arr, id) {
+    return arr.find(obj => obj.id === id);
+  }
   return (
     <div className="mt-8">
       <h1 className="text-3xl font-bold mb-4">Function List</h1>
@@ -9,7 +12,7 @@ const FunctionList = ({ functions, navigateTo }) => {
         {functions.map(func => (
           <li
             key={func.id}
-            onClick={() => navigateTo('functionDetails')} // Correctly calls navigateTo function
+            onClick={() => navigateTo('functionDetails', func)} // Correctly calls navigateTo function
             className="cursor-pointer text-blue-500 hover:underline mb-2"
           >
             {func.name} - {func.description}
@@ -24,3 +27,4 @@ const FunctionList = ({ functions, navigateTo }) => {
 };
 
 export default FunctionList;
+  ``

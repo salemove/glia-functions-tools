@@ -1,4 +1,4 @@
-const listFunctionsPromise = (siteId, headers) => {
+const fetchFunctionPromise = (functionId, headers) => {
     return fetch(
         `https://api.glia.com/functions?site_ids[]=${siteId}`,
         {
@@ -8,4 +8,4 @@ const listFunctionsPromise = (siteId, headers) => {
     )
 };
 
-export default listFunctionsPromise
+export default fetchFunctionPromise
