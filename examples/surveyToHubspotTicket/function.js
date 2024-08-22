@@ -195,8 +195,9 @@ async function onInvoke(request, env) {
         console.log("Ticket: " + JSON.stringify(ticket));
     }
 
-    return true;
-
+    // return status 201 for exports
+    return new Response(JSON.stringify({ status: 201 }));
+    
 }
 export {
   onInvoke
