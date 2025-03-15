@@ -31,7 +31,13 @@ export const DEFAULT_API_CONFIG = {
     resetTimeoutMs: 30000,
     halfOpenMaxCalls: 1
   },
-  offline: DEFAULT_OFFLINE_CONFIG
+  offline: DEFAULT_OFFLINE_CONFIG,
+  requests: {
+    defaultTimeout: 30000,      // 30 seconds default timeout
+    prefetchEnabled: false,     // Prefetching disabled by default
+    idempotencyEnabled: true,   // Enable idempotency keys by default
+    idempotencyHeader: 'X-Idempotency-Key'
+  }
 };
 
 /**
@@ -82,6 +88,18 @@ export default class GliaApiClient {
       }) : 
       null;
     
+    // Initialize request configuration
+    this.requestConfig = {
+      ...DEFAULT_API_CONFIG.requests,
+      ...(config.requests || {})
+    };
+    
+    // Track active requests for cancellation support
+    this.activeRequests = new Map();
+    
+    // Prefetch cache for storing prefetched data
+    this.prefetchCache = new Map();
+    
     // Initialize offline manager with proper config
     const offlineConfig = {
       ...DEFAULT_API_CONFIG.offline,
@@ -116,6 +134,138 @@ export default class GliaApiClient {
     // Configure request logging
     this.logRequests = config.logRequests || false;
   }
+  
+  /**
+   * Generate a unique identifier for requests
+   * Used for idempotency keys and request tracking
+   * 
+   * @returns {string} A unique request ID
+   * @private
+   */
+  _generateRequestId() {
+    const timestamp = Date.now();
+    const randomPart = Math.random().toString(36).substring(2, 10);
+    return `req_${timestamp}_${randomPart}`;
+  }
+  
+  /**
+   * Cancels any pending requests that match the filter
+   * 
+   * @param {Function|string} filter - If string, matches against endpoint; if function, calls with (endpoint, requestId)
+   * @returns {number} Number of requests cancelled
+   */
+  cancelRequests(filter) {
+    let count = 0;
+    
+    this.activeRequests.forEach((controller, requestId) => {
+      const endpoint = requestId.split('::')[0];
+      
+      const shouldCancel = typeof filter === 'function' 
+        ? filter(endpoint, requestId)
+        : endpoint.includes(filter);
+        
+      if (shouldCancel) {
+        controller.abort();
+        this.activeRequests.delete(requestId);
+        count++;
+        
+        if (this.logRequests) {
+          console.log(`[API] Cancelled request: ${requestId}`);
+        }
+      }
+    });
+    
+    return count;
+  }
+  
+  /**
+   * Prefetches data for a specified endpoint
+   * 
+   * @param {string} endpoint - The endpoint to prefetch
+   * @param {Object} options - Request options
+   * @param {Object} requestOptions - Additional request options
+   * @returns {Promise<void>} - Promise that resolves when prefetching is complete
+   */
+  async prefetch(endpoint, options = {}, requestOptions = {}) {
+    if (!this.requestConfig.prefetchEnabled) {
+      return;
+    }
+    
+    try {
+      if (this.logRequests) {
+        console.log(`[API] Prefetching: ${endpoint}`);
+      }
+      
+      // Clone options and mark as prefetch
+      const prefetchOptions = { ...options };
+      const prefetchRequestOptions = { 
+        ...requestOptions,
+        isPrefetch: true,
+        useRetry: false, // Don't retry prefetch requests
+        timeout: requestOptions.timeout || 5000 // Shorter timeout for prefetch
+      };
+      
+      // Execute the request in the background
+      const result = await this.makeRequest(endpoint, prefetchOptions, prefetchRequestOptions);
+      
+      // Store in prefetch cache
+      const cacheKey = this._generateCacheKey(endpoint, options);
+      this.prefetchCache.set(cacheKey, {
+        data: result,
+        timestamp: Date.now()
+      });
+      
+      if (this.logRequests) {
+        console.log(`[API] Prefetch complete: ${endpoint}`);
+      }
+    } catch (error) {
+      // Silent fail for prefetch - just log if enabled
+      if (this.logRequests) {
+        console.log(`[API] Prefetch failed: ${endpoint}`, error.message);
+      }
+    }
+  }
+  
+  /**
+   * Generate a consistent cache key from endpoint and options
+   * 
+   * @private
+   * @param {string} endpoint - API endpoint
+   * @param {Object} options - Request options
+   * @returns {string} - Cache key
+   */
+  _generateCacheKey(endpoint, options) {
+    // Use endpoint as base key
+    let key = endpoint;
+    
+    // Add method to key
+    const method = options.method || 'GET';
+    key += `::${method}`;
+    
+    // Add body hash to key if present (for POST/PUT/PATCH)
+    if (options.body && ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase())) {
+      try {
+        // Try to create a consistent hash of the body
+        const bodyStr = typeof options.body === 'string' 
+          ? options.body 
+          : JSON.stringify(options.body);
+          
+        // Simple string hash function
+        let hash = 0;
+        for (let i = 0; i < bodyStr.length; i++) {
+          const char = bodyStr.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash; // Convert to 32bit integer
+        }
+        key += `::${hash}`;
+      } catch (error) {
+        // If hashing fails, add a timestamp to ensure uniqueness
+        key += `::${Date.now()}`;
+      }
+    }
+    
+    return key;
+  }
 
   /**
    * Make a request to the Glia API with retry and caching capabilities
@@ -147,27 +297,58 @@ export default class GliaApiClient {
     const url = `${this.baseUrl}${endpoint}`;
     const method = options.method || 'GET';
     
-    // Add request timeout if not already specified
-    if (!options.signal && !options.timeout) {
-      const timeout = requestOptions.timeout || 30000; // Default 30s timeout
-      const controller = new AbortController();
-      options.signal = controller.signal;
+    // Generate a unique request ID for tracking
+    const requestId = `${endpoint}::${this._generateRequestId()}`;
+    
+    // Add request timeout and handle cancellation
+    const controller = new AbortController();
+    if (options.signal) {
+      // If there's already a signal, we need to handle both signals
+      const existingSignal = options.signal;
       
-      // Set up the timeout
-      setTimeout(() => {
+      // If the original signal aborts, we need to abort our controller too
+      const onAbort = () => {
         controller.abort();
-      }, timeout);
+        existingSignal.removeEventListener('abort', onAbort);
+      };
+      
+      existingSignal.addEventListener('abort', onAbort);
+    }
+    
+    // Add our controller's signal to the request
+    options.signal = controller.signal;
+    
+    // Set up the timeout
+    const timeout = requestOptions.timeout || this.requestConfig.defaultTimeout;
+    const timeoutId = setTimeout(() => {
+      controller.abort(new Error('Request timed out'));
+    }, timeout);
+    
+    // Add this request to the active requests map for cancellation support
+    this.activeRequests.set(requestId, controller);
+    
+    // Handle idempotency for mutation operations
+    if (this.requestConfig.idempotencyEnabled && 
+        ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) &&
+        !options.headers?.[this.requestConfig.idempotencyHeader]) {
+      
+      // Add or update headers with idempotency key
+      options.headers = {
+        ...(options.headers || {}),
+        [this.requestConfig.idempotencyHeader]: requestId
+      };
     }
     
     // Request logging if enabled
     if (this.logRequests) {
-      console.log(`[API] ${method} ${url}`);
+      console.log(`[API] ${method} ${url} (${requestId})`);
     }
     
     // Store request info for error context
     const requestInfo = {
       endpoint,
       method,
+      requestId,
       payload: this._extractPayload(options.body)
     };
     
@@ -177,7 +358,8 @@ export default class GliaApiClient {
       forceRefresh = false,
       cacheTtl,
       useRetry = true,
-      offlineMode = true   // Whether to use offline capabilities
+      offlineMode = true,   // Whether to use offline capabilities
+      isPrefetch = false    // Whether this is a prefetch request
     } = requestOptions;
     
     // Add debug info to request tracking
@@ -185,142 +367,257 @@ export default class GliaApiClient {
       timestamp: new Date().toISOString(),
       cached: false,
       retries: 0,
-      offline: false
+      offline: false,
+      isPrefetch
     };
     
-    // Check if we're offline and have offline mode enabled
-    let isOffline = false;
-    if (offlineMode && this.offlineManager) {
-      isOffline = await this.offlineManager.isOffline();
-      trackingInfo.offline = isOffline;
-      
-      if (isOffline && this.logRequests) {
-        console.log(`[API] Operating in offline mode`);
-      }
-    }
-    
-    // Define the operation for offline queueing if needed
-    const operation = {
-      endpoint,
-      options,
-      requestOptions: {
-        ...requestOptions,
-        offlineMode: false // Don't recursively use offline mode when processing the queue
-      }
-    };
-    
-    // Check memory cache first if enabled and not forcing a refresh
-    if (useCache && !forceRefresh && this._isMethodCacheable(method)) {
-      const cachedResponse = this.cache.get(endpoint, options);
-      if (cachedResponse) {
-        if (this.logRequests) {
-          console.log(`[API] Cache hit for ${method} ${url}`);
+    try {
+      // Check if we're offline and have offline mode enabled
+      let isOffline = false;
+      if (offlineMode && this.offlineManager) {
+        isOffline = await this.offlineManager.isOffline();
+        trackingInfo.offline = isOffline;
+        
+        if (isOffline && this.logRequests) {
+          console.log(`[API] Operating in offline mode`);
         }
-        trackingInfo.cached = true;
-        return cachedResponse;
       }
       
-      // If we're offline and have persistent cache, check it asynchronously
-      if (isOffline && this.cache.config.persistent && this.cache.persistentCache) {
-        try {
-          const persistentData = await this.cache.getAsync(endpoint, options);
-          if (persistentData) {
-            if (this.logRequests) {
-              console.log(`[API] Persistent cache hit for ${method} ${url}`);
-            }
-            trackingInfo.cached = true;
-            return persistentData;
-          }
-        } catch (error) {
-          console.error('Error retrieving from persistent cache:', error);
-        }
-      }
-    }
-    
-    // If we're offline, handle according to request type
-    if (isOffline && offlineMode && this.offlineManager) {
-      return await this.offlineManager.executeOrQueue(
-        // Function to execute when online
-        () => this.makeRequest(endpoint, options, { ...requestOptions, offlineMode: false }),
-        // Operation details for queueing
-        operation
-      );
-    }
-    
-    // Execute the request function (with retry if enabled)
-    const executeRequest = async () => {
-      try {
-        const headers = this._prepareHeaders(options.headers);
-        const response = await fetch(url, {
-          headers,
-          ...options
-        });
+      // Check prefetch cache first if not a prefetch request itself
+      if (!isPrefetch && this.requestConfig.prefetchEnabled) {
+        const cacheKey = this._generateCacheKey(endpoint, options);
+        const prefetched = this.prefetchCache.get(cacheKey);
         
-        // Extract and process response metadata
-        const responseInfo = this._extractResponseMetadata(response);
-        trackingInfo.requestId = responseInfo.requestId;
-        
-        // Parse response based on content type
-        const data = await this._parseResponseData(response);
-        
-        // Handle rate limiting preemptively
-        if (response.status === 429) {
-          return this._handleRateLimit(response, responseInfo, requestInfo, data);
-        }
-        
-        // Handle unsuccessful responses with more context
-        if (!response.ok) {
-          throw GliaError.fromApiResponse(response, data, {
-            ...requestInfo, 
-            requestTimestamp: trackingInfo.timestamp
-          });
-        }
-        
-        // Cache successful responses if appropriate
-        if (useCache && this._isMethodCacheable(method)) {
-          // Store in memory cache
-          this.cache.set(endpoint, options, data, cacheTtl);
-          
-          // Also store in persistent cache if enabled
-          if (this.cache.config.persistent && this.offlineManager) {
-            try {
-              await this.offlineManager.saveToCache(endpoint, options, data, cacheTtl);
-            } catch (error) {
-              console.error('Error saving to persistent cache:', error);
-            }
-          }
-        }
-        
-        return data;
-      } catch (error) {
-        return this._handleRequestError(error, endpoint, requestInfo, trackingInfo);
-      }
-    };
-    
-    // If retry is disabled, just execute the request once
-    if (!useRetry) {
-      return executeRequest();
-    }
-    
-    // Otherwise, use retry mechanism
-    return withRetry(
-      executeRequest,
-      {
-        retryConfig: this.retryConfig,
-        circuitBreaker: this.circuitBreaker,
-        onRetry: (retryInfo) => {
-          trackingInfo.retries = retryInfo.attempt;
+        if (prefetched) {
           if (this.logRequests) {
-            console.log(`[API] Retrying ${method} ${url} (attempt ${retryInfo.attempt}, delay ${retryInfo.delayMs}ms)`);
+            console.log(`[API] Prefetch hit for ${method} ${url}`);
           }
-        },
-        context: {
-          endpoint,
-          method,
-          tracking: trackingInfo
+          
+          // Clean up
+          clearTimeout(timeoutId);
+          this.activeRequests.delete(requestId);
+          
+          trackingInfo.cached = true;
+          return prefetched.data;
         }
       }
-    );
+      
+      // Define the operation for offline queueing if needed
+      const operation = {
+        endpoint,
+        options,
+        requestOptions: {
+          ...requestOptions,
+          offlineMode: false // Don't recursively use offline mode when processing the queue
+        }
+      };
+      
+      // Check memory cache first if enabled and not forcing a refresh
+      if (useCache && !forceRefresh && this._isMethodCacheable(method)) {
+        const cachedResponse = this.cache.get(endpoint, options);
+        if (cachedResponse) {
+          if (this.logRequests) {
+            console.log(`[API] Cache hit for ${method} ${url}`);
+          }
+          
+          // Clean up
+          clearTimeout(timeoutId);
+          this.activeRequests.delete(requestId);
+          
+          trackingInfo.cached = true;
+          return cachedResponse;
+        }
+        
+        // If we're offline and have persistent cache, check it asynchronously
+        if (isOffline && this.cache.config.persistent && this.cache.persistentCache) {
+          try {
+            const persistentData = await this.cache.getAsync(endpoint, options);
+            if (persistentData) {
+              if (this.logRequests) {
+                console.log(`[API] Persistent cache hit for ${method} ${url}`);
+              }
+              
+              // Clean up
+              clearTimeout(timeoutId);
+              this.activeRequests.delete(requestId);
+              
+              trackingInfo.cached = true;
+              return persistentData;
+            }
+          } catch (error) {
+            console.error('Error retrieving from persistent cache:', error);
+          }
+        }
+      }
+      
+      // If we're offline, handle according to request type
+      if (isOffline && offlineMode && this.offlineManager) {
+        // Clean up
+        clearTimeout(timeoutId);
+        this.activeRequests.delete(requestId);
+        
+        return await this.offlineManager.executeOrQueue(
+          // Function to execute when online
+          () => this.makeRequest(endpoint, options, { ...requestOptions, offlineMode: false }),
+          // Operation details for queueing
+          operation
+        );
+      }
+      
+      // Execute the request function (with retry if enabled)
+      const executeRequest = async () => {
+        try {
+          const headers = this._prepareHeaders(options.headers);
+          const response = await fetch(url, {
+            headers,
+            ...options
+          });
+          
+          // Extract and process response metadata
+          const responseInfo = this._extractResponseMetadata(response);
+          trackingInfo.requestId = responseInfo.requestId;
+          
+          // Parse response based on content type
+          const data = await this._parseResponseData(response);
+          
+          // Handle rate limiting preemptively
+          if (response.status === 429) {
+            return this._handleRateLimit(response, responseInfo, requestInfo, data);
+          }
+          
+          // Handle unsuccessful responses with more context
+          if (!response.ok) {
+            throw GliaError.fromApiResponse(response, data, {
+              ...requestInfo, 
+              requestTimestamp: trackingInfo.timestamp
+            });
+          }
+          
+          // Cache successful responses if appropriate
+          if (useCache && this._isMethodCacheable(method)) {
+            // Store in memory cache
+            this.cache.set(endpoint, options, data, cacheTtl);
+            
+            // Also store in persistent cache if enabled
+            if (this.cache.config.persistent && this.offlineManager) {
+              try {
+                await this.offlineManager.saveToCache(endpoint, options, data, cacheTtl);
+              } catch (error) {
+                console.error('Error saving to persistent cache:', error);
+              }
+            }
+          }
+          
+          return data;
+        } catch (error) {
+          return this._handleRequestError(error, endpoint, requestInfo, trackingInfo);
+        }
+      };
+    
+      // If retry is disabled, just execute the request once
+      let result;
+      try {
+        if (!useRetry) {
+          result = await executeRequest();
+        } else {
+          // Otherwise, use retry mechanism
+          result = await withRetry(
+            executeRequest,
+            {
+              retryConfig: this.retryConfig,
+              circuitBreaker: this.circuitBreaker,
+              onRetry: (retryInfo) => {
+                trackingInfo.retries = retryInfo.attempt;
+                if (this.logRequests) {
+                  console.log(`[API] Retrying ${method} ${url} (attempt ${retryInfo.attempt}, delay ${retryInfo.delayMs}ms)`);
+                }
+              },
+              context: {
+                endpoint,
+                method,
+                tracking: trackingInfo,
+                requestId
+              }
+            }
+          );
+        }
+        
+        // Clean up
+        clearTimeout(timeoutId);
+        this.activeRequests.delete(requestId);
+        
+        // Schedule background prefetching for certain GET requests if enabled
+        if (this.requestConfig.prefetchEnabled && 
+            method.toUpperCase() === 'GET' &&
+            !isPrefetch &&
+            result) {
+          
+          // Check if the result has links to prefetch
+          this._schedulePrefetching(result, endpoint);
+        }
+        
+        return result;
+      } catch (error) {
+        // Clean up on error
+        clearTimeout(timeoutId);
+        this.activeRequests.delete(requestId);
+        throw error;
+      }
+    } catch (outerError) {
+      // Handle errors from the try/catch block (like offline errors)
+      clearTimeout(timeoutId);
+      this.activeRequests.delete(requestId);
+      throw outerError;
+    }
+  }
+  
+  /**
+   * Schedule prefetching for linked resources if appropriate
+   * 
+   * @param {Object} result - The API response
+   * @param {string} sourceEndpoint - The endpoint that was requested
+   * @private
+   */
+  _schedulePrefetching(result, sourceEndpoint) {
+    if (!this.requestConfig.prefetchEnabled || !result) {
+      return;
+    }
+    
+    try {
+      // Don't prefetch if this is a list endpoint
+      if (sourceEndpoint.includes('list') || 
+          sourceEndpoint.match(/\/\w+s\??/)) { // Endpoint ends with plural name
+        return;
+      }
+      
+      // Look for common patterns for linked resources
+      const prefetchEndpoints = [];
+      
+      // Look for IDs that could be related resources
+      if (result.id) {
+        // Example: if we loaded /functions/123, prefetch /functions/123/versions
+        if (sourceEndpoint.match(/\/functions\/[^\/]+$/)) {
+          prefetchEndpoints.push(`${sourceEndpoint}/versions`);
+        }
+        
+        // Example: if we loaded /functions/123, prefetch /functions/123/logs
+        if (sourceEndpoint.match(/\/functions\/[^\/]+$/)) {
+          prefetchEndpoints.push(`${sourceEndpoint}/logs`);
+        }
+      }
+      
+      // Schedule the prefetches with a small delay to not block current request
+      for (const endpoint of prefetchEndpoints) {
+        setTimeout(() => {
+          this.prefetch(endpoint);
+        }, 100);
+      }
+    } catch (error) {
+      // Silent fail for prefetch scheduling - just log if enabled
+      if (this.logRequests) {
+        console.log(`[API] Prefetch scheduling failed:`, error.message);
+      }
+    }
   }
   
   /**
