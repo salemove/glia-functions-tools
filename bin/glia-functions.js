@@ -13,12 +13,25 @@
 import { Command } from 'commander';
 import { runCLI, createBearerToken } from '../src/cli/index.js';
 import { routeCommand } from '../src/cli/command-router.js';
-import { getApiConfig, getCliVersion, hasValidBearerToken, getAuthConfig, updateEnvFile, updateGlobalConfig } from '../src/lib/config.js';
+import { 
+  getApiConfig, 
+  getCliVersion, 
+  hasValidBearerToken, 
+  getAuthConfig, 
+  updateEnvFile, 
+  updateGlobalConfig,
+  listProfiles,
+  createProfile,
+  updateProfile,
+  switchProfile,
+  deleteProfile 
+} from '../src/lib/config.js';
 import GliaApiClient from '../src/lib/api.js';
 import chalk from 'chalk';
 import * as fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { confirm } from '@inquirer/prompts';
 
 // Global config paths
 const GLOBAL_CONFIG_DIR = path.join(os.homedir(), '.glia-cli');
@@ -102,8 +115,98 @@ program
   .description('Create a new function')
   .requiredOption('--name <name>', 'Function name')
   .option('--description <description>', 'Function description', '')
+  .option('--template <template>', 'Template to use for function')
+  .option('--output <path>', 'Output path for function file')
+  .option('--list-templates', 'List available templates')
+  .option('--skip-api', 'Skip creating function via API (local only)')
   .action(async (options) => {
     try {
+      // List templates if requested
+      if (options.listTemplates) {
+        const { listTemplates } = await import('../src/utils/template-manager.js');
+        const templates = await listTemplates();
+        
+        console.log(chalk.blue('ℹ️  Available function templates:'));
+        
+        if (templates.length === 0) {
+          console.log('No templates available');
+        } else {
+          templates.forEach(template => {
+            console.log(`- ${chalk.bold(template.name)}: ${template.description}`);
+          });
+        }
+        
+        // Delay exit to ensure output is flushed
+        setTimeout(() => {
+          process.exit(0);
+        }, 100);
+        return;
+      }
+      
+      // Handle template creation if specified
+      let templateResult = null;
+      if (options.template) {
+        const { createFromTemplate, getTemplateEnvVars } = await import('../src/utils/template-manager.js');
+        
+        // Determine output path
+        const outputPath = options.output || path.resolve(process.cwd(), `${options.name.replace(/\s+/g, '-')}.js`);
+        
+        console.log(chalk.blue('ℹ️  Info:'), `Creating function file from template "${options.template}"...`);
+        
+        try {
+          // Create function file from template
+          await createFromTemplate(options.template, outputPath, {
+            functionName: options.name
+          });
+          
+          templateResult = {
+            filePath: outputPath
+          };
+          
+          // Get recommended environment variables for this template
+          const envVars = await getTemplateEnvVars(options.template);
+          if (Object.keys(envVars).length > 0) {
+            templateResult.envVars = envVars;
+            
+            console.log(chalk.blue('ℹ️  Recommended environment variables for this template:'));
+            for (const [key, value] of Object.entries(envVars)) {
+              console.log(`- ${key}: ${value}`);
+            }
+          }
+          
+          console.log(chalk.green('✅ Success:'), `Function file created at: ${outputPath}`);
+        } catch (error) {
+          console.error(chalk.red(`Error creating function file: ${error.message}`));
+          if (!options.skipApi) {
+            console.log(chalk.yellow('⚠️  Warning:'), 'Continuing with API function creation...');
+          } else {
+            // Delay exit to ensure output is flushed
+            setTimeout(() => {
+              process.exit(1);
+            }, 100);
+            return;
+          }
+        }
+      }
+      
+      // Skip API function creation if requested
+      if (options.skipApi) {
+        if (templateResult) {
+          // Delay exit to ensure output is flushed
+          setTimeout(() => {
+            process.exit(0);
+          }, 100);
+        } else {
+          console.error(chalk.red('Error: No template specified with --skip-api. Nothing to do.'));
+          // Delay exit to ensure output is flushed
+          setTimeout(() => {
+            process.exit(1);
+          }, 100);
+        }
+        return;
+      }
+      
+      // Create function via API
       // Get API configuration directly
       const apiConfig = await getApiConfig();
       
@@ -119,6 +222,11 @@ program
       console.log(chalk.green('✅ Success:'), 'Function created successfully!');
       console.log('\nFunction details:');
       console.log(JSON.stringify(result, null, 2));
+      
+      // Mention template if used
+      if (templateResult) {
+        console.log(chalk.blue('ℹ️  Info:'), `Function file created at: ${templateResult.filePath}`);
+      }
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -280,6 +388,137 @@ program
     }
   });
 
+// Profile management commands
+const profilesCommand = program
+  .command('profiles')
+  .description('Manage configuration profiles for different environments');
+
+// List profiles
+profilesCommand
+  .command('list')
+  .description('List all available profiles')
+  .action(async () => {
+    try {
+      const profiles = listProfiles();
+      const currentProfile = process.env.GLIA_PROFILE || 'default';
+      
+      console.log(chalk.blue('ℹ️  Available profiles:'));
+      
+      if (profiles.length === 0 && currentProfile === 'default') {
+        console.log('No custom profiles found. Using default profile.');
+      } else {
+        // Ensure default is in the list
+        const allProfiles = [...new Set(['default', ...profiles])];
+        
+        allProfiles.forEach(profile => {
+          if (profile === currentProfile) {
+            console.log(`  ${chalk.green('*')} ${profile} ${chalk.dim('(current)')}`);
+          } else {
+            console.log(`    ${profile}`);
+          }
+        });
+      }
+      
+      // Delay exit to ensure output is flushed
+      setTimeout(() => {
+        process.exit(0);
+      }, 100);
+      
+    } catch (error) {
+      console.error(chalk.red(`Error listing profiles: ${error.message}`));
+      
+      setTimeout(() => {
+        process.exit(1);
+      }, 100);
+    }
+  });
+
+// Create profile
+profilesCommand
+  .command('create')
+  .description('Create a new profile')
+  .requiredOption('--name <name>', 'Profile name')
+  .action(async (options) => {
+    try {
+      await createProfile(options.name);
+      console.log(chalk.green('✅ Success:'), `Profile '${options.name}' created successfully`);
+      
+      // Delay exit to ensure output is flushed
+      setTimeout(() => {
+        process.exit(0);
+      }, 100);
+      
+    } catch (error) {
+      console.error(chalk.red(`Error creating profile: ${error.message}`));
+      
+      setTimeout(() => {
+        process.exit(1);
+      }, 100);
+    }
+  });
+
+// Switch profile
+profilesCommand
+  .command('switch')
+  .description('Switch to a different profile')
+  .requiredOption('--name <name>', 'Profile name to switch to')
+  .action(async (options) => {
+    try {
+      await switchProfile(options.name);
+      console.log(chalk.green('✅ Success:'), `Switched to profile '${options.name}'`);
+      
+      // Delay exit to ensure output is flushed
+      setTimeout(() => {
+        process.exit(0);
+      }, 100);
+      
+    } catch (error) {
+      console.error(chalk.red(`Error switching profile: ${error.message}`));
+      
+      setTimeout(() => {
+        process.exit(1);
+      }, 100);
+    }
+  });
+
+// Delete profile
+profilesCommand
+  .command('delete')
+  .description('Delete a profile')
+  .requiredOption('--name <name>', 'Profile name to delete')
+  .option('--force', 'Force deletion without confirmation')
+  .action(async (options) => {
+    try {
+      if (!options.force) {
+        // Use inquirer for confirmation
+        const shouldDelete = await confirm({
+          message: `Are you sure you want to delete profile '${options.name}'? This action cannot be undone.`
+        });
+        
+        if (!shouldDelete) {
+          console.log(chalk.blue('ℹ️  Info:'), 'Profile deletion cancelled.');
+          process.exit(0);
+          return;
+        }
+      }
+      
+      await deleteProfile(options.name);
+      console.log(chalk.green('✅ Success:'), `Profile '${options.name}' deleted successfully`);
+      
+      // Delay exit to ensure output is flushed
+      setTimeout(() => {
+        process.exit(0);
+      }, 100);
+      
+    } catch (error) {
+      console.error(chalk.red(`Error deleting profile: ${error.message}`));
+      
+      setTimeout(() => {
+        process.exit(1);
+      }, 100);
+    }
+  });
+
 // Create and deploy version command (with bundle support)
 program
   .command('create-version')
@@ -289,6 +528,7 @@ program
   .option('--env <env>', 'Environment variables as JSON string', '{}')
   .option('--compatibility-date <date>', 'Compatibility date (YYYY-MM-DD format)', 'latest')
   .option('--deploy', 'Deploy this version after creation', false)
+  .option('--profile <profile>', 'Profile to use for this operation')
   .action(async (options) => {
     try {
       // Parse the environment variables
@@ -406,6 +646,193 @@ program
     }
   });
 
+// List templates command
+program
+  .command('list-templates')
+  .description('List available function templates')
+  .option('--format <format>', 'Output format (text, json)', 'text')
+  .action(async (options) => {
+    try {
+      const { listTemplates } = await import('../src/utils/template-manager.js');
+      const templates = await listTemplates();
+      
+      // Display results based on format
+      if (options.format === 'json') {
+        console.log(JSON.stringify(templates, null, 2));
+      } else {
+        console.log(chalk.blue('ℹ️  Available function templates:'));
+        
+        if (templates.length === 0) {
+          console.log('No templates available');
+        } else {
+          templates.forEach(template => {
+            console.log(`- ${chalk.bold(template.name)}: ${template.description}`);
+          });
+          console.log('\nUse create-function command with --template option to create a function from a template');
+        }
+      }
+      
+      // Delay exit to ensure output is flushed
+      setTimeout(() => {
+        process.exit(0);
+      }, 100);
+    } catch (error) {
+      console.error(chalk.red(`Error listing templates: ${error.message}`));
+      
+      // Delay exit to ensure output is flushed
+      setTimeout(() => {
+        process.exit(1);
+      }, 100);
+    }
+  });
+
+// Dev server command
+program
+  .command('dev')
+  .description('Run function locally in development mode')
+  .requiredOption('--path <path>', 'Path to function file')
+  .option('--port <port>', 'Port to run server on', '8787')
+  .option('--watch', 'Watch for file changes and rebuild', false)
+  .option('--env <json>', 'Environment variables as JSON string', '{}')
+  .option('--profile <name>', 'Profile to use for environment variables')
+  .action(async (options) => {
+    try {
+      // Parse environment variables
+      let env = {};
+      if (options.env && options.env !== '{}') {
+        try {
+          env = JSON.parse(options.env);
+        } catch (error) {
+          console.error(chalk.red(`Invalid environment variables JSON: ${error.message}`));
+          process.exit(1);
+        }
+      }
+      
+      // Import and run dev command
+      console.log(chalk.blue('ℹ️  Starting local development server...'));
+      const { dev } = await import('../src/commands/dev.js');
+      
+      const result = await dev({
+        path: options.path,
+        port: parseInt(options.port, 10) || 8787,
+        watch: options.watch,
+        env,
+        profile: options.profile
+      });
+      
+      // Keep process running until manually stopped
+      process.stdin.resume();
+      
+    } catch (error) {
+      console.error(chalk.red(`Development server error: ${error.message}`));
+      
+      // Delay exit to ensure output is flushed
+      setTimeout(() => {
+        process.exit(1);
+      }, 100);
+    }
+  });
+
+// Init project command
+program
+  .command('init')
+  .description('Initialize a new function project from template')
+  .option('--template <name>', 'Project template to use')
+  .option('--output <path>', 'Output directory path')
+  .option('--variables <vars>', 'Template variables (key1=value1,key2=value2)')
+  .option('--list-templates', 'List available project templates')
+  .option('--force', 'Force create even if directory exists')
+  .action(async (options) => {
+    try {
+      // Handle list templates option
+      if (options.listTemplates) {
+        try {
+          const { listProjectTemplates } = await import('../src/utils/project-template-manager.js');
+          const templates = await listProjectTemplates();
+          
+          console.log(chalk.blue('ℹ️  Available project templates:'));
+          
+          if (templates.length === 0) {
+            console.log('No project templates available');
+          } else {
+            templates.forEach(template => {
+              console.log(`- ${chalk.bold(template.displayName)}: ${template.description}`);
+            });
+          }
+          
+          // Delay exit to ensure output is flushed
+          setTimeout(() => {
+            process.exit(0);
+          }, 100);
+          return;
+        } catch (error) {
+          console.error(chalk.red(`Error listing project templates: ${error.message}`));
+          
+          // Delay exit to ensure output is flushed
+          setTimeout(() => {
+            process.exit(1);
+          }, 100);
+          return;
+        }
+      }
+      
+      // Parse variables if provided
+      let parsedVars = {};
+      if (options.variables) {
+        parsedVars = options.variables.split(',').reduce((vars, item) => {
+          const [key, value] = item.split('=');
+          if (key && value) {
+            vars[key.trim()] = value.trim();
+          }
+          return vars;
+        }, {});
+      }
+      
+      // Import and run init command
+      const { initCommand } = await import('../src/commands/init.js');
+      await initCommand({
+        template: options.template,
+        output: options.output,
+        variables: parsedVars,
+        force: options.force
+      });
+      
+      // Delay exit to ensure output is flushed
+      setTimeout(() => {
+        process.exit(0);
+      }, 100);
+    } catch (error) {
+      console.error(chalk.red(`Error initializing project: ${error.message}`));
+      
+      // Delay exit to ensure output is flushed
+      setTimeout(() => {
+        process.exit(1);
+      }, 100);
+    }
+  });
+
+// Add --profile option to all commands
+program.commands.forEach(command => {
+  // Skip the profiles command as it already handles profiles
+  if (command.name() !== 'profiles') {
+    command.option('--profile <profile>', 'Profile to use for this operation');
+    
+    // Wrap the action to set the profile before executing
+    const originalAction = command.actionFunction;
+    if (originalAction) {
+      command.action((options, ...args) => {
+        if (options.profile) {
+          // Set the profile for this command execution
+          process.env.GLIA_PROFILE = options.profile;
+        }
+        
+        // Call the original action
+        return originalAction(options, ...args);
+      });
+    }
+  }
+});
+
 // Handle interactive mode when no arguments provided
 if (process.argv.length <= 2) {
   runCLI()
@@ -419,9 +846,19 @@ if (process.argv.length <= 2) {
       process.exit(1);
     });
 } else {
+  // Check for profile flag first
+  const profileIndex = process.argv.findIndex(arg => arg === '--profile');
+  if (profileIndex > 0 && profileIndex < process.argv.length - 1) {
+    // Set the profile for this command execution
+    process.env.GLIA_PROFILE = process.argv[profileIndex + 1];
+  }
+  
   // Check for valid bearer token before parsing command line arguments
   hasValidBearerToken().then(async hasToken => {
-    if (!hasToken) {
+    // Skip token check for profile commands
+    const isProfileCommand = process.argv.includes('profiles');
+    
+    if (!hasToken && !isProfileCommand) {
       console.log(chalk.yellow('⚠️ No valid bearer token found or token has expired.'));
       
       // Check if we have auth config to auto-refresh the token
@@ -437,16 +874,28 @@ if (process.argv.length <= 2) {
             authConfig.apiUrl || 'https://api.glia.com'
           );
           
-          // Save to the same location as the authConfig (assuming the source is either global or local)
-          const useGlobal = fs.existsSync(GLOBAL_CONFIG_FILE) && 
-            fs.readFileSync(GLOBAL_CONFIG_FILE, 'utf8').includes(`GLIA_KEY_ID=${authConfig.keyId}`);
+          // Check if we're using a specific profile
+          const profileName = process.env.GLIA_PROFILE || 'default';
           
-          const updateFn = useGlobal ? updateGlobalConfig : updateEnvFile;
-          
-          await updateFn({
-            'GLIA_BEARER_TOKEN': tokenInfo.token,
-            'GLIA_TOKEN_EXPIRES_AT': tokenInfo.expiresAt
-          });
+          // Save to the appropriate location based on profile
+          if (profileName !== 'default') {
+            // Save to the profile
+            await updateProfile(profileName, {
+              'GLIA_BEARER_TOKEN': tokenInfo.token,
+              'GLIA_TOKEN_EXPIRES_AT': tokenInfo.expiresAt
+            });
+          } else {
+            // Save to the same location as the authConfig (assuming the source is either global or local)
+            const useGlobal = fs.existsSync(GLOBAL_CONFIG_FILE) && 
+              fs.readFileSync(GLOBAL_CONFIG_FILE, 'utf8').includes(`GLIA_KEY_ID=${authConfig.keyId}`);
+            
+            const updateFn = useGlobal ? updateGlobalConfig : updateEnvFile;
+            
+            await updateFn({
+              'GLIA_BEARER_TOKEN': tokenInfo.token,
+              'GLIA_TOKEN_EXPIRES_AT': tokenInfo.expiresAt
+            });
+          }
           
           // Update process.env for current session
           process.env.GLIA_BEARER_TOKEN = tokenInfo.token;
