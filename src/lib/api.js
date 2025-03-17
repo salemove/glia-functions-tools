@@ -1,8 +1,17 @@
 /**
- * Unified API client for interacting with the Glia Functions API
+ * Glia API Client
  * 
- * Provides methods for all API operations with consistent error handling,
- * retry mechanisms, and request caching capabilities
+ * A robust client for interacting with the Glia API that provides:
+ * - Request/response handling with proper content type support
+ * - Authentication management
+ * - Retry mechanism with exponential backoff
+ * - Circuit breaker pattern to prevent cascading failures
+ * - Request caching for improved performance
+ * - Idempotency key support for safe retries of mutation operations
+ * - Request cancellation for managing in-flight requests
+ * - Prefetching of related resources
+ * 
+ * @module api
  */
 
 import { 

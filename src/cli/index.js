@@ -9,9 +9,21 @@ import { input, select, confirm, editor } from '@inquirer/prompts';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
 
-import { getCliVersion } from '../lib/config.js';
+import { 
+  getCliVersion, 
+  loadConfig, 
+  updateEnvFile, 
+  updateGlobalConfig, 
+  getAuthConfig, 
+  getApiConfig, 
+  hasValidBearerToken, 
+  validateToken,
+  listProfiles,
+  createProfile,
+  switchProfile,
+  deleteProfile
+} from '../lib/config.js';
 import GliaApiClient from '../lib/api.js';
-import { loadConfig, updateEnvFile, updateGlobalConfig, getAuthConfig, getApiConfig, hasValidBearerToken, validateToken } from '../lib/config.js';
 import { handleError, showSuccess, showInfo, showWarning } from './error-handler.js';
 import { parseAndValidateJson } from '../lib/validation.js';
 import { AuthenticationError, ConfigurationError, NetworkError } from '../lib/errors.js';
@@ -60,6 +72,13 @@ const CLIMainMenu = async () => {
       description: '(Re)Generate a new bearer token',
     });
   }
+  
+  // Profile management
+  choices.push({
+    name: 'Manage profiles',
+    value: 'profiles',
+    description: 'Create, switch between, and manage configuration profiles',
+  });
 
   choices.push({
     name: '(Exit)',
@@ -76,6 +95,7 @@ const CLIMainMenu = async () => {
       case 'setup': await CLISetup(); return false;
       case 'auth': await CLIAuth();  return false;
       case 'build': await CLIBuildMenu(); return false;
+      case 'profiles': await CLIProfileMenu(); return false;
       case 'exit': 
         console.log(chalk.green('Exiting Glia Functions CLI. Goodbye!'));
         process.exit(0); // Explicitly exit with success code
@@ -116,25 +136,97 @@ const CLISetup = async () => {
         value: 'beta'
       }]
     });
-
+    
+    // Profile selection - default or custom profile
+    const availableProfiles = listProfiles();
+    
+    // Get current profile name
+    const currentProfile = process.env.GLIA_PROFILE || 'default';
+    
+    // Ask if the user wants to save to the current profile or a different one
+    const profileChoices = [];
+    
+    // Always include current profile as first option
+    profileChoices.push({
+      name: `Current profile (${currentProfile})`,
+      value: currentProfile
+    });
+    
+    // Add option to create new profile
+    profileChoices.push({
+      name: 'Create new profile...',
+      value: 'new'
+    });
+    
+    // Add other existing profiles
+    const otherProfiles = availableProfiles.filter(p => p !== currentProfile);
+    if (otherProfiles.length > 0) {
+      otherProfiles.forEach(profile => {
+        profileChoices.push({
+          name: profile,
+          value: profile
+        });
+      });
+    }
+    
+    const selectedProfileOption = await select({
+      message: 'Save to profile:',
+      choices: profileChoices
+    });
+    
+    // Handle creating a new profile
+    let targetProfile = selectedProfileOption;
+    if (selectedProfileOption === 'new') {
+      const newProfileName = await input({
+        message: 'Enter new profile name:',
+        validate: (input) => {
+          if (!input) return 'Profile name is required';
+          if (!/^[a-zA-Z0-9_-]+$/.test(input)) {
+            return 'Profile name can only contain letters, numbers, dashes, and underscores';
+          }
+          if (availableProfiles.includes(input)) {
+            return `Profile '${input}' already exists`;
+          }
+          return true;
+        }
+      });
+      
+      // Create the new profile
+      await createProfile(newProfileName);
+      
+      targetProfile = newProfileName;
+    }
+    
     const confirmDetails = await confirm({ 
-      message: 'Do you want to proceed with the above details? This will overwrite your current settings.' 
+      message: `Do you want to proceed with the above details? This will ${targetProfile === currentProfile ? 'overwrite your current settings' : `save to profile '${targetProfile}'`}.` 
     });
 
     if (confirmDetails) {
-      let env = ``;
+      // Generate URL based on environment
       const url = Environment === 'beta' ? 'https://api.beta.glia.com' : 'https://api.glia.com';
-      env += `GLIA_KEY_ID = ${APIKey}\n`;
-      env += `GLIA_KEY_SECRET = ${APISecret}\n`;
-      env += `GLIA_SITE_ID = ${SiteID}\n`;
-      env += `GLIA_API_URL = ${url}\n`;
-
+      
       try {
         // Create a temporary API client to generate token
         const tokenInfo = await createBearerToken(APIKey, APISecret, url);
+        
+        // Prepare configuration updates
+        const configUpdates = {
+          'GLIA_KEY_ID': APIKey,
+          'GLIA_KEY_SECRET': APISecret,
+          'GLIA_SITE_ID': SiteID,
+          'GLIA_API_URL': url,
+          'GLIA_BEARER_TOKEN': tokenInfo.token,
+          'GLIA_TOKEN_EXPIRES_AT': tokenInfo.expiresAt
+        };
+        
+        // Save to local .env
+        let env = ``;
+        env += `GLIA_KEY_ID = ${APIKey}\n`;
+        env += `GLIA_KEY_SECRET = ${APISecret}\n`;
+        env += `GLIA_SITE_ID = ${SiteID}\n`;
+        env += `GLIA_API_URL = ${url}\n`;
         env += `GLIA_BEARER_TOKEN = ${tokenInfo.token}\n`;
         env += `GLIA_TOKEN_EXPIRES_AT = ${tokenInfo.expiresAt}\n`;
-
         await fs.writeFileSync('.env', env);
         
         // Update process.env variables to ensure they're available immediately in the current session
@@ -145,28 +237,32 @@ const CLISetup = async () => {
         process.env.GLIA_BEARER_TOKEN = tokenInfo.token;
         process.env.GLIA_TOKEN_EXPIRES_AT = tokenInfo.expiresAt;
         
-        // Ask if user wants to store credentials globally
-        const storeGlobally = await confirm({ 
-          message: 'Would you like to store these credentials globally (in ~/.glia-cli/config.env) to use across all projects?',
-          default: true
-        });
-        
-        if (storeGlobally) {
-          await updateGlobalConfig({
-            'GLIA_KEY_ID': APIKey,
-            'GLIA_KEY_SECRET': APISecret,
-            'GLIA_SITE_ID': SiteID,
-            'GLIA_API_URL': url,
-            'GLIA_BEARER_TOKEN': tokenInfo.token,
-            'GLIA_TOKEN_EXPIRES_AT': tokenInfo.expiresAt
+        // If target profile is not default or current profile,
+        // ask if they want to switch to it
+        let shouldSwitchProfile = false;
+        if (targetProfile !== currentProfile) {
+          shouldSwitchProfile = await confirm({
+            message: `Switch to profile '${targetProfile}' now?`,
+            default: true
           });
-          
-          showSuccess('Configuration saved locally and globally');
-          showInfo('Settings written to .env file and ~/.glia-cli/config.env.');
-        } else {
-          showSuccess('Configuration saved locally');
-          showInfo('Settings written to .env file.');
         }
+        
+        if (targetProfile !== 'default') {
+          // Save to selected profile
+          await updateProfile(targetProfile, configUpdates);
+          showSuccess(`Configuration saved to profile '${targetProfile}'`);
+          
+          if (shouldSwitchProfile) {
+            await switchProfile(targetProfile);
+            showInfo(`Switched to profile '${targetProfile}'`);
+          }
+        } else {
+          // Default profile - save to global config
+          await updateGlobalConfig(configUpdates);
+          showSuccess('Configuration saved globally');
+        }
+        
+        showInfo('Settings also written to .env file for local project use.');
 
         await CLIMainMenu();
         return false;
@@ -305,6 +401,16 @@ const CLIBuildMenu = async () => {
           description: 'Create a new Glia Function from scratch.',
         },
         {
+          name: 'Initialize project from template',
+          value: 'CLIInitProject',
+          description: 'Create a complete project structure using a template.',
+        },
+        {
+          name: 'Run function locally',
+          value: 'CLIDevFunction',
+          description: 'Run a function locally using the development server.',
+        },
+        {
           name: 'Manage existing functions',
           value: 'CLIListFunctions',
           description: 'Build and deploy function versions, access function logs, see usage statistics.',
@@ -318,9 +424,138 @@ const CLIBuildMenu = async () => {
 
     switch(answer) {
       case 'CLINewFunction': await CLINewFunction(); return false;
+      case 'CLIInitProject': await CLIInitProject(); return false;
+      case 'CLIDevFunction': await CLIDevFunction(); return false;
       case 'CLIListFunctions': await CLIListFunctions(); return false;
       case 'back': await CLIMainMenu(); return false;
     }
+  } catch (error) {
+    handleError(error);
+  }
+}
+
+/**
+ * Initialize a project from template
+ */
+const CLIInitProject = async () => {
+  try {
+    // Import required functions
+    const { 
+      listProjectTemplates, 
+      getProjectTemplate, 
+      createProjectFromTemplate,
+      getTemplateDefaultVars 
+    } = await import('../utils/project-template-manager.js');
+    
+    // Get available templates
+    const templates = await listProjectTemplates();
+    
+    if (templates.length === 0) {
+      showWarning('No project templates available');
+      await CLIBuildMenu();
+      return false;
+    }
+    
+    // Create template choices
+    const templateChoices = templates.map(template => ({
+      name: template.displayName,
+      value: template.name,
+      description: template.description
+    }));
+    
+    templateChoices.push({
+      name: '(Back)',
+      value: 'back'
+    });
+    
+    // Select template
+    const selectedTemplate = await select({
+      message: 'Select a project template:',
+      choices: templateChoices
+    });
+    
+    if (selectedTemplate === 'back') {
+      await CLIBuildMenu();
+      return false;
+    }
+    
+    // Get template details
+    const template = await getProjectTemplate(selectedTemplate);
+    
+    // Get output directory
+    const projectName = await input({
+      message: 'Project name:',
+      default: template.name
+    });
+    
+    const outputDir = await input({
+      message: 'Output directory:',
+      default: `./${projectName}`
+    });
+    
+    // Check if directory exists and is not empty
+    if (fs.existsSync(outputDir) && fs.readdirSync(outputDir).length > 0) {
+      const overwrite = await confirm({
+        message: `Directory "${outputDir}" already exists and is not empty. Proceed anyway?`,
+        default: false
+      });
+      
+      if (!overwrite) {
+        showInfo('Project initialization cancelled');
+        await CLIBuildMenu();
+        return false;
+      }
+    }
+    
+    // Get default variables
+    const defaultVars = getTemplateDefaultVars(template);
+    
+    // Collect variable values
+    const variables = { ...defaultVars };
+    
+    if (template.variables) {
+      console.log(chalk.blue('\nTemplate variables:'));
+      
+      for (const [key, config] of Object.entries(template.variables)) {
+        if (key === 'projectName') {
+          // Use project name for projectName variable
+          variables[key] = projectName;
+          console.log(`- ${key}: ${projectName} ${config.required ? '(required)' : ''}`);
+          continue;
+        }
+        
+        const defaultValue = config.default || '';
+        const value = await input({
+          message: `${config.description || key}${config.required ? ' (required)' : ''}:`,
+          default: defaultValue
+        });
+        
+        variables[key] = value;
+      }
+    }
+    
+    // Create project
+    showInfo(`Creating project from template "${template.displayName}"...`);
+    
+    const result = await createProjectFromTemplate(template.name, outputDir, variables);
+    
+    if (result.files.every(f => f.success)) {
+      showSuccess(`Project created successfully in ${outputDir}`);
+    } else {
+      const successCount = result.files.filter(f => f.success).length;
+      const errorCount = result.files.filter(f => !f.success).length;
+      showWarning(`Project created with ${errorCount} errors (${successCount} files successful)`);
+    }
+    
+    // Print next steps
+    console.log('\nNext steps:');
+    console.log(`1. cd ${outputDir}`);
+    console.log('2. Review and edit the generated files');
+    console.log('3. Follow the instructions in README.md');
+    
+    // Return to main menu
+    await CLIMainMenu();
+    return false;
   } catch (error) {
     handleError(error);
   }
@@ -340,9 +575,60 @@ const CLINewFunction = async () => {
       name: 'functionDescription',
       message: 'Function description:'
     });
+    
+    // Offer to use a template
+    const useTemplate = await confirm({
+      message: 'Would you like to use a template for this function?',
+      default: true
+    });
+    
+    let selectedTemplate = null;
+    if (useTemplate) {
+      try {
+        // Import the template manager functions
+        const { listTemplates } = await import('../utils/template-manager.js');
+        
+        // Get templates
+        const templates = await listTemplates();
+        
+        if (templates.length > 0) {
+          // Create template choices
+          const templateChoices = templates.map(template => ({
+            name: `${template.name}: ${template.description}`,
+            value: template.name
+          }));
+          
+          // Add option to continue without a template
+          templateChoices.push({
+            name: '(None/Cancel)',
+            value: null
+          });
+          
+          selectedTemplate = await select({
+            message: 'Select a template:',
+            choices: templateChoices
+          });
+        } else {
+          showWarning('No templates found. Continuing without a template.');
+        }
+      } catch (error) {
+        console.error('Error loading templates:', error);
+        showWarning('Failed to load templates. Continuing without a template.');
+      }
+    }
+    
+    // Determine output path if using a template
+    let outputPath = null;
+    if (selectedTemplate) {
+      outputPath = await input({
+        name: 'outputPath',
+        message: 'Output file path:',
+        default: `./${functionName.replace(/\s+/g, '-')}.js`
+      });
+    }
 
     const confirmDetails = await confirm({ 
-      message: 'Proceed with above details?' 
+      message: `Proceed with ${selectedTemplate ? 'template ' + selectedTemplate : 'no template'}?` 
     });
 
     if (confirmDetails) {
@@ -357,6 +643,33 @@ const CLINewFunction = async () => {
       
       showSuccess('New Glia Function successfully created');
       console.log(newGliaFunction);
+      
+      // Create from template if selected
+      if (selectedTemplate) {
+        try {
+          const { createFromTemplate, getTemplateEnvVars } = await import('../utils/template-manager.js');
+          
+          showInfo(`Creating function file from template "${selectedTemplate}"...`);
+          
+          // Create function file from template
+          await createFromTemplate(selectedTemplate, outputPath, {
+            functionName: functionName
+          });
+          
+          showSuccess(`Function file created at: ${outputPath}`);
+          
+          // Get recommended environment variables for this template
+          const envVars = await getTemplateEnvVars(selectedTemplate);
+          if (Object.keys(envVars).length > 0) {
+            console.log('\nRecommended environment variables for this template:');
+            for (const [key, value] of Object.entries(envVars)) {
+              console.log(`- ${key}: ${value}`);
+            }
+          }
+        } catch (error) {
+          showWarning(`Error creating function file: ${error.message}`);
+        }
+      }
       
       await CLIBuildMenu();
       return false;
@@ -943,6 +1256,332 @@ export async function runCLI() {
 if (import.meta.url === `file://${process.argv[1]}`) {
   runCLI();
 }
+
+/**
+ * Profile management menu for the CLI
+ */
+const CLIProfileMenu = async () => {
+  try {
+    // Get current profile
+    const currentProfile = process.env.GLIA_PROFILE || 'default';
+    
+    // Get all profiles
+    const profiles = listProfiles();
+    
+    // Make sure default is included
+    if (!profiles.includes('default')) {
+      profiles.unshift('default');
+    }
+    
+    console.log(chalk.blue('Current active profile:'), chalk.bold(currentProfile));
+    console.log(separator);
+    
+    const answer = await select({
+      message: 'Select action:',
+      choices: [
+        {
+          name: 'List profiles',
+          value: 'list',
+          description: 'Show all available profiles',
+        },
+        {
+          name: 'Create new profile',
+          value: 'create',
+          description: 'Create a new configuration profile',
+        },
+        {
+          name: 'Switch profile',
+          value: 'switch',
+          description: 'Switch to a different profile',
+        },
+        {
+          name: 'Delete profile',
+          value: 'delete',
+          description: 'Delete an existing profile',
+        },
+        {
+          name: '(Back)',
+          value: 'back'
+        }
+      ]
+    });
+    
+    switch(answer) {
+      case 'list': await CLIListProfiles(); return false;
+      case 'create': await CLICreateProfile(); return false;
+      case 'switch': await CLISwitchProfile(); return false;
+      case 'delete': await CLIDeleteProfile(); return false;
+      case 'back': await CLIMainMenu(); return false;
+    }
+  } catch (error) {
+    handleError(error);
+  }
+}
+
+/**
+ * List all available profiles
+ */
+const CLIListProfiles = async () => {
+  try {
+    // Get current profile
+    const currentProfile = process.env.GLIA_PROFILE || 'default';
+    
+    // Get all profiles
+    const profiles = listProfiles();
+    
+    // Make sure default is included
+    if (!profiles.includes('default')) {
+      profiles.unshift('default');
+    }
+    
+    console.log(chalk.blue('Available profiles:'));
+    
+    profiles.forEach(profile => {
+      if (profile === currentProfile) {
+        console.log(`  ${chalk.green('*')} ${profile} ${chalk.green('(current)')}`);
+      } else {
+        console.log(`  ${profile}`);
+      }
+    });
+    
+    console.log(''); // Empty line
+    await CLIProfileMenu();
+    return false;
+  } catch (error) {
+    handleError(error);
+  }
+}
+
+/**
+ * Create a new profile
+ */
+const CLICreateProfile = async () => {
+  try {
+    const profileName = await input({
+      message: 'Enter new profile name:',
+      validate: (input) => {
+        if (!input) return 'Profile name is required';
+        if (!/^[a-zA-Z0-9_-]+$/.test(input)) {
+          return 'Profile name can only contain letters, numbers, dashes, and underscores';
+        }
+        return true;
+      }
+    });
+    
+    // Create the profile
+    await createProfile(profileName);
+    
+    showSuccess(`Profile '${profileName}' created successfully`);
+    
+    // Ask if they want to switch to this profile
+    const switchToNew = await confirm({
+      message: `Switch to the new '${profileName}' profile now?`,
+      default: true
+    });
+    
+    if (switchToNew) {
+      await switchProfile(profileName);
+      showSuccess(`Switched to profile '${profileName}'`);
+    }
+    
+    await CLIProfileMenu();
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIProfileMenu();
+    return false;
+  }
+}
+
+/**
+ * Switch to a different profile
+ */
+const CLISwitchProfile = async () => {
+  try {
+    // Get current profile
+    const currentProfile = process.env.GLIA_PROFILE || 'default';
+    
+    // Get all profiles
+    const profiles = listProfiles();
+    
+    // Make sure default is included
+    if (!profiles.includes('default')) {
+      profiles.unshift('default');
+    }
+    
+    // Create choices with current profile marked
+    const choices = profiles.map(profile => ({
+      name: profile === currentProfile ? `${profile} (current)` : profile,
+      value: profile,
+      disabled: profile === currentProfile
+    }));
+    
+    const profileName = await select({
+      message: 'Select profile to switch to:',
+      choices
+    });
+    
+    // Switch to the profile
+    await switchProfile(profileName);
+    
+    showSuccess(`Switched to profile '${profileName}'`);
+    
+    // Delay slightly to make sure the user sees the success message
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    await CLIProfileMenu();
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIProfileMenu();
+    return false;
+  }
+}
+
+/**
+ * Delete a profile
+ */
+const CLIDeleteProfile = async () => {
+  try {
+    // Get current profile
+    const currentProfile = process.env.GLIA_PROFILE || 'default';
+    
+    // Get all profiles
+    const profiles = listProfiles();
+    
+    // Filter out default and current profile
+    const availableProfiles = profiles.filter(profile => 
+      profile !== 'default' && profile !== currentProfile
+    );
+    
+    if (availableProfiles.length === 0) {
+      showWarning('No profiles available to delete. You cannot delete the default profile or the currently active profile.');
+      await CLIProfileMenu();
+      return false;
+    }
+    
+    const profileName = await select({
+      message: 'Select profile to delete:',
+      choices: [
+        ...availableProfiles.map(profile => ({
+          name: profile,
+          value: profile,
+        })),
+        {
+          name: '(Cancel)',
+          value: 'cancel'
+        }
+      ]
+    });
+    
+    if (profileName === 'cancel') {
+      await CLIProfileMenu();
+      return false;
+    }
+    
+    // Confirm deletion
+    const confirmDelete = await confirm({
+      message: `Are you sure you want to delete profile '${profileName}'? This action cannot be undone.`,
+      default: false
+    });
+    
+    if (!confirmDelete) {
+      showInfo('Profile deletion cancelled');
+      await CLIProfileMenu();
+      return false;
+    }
+    
+    // Delete the profile
+    await deleteProfile(profileName);
+    
+    showSuccess(`Profile '${profileName}' deleted successfully`);
+    
+    await CLIProfileMenu();
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIProfileMenu();
+    return false;
+  }
+}
+
+/**
+ * Run a function locally in development mode
+ */
+const CLIDevFunction = async () => {
+  try {
+    const functionPath = await input({  
+      message: 'Path to function file:',
+      default: './function.js'
+    });
+    
+    const port = await input({
+      message: 'Port to run server on:',
+      default: '8787'
+    });
+    
+    const watchMode = await confirm({
+      message: 'Enable watch mode (auto-reload on file changes)?',
+      default: true
+    });
+    
+    const useEnv = await confirm({
+      message: 'Add custom environment variables?',
+      default: false
+    });
+    
+    let env = {};
+    if (useEnv) {
+      const envString = await editor({
+        message: 'Enter environment variables as JSON:',
+        default: '{\n  "KEY": "value"\n}',
+        postfix: '.json'
+      });
+      
+      try {
+        env = JSON.parse(envString);
+        showSuccess('Environment variables validated');
+      } catch (error) {
+        showWarning(`Invalid JSON format: ${error.message}`);
+        showInfo('Continuing with empty environment variables');
+      }
+    }
+
+    showInfo('Starting local development server...');
+    
+    const { dev } = await import('../commands/dev.js');
+    
+    try {
+      await dev({
+        path: functionPath,
+        port: parseInt(port, 10) || 8787,
+        watch: watchMode,
+        env: env
+      });
+      
+      // Show additional info
+      showSuccess('Development server is running');
+      showInfo('Press Ctrl+C to stop the server and return to the menu');
+      
+      // Wait for user to terminate with Ctrl+C
+      await new Promise(resolve => {
+        process.on('SIGINT', () => {
+          resolve();
+        });
+      });
+      
+      // Return to build menu
+      await CLIBuildMenu();
+      return false;
+    } catch (error) {
+      showError(`Failed to start development server: ${error.message}`);
+      await CLIBuildMenu();
+      return false;
+    }
+  } catch (error) {
+    handleError(error);
+  }
+};
 
 // Export createBearerToken for use in bin/glia-functions.js
 export { createBearerToken };

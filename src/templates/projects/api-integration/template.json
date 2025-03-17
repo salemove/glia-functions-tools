@@ -1,0 +1,76 @@
+{
+  "name": "api-integration",
+  "displayName": "API Integration",
+  "description": "A robust API integration template with error handling, validation, and testing",
+  "version": "1.0.0",
+  "variables": {
+    "projectName": {
+      "description": "Project name (used in package.json and README)",
+      "default": "api-integration",
+      "required": true
+    },
+    "description": {
+      "description": "Project description",
+      "default": "An API integration Glia Function",
+      "required": true
+    },
+    "version": {
+      "description": "Project version",
+      "default": "0.1.0",
+      "required": false
+    },
+    "author": {
+      "description": "Project author",
+      "default": "",
+      "required": false
+    },
+    "environment": {
+      "description": "Target environment",
+      "default": "production",
+      "required": false,
+      "enum": ["production", "beta", "development"]
+    },
+    "profile": {
+      "description": "Glia CLI profile to use",
+      "default": "default",
+      "required": false
+    },
+    "apiKey": {
+      "description": "API key for the external service",
+      "default": "",
+      "required": false
+    },
+    "apiUrl": {
+      "description": "API URL for the external service",
+      "default": "https://api.example.com/v1",
+      "required": false
+    },
+    "apiTimeout": {
+      "description": "API request timeout in milliseconds",
+      "default": "5000",
+      "required": false
+    },
+    "functionId": {
+      "description": "Function ID (can be set later)",
+      "default": "",
+      "required": false
+    }
+  },
+  "files": [
+    "README.md",
+    "function.js",
+    "package.json",
+    "lib/api-client.js",
+    "lib/validator.js",
+    "test/function.test.js",
+    "test/test-api.js",
+    ".env.example"
+  ],
+  "devDependencies": [
+    "dotenv"
+  ],
+  "postInit": [
+    "Copy .env.example to .env",
+    "Install dependencies: npm install"
+  ]
+}

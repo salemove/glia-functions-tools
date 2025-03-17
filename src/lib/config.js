@@ -3,6 +3,17 @@
  * 
  * Handles loading environment variables and managing configuration settings
  * Supports both local (.env) and global (~/.glia-cli/config.env) credentials
+ * Includes profile management for multiple environments
+ * 
+ * The configuration system uses a layered approach for maximum flexibility:
+ * 1. CLI arguments (highest precedence)
+ * 2. Local .env file 
+ * 3. Active profile config
+ * 4. Global config file
+ * 5. Environment variables
+ * 6. Default values (lowest precedence)
+ * 
+ * @module config
  */
 
 import dotenv from 'dotenv';
@@ -14,21 +25,62 @@ import os from 'os';
 // Default configuration values
 const DEFAULT_CONFIG = {
   apiUrl: 'https://api.glia.com',
+  defaultProfile: 'default'
 };
 
 // Global config paths
 const GLOBAL_CONFIG_DIR = path.join(os.homedir(), '.glia-cli');
 const GLOBAL_CONFIG_FILE = path.join(GLOBAL_CONFIG_DIR, 'config.env');
+const PROFILES_DIR = path.join(GLOBAL_CONFIG_DIR, 'profiles');
 const LOCAL_CONFIG_FILE = './.env';
 
-// Ensure global config directory exists
+// Ensure global config and profiles directories exist
 try {
   if (!fs.existsSync(GLOBAL_CONFIG_DIR)) {
     fs.mkdirSync(GLOBAL_CONFIG_DIR, { recursive: true });
   }
+  if (!fs.existsSync(PROFILES_DIR)) {
+    fs.mkdirSync(PROFILES_DIR, { recursive: true });
+  }
 } catch (error) {
   // Silent fail - we'll handle this during actual operations
   console.error(`Warning: Could not create global config directory: ${error.message}`);
+}
+
+/**
+ * Gets the current active profile name from the global config
+ * 
+ * @returns {string} Current profile name or 'default'
+ */
+function getCurrentProfileName() {
+  try {
+    if (process.env.GLIA_PROFILE) {
+      return process.env.GLIA_PROFILE;
+    }
+    
+    // Try to get from global config
+    if (fs.existsSync(GLOBAL_CONFIG_FILE)) {
+      const globalConfig = loadEnvFile(GLOBAL_CONFIG_FILE);
+      if (globalConfig.GLIA_PROFILE) {
+        return globalConfig.GLIA_PROFILE;
+      }
+    }
+    
+    // Default profile if none specified
+    return DEFAULT_CONFIG.defaultProfile;
+  } catch (error) {
+    return DEFAULT_CONFIG.defaultProfile;
+  }
+}
+
+/**
+ * Gets the path to the active profile configuration file
+ * 
+ * @param {string} profileName - Profile name
+ * @returns {string} Path to profile config file
+ */
+function getProfilePath(profileName) {
+  return path.join(PROFILES_DIR, `${profileName}.env`);
 }
 
 /**
@@ -59,8 +111,34 @@ function loadEnvFile(filePath) {
 }
 
 /**
+ * Lists all available profiles
+ * 
+ * @returns {Array<string>} List of profile names
+ */
+export function listProfiles() {
+  try {
+    if (!fs.existsSync(PROFILES_DIR)) {
+      return [];
+    }
+    
+    const files = fs.readdirSync(PROFILES_DIR);
+    return files
+      .filter(file => file.endsWith('.env'))
+      .map(file => file.replace(/\.env$/, ''));
+  } catch (error) {
+    console.error(`Warning: Error listing profiles: ${error.message}`);
+    return [];
+  }
+}
+
+/**
  * Loads the configuration from environment variables and .env files
- * Checks both local and global config files, with local taking precedence
+ * Uses layered configuration resolution:
+ * 1. CLI args (already in process.env)
+ * 2. Local .env file 
+ * 3. Active profile config
+ * 4. Global config file
+ * 5. Default values
  * 
  * @returns {Object} The loaded configuration
  */
@@ -68,17 +146,25 @@ export async function loadConfig() {
   // Start with process.env defaults
   const originalEnvVars = { ...process.env };
   
-  // Load global config first (lower precedence)
+  // Get active profile name
+  const profileName = getCurrentProfileName();
+  
+  // Load profile config if it exists (medium precedence)
+  const profilePath = getProfilePath(profileName);
+  const profileEnv = loadEnvFile(profilePath);
+  
+  // Load global config (lower precedence)
   const globalEnv = loadEnvFile(GLOBAL_CONFIG_FILE);
   
-  // Then load local config (higher precedence)
+  // Load local config (highest precedence)
   const localEnv = loadEnvFile(LOCAL_CONFIG_FILE);
   
   // Merge environment variables in order of precedence:
   // 1. Local .env file (highest precedence)
-  // 2. Global config file
-  // 3. Process environment variables (already loaded)
-  Object.assign(process.env, globalEnv, localEnv);
+  // 2. Active profile config
+  // 3. Global config file
+  // 4. Process environment variables (already loaded)
+  Object.assign(process.env, globalEnv, profileEnv, localEnv);
   
   // Create final config object
   const config = {
@@ -88,7 +174,8 @@ export async function loadConfig() {
     apiUrl: process.env.GLIA_API_URL || DEFAULT_CONFIG.apiUrl,
     bearerToken: process.env.GLIA_BEARER_TOKEN,
     tokenExpiresAt: process.env.GLIA_TOKEN_EXPIRES_AT ? 
-      parseInt(process.env.GLIA_TOKEN_EXPIRES_AT, 10) : null
+      parseInt(process.env.GLIA_TOKEN_EXPIRES_AT, 10) : null,
+    profile: profileName
   };
   
   return config;
@@ -262,6 +349,136 @@ export async function updateEnvFile(updates) {
  */
 export async function updateGlobalConfig(updates) {
   return updateEnvFileAtPath(GLOBAL_CONFIG_FILE, updates);
+}
+
+/**
+ * Creates a new named profile
+ * 
+ * @param {string} profileName - Name of the profile to create
+ * @param {Object} config - Configuration values for the profile
+ * @returns {Promise<void>}
+ */
+export async function createProfile(profileName) {
+  if (!profileName || typeof profileName !== 'string') {
+    throw new ConfigurationError('Profile name is required');
+  }
+  
+  // Sanitize profile name (alphanumeric, dash, underscore only)
+  const sanitized = profileName.replace(/[^a-zA-Z0-9_-]/g, '');
+  if (sanitized !== profileName) {
+    throw new ConfigurationError('Profile name can only contain letters, numbers, dashes, and underscores');
+  }
+  
+  const profilePath = getProfilePath(profileName);
+  
+  // Check if profile already exists
+  if (fs.existsSync(profilePath)) {
+    throw new ConfigurationError(`Profile ${profileName} already exists`);
+  }
+  
+  // Create empty profile file
+  try {
+    fs.writeFileSync(profilePath, '', { mode: 0o600 });
+    return profileName;
+  } catch (error) {
+    throw new ConfigurationError(
+      `Failed to create profile ${profileName}: ${error.message}`,
+      { error }
+    );
+  }
+}
+
+/**
+ * Updates a named profile with new configuration values
+ * 
+ * @param {string} profileName - Name of the profile to update
+ * @param {Object} updates - Key-value pairs to update in the profile
+ * @returns {Promise<void>}
+ */
+export async function updateProfile(profileName, updates) {
+  if (!profileName || typeof profileName !== 'string') {
+    throw new ConfigurationError('Profile name is required');
+  }
+  
+  const profilePath = getProfilePath(profileName);
+  
+  // Create profile if it doesn't exist
+  if (!fs.existsSync(profilePath)) {
+    await createProfile(profileName);
+  }
+  
+  return updateEnvFileAtPath(profilePath, updates);
+}
+
+/**
+ * Switches to a different named profile
+ * 
+ * @param {string} profileName - Name of the profile to switch to
+ * @returns {Promise<void>}
+ * @throws {ConfigurationError} If the profile doesn't exist
+ */
+export async function switchProfile(profileName) {
+  if (!profileName || typeof profileName !== 'string') {
+    throw new ConfigurationError('Profile name is required');
+  }
+  
+  const profilePath = getProfilePath(profileName);
+  
+  // Check if profile exists
+  if (!fs.existsSync(profilePath)) {
+    throw new ConfigurationError(`Profile ${profileName} does not exist`);
+  }
+  
+  // Update global config to use this profile
+  await updateGlobalConfig({
+    'GLIA_PROFILE': profileName
+  });
+  
+  // Update process.env for immediate effect
+  process.env.GLIA_PROFILE = profileName;
+  
+  return profileName;
+}
+
+/**
+ * Deletes a named profile
+ * 
+ * @param {string} profileName - Name of the profile to delete
+ * @returns {Promise<void>}
+ * @throws {ConfigurationError} If trying to delete the active profile
+ */
+export async function deleteProfile(profileName) {
+  if (!profileName || typeof profileName !== 'string') {
+    throw new ConfigurationError('Profile name is required');
+  }
+  
+  // Don't allow deleting the default profile
+  if (profileName === DEFAULT_CONFIG.defaultProfile) {
+    throw new ConfigurationError(`Cannot delete the ${DEFAULT_CONFIG.defaultProfile} profile`);
+  }
+  
+  // Don't allow deleting the active profile
+  const currentProfile = getCurrentProfileName();
+  if (profileName === currentProfile) {
+    throw new ConfigurationError('Cannot delete the active profile. Switch to another profile first.');
+  }
+  
+  const profilePath = getProfilePath(profileName);
+  
+  // Check if profile exists
+  if (!fs.existsSync(profilePath)) {
+    throw new ConfigurationError(`Profile ${profileName} does not exist`);
+  }
+  
+  // Delete the profile file
+  try {
+    fs.unlinkSync(profilePath);
+  } catch (error) {
+    throw new ConfigurationError(
+      `Failed to delete profile ${profileName}: ${error.message}`,
+      { error }
+    );
+  }
 }
 
 /**
