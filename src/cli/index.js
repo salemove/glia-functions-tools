@@ -20,6 +20,7 @@ import {
   validateToken,
   listProfiles,
   createProfile,
+  updateProfile,
   switchProfile,
   deleteProfile
 } from '../lib/config.js';
@@ -901,6 +902,11 @@ const CLIFunctionDetailsMenu = async (functionId) => {
           description: 'Bundle and create a new function version or update env. variables.',
         },
         {
+          name: 'Update function details',
+          value: 'updateFunction',
+          description: 'Update function name and description.',
+        },
+        {
           name: 'Manage existing function versions',
           value: 'functionVersions',
           description: 'Retrieve function versions.',
@@ -925,6 +931,7 @@ const CLIFunctionDetailsMenu = async (functionId) => {
     switch(answer) {
       case 'functionLogs': await CLIFunctionLogs(functionId); return false;
       case 'newVersion': await CLINewVersion(functionId); return false;
+      case 'updateFunction': await CLIUpdateFunction(functionId, functionDetails); return false;
       case 'functionVersions': await CLIFunctionVersions(functionId, functionDetails.current_version); return false;
       case 'functionInvoke': await CLIFunctionInvoke(functionId, functionDetails.invocation_uri); return false;
       case 'back': await CLIBuildMenu(); return false;
@@ -1583,5 +1590,87 @@ const CLIDevFunction = async () => {
   }
 };
 
-// Export createBearerToken for use in bin/glia-functions.js
+/**
+ * Update function details (name and description)
+ * 
+ * @param {string} functionId - Function ID
+ * @param {object} functionDetails - Current function details
+ */
+const CLIUpdateFunction = async (functionId, functionDetails) => {
+  try {
+    console.log(separator);
+    console.log(chalk.bold('Update function details:'));
+    
+    // Get current function name and description
+    const currentName = functionDetails.name || '';
+    const currentDescription = functionDetails.description || '';
+    
+    console.log(chalk.blue('Current name:'), currentName);
+    console.log(chalk.blue('Current description:'), currentDescription);
+    console.log('');
+    
+    // Ask for new name (default to current)
+    const newName = await input({
+      message: 'New function name:',
+      default: currentName
+    });
+    
+    // Ask for new description (default to current)
+    const newDescription = await input({
+      message: 'New function description:',
+      default: currentDescription
+    });
+    
+    // Check if anything changed
+    if (newName === currentName && newDescription === currentDescription) {
+      showInfo('No changes detected. Update cancelled.');
+      await CLIFunctionDetailsMenu(functionId);
+      return false;
+    }
+    
+    // Confirm update
+    const confirmUpdate = await confirm({
+      message: 'Update function details with these values?',
+      default: true
+    });
+    
+    if (!confirmUpdate) {
+      showInfo('Update cancelled.');
+      await CLIFunctionDetailsMenu(functionId);
+      return false;
+    }
+    
+    // Get API configuration
+    const apiConfig = await getApiConfig();
+    
+    // Create API client
+    const api = new GliaApiClient(apiConfig);
+    
+    // Prepare updates object
+    const updates = {};
+    if (newName !== currentName) updates.name = newName;
+    if (newDescription !== currentDescription) updates.description = newDescription;
+    
+    // Update function
+    showInfo(`Updating function "${functionId}"...`);
+    const updatedFunction = await api.updateFunction(functionId, updates);
+    
+    showSuccess('Function details updated successfully');
+    
+    // Show what was updated
+    if (newName !== currentName) {
+      console.log(chalk.blue('New name:'), updatedFunction.name);
+    }
+    if (newDescription !== currentDescription) {
+      console.log(chalk.blue('New description:'), updatedFunction.description);
+    }
+    
+    // Return to function details menu
+    await CLIFunctionDetailsMenu(functionId);
+    return false;
+  } catch (error) {
+    handleError(error);
+  }
+};
+
 export { createBearerToken };

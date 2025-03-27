@@ -243,6 +243,52 @@ program
     }
   });
 
+// Update function command
+program
+  .command('update-function')
+  .description('Update a function\'s name and/or description')
+  .requiredOption('--id <id>', 'Function ID')
+  .option('--name <name>', 'New function name')
+  .option('--description <description>', 'New function description')
+  .option('--profile <profile>', 'Profile to use for this operation')
+  .action(async (options) => {
+    try {
+      // Validate that at least one update field is provided
+      if (options.name === undefined && options.description === undefined) {
+        console.error(chalk.red('Error:'), 'Please provide at least one field to update (--name or --description)');
+        process.exit(1);
+      }
+      
+      // Run the update function command
+      const result = await routeCommand('update-function', options);
+      
+      // Display success message
+      console.log(chalk.green('✅ Success:'), `Function "${result.id}" updated successfully`);
+      
+      // Show the updated values
+      if (options.name !== undefined) {
+        console.log(chalk.blue('ℹ️  Name:'), result.name);
+      }
+      
+      if (options.description !== undefined) {
+        console.log(chalk.blue('ℹ️  Description:'), result.description);
+      }
+      
+      // Delay exit to ensure output is flushed
+      setTimeout(() => {
+        process.exit(0);
+      }, 100);
+      
+    } catch (error) {
+      console.error(chalk.red(`Error updating function: ${error.message}`));
+      
+      // Delay exit to ensure error is flushed
+      setTimeout(() => {
+        process.exit(1);
+      }, 100);
+    }
+  });
+
 // Deploy function version command
 program
   .command('deploy')

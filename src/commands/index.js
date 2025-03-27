@@ -7,6 +7,7 @@
 // Function management commands
 export { default as createAndDeployVersion } from './createAndDeployVersion.js';
 export { default as createFunction } from './createFunction.js';
+export { default as updateFunction } from './updateFunction.js';
 export { default as fetchLogs } from './fetchLogs.js';
 export { default as invokeFunction } from './invokeFunction.js';
 export { default as listFunctions } from './listFunctions.js';

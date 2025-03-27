@@ -425,4 +425,90 @@ describe('GliaApiClient', () => {
       expect(results).toEqual([]);
     });
   });
+
+  describe('updateFunction', () => {
+    it('should update a function\'s name and description', async () => {
+      const functionId = 'test-function-id';
+      const updates = {
+        name: 'Updated Function',
+        description: 'Updated Description'
+      };
+      const mockResponse = { 
+        id: functionId, 
+        name: updates.name, 
+        description: updates.description 
+      };
+      fetchMock.mockResponseOnce(JSON.stringify(mockResponse));
+      
+      const result = await api.updateFunction(functionId, updates);
+      
+      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/functions/${functionId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates),
+        headers: expect.objectContaining({
+          'Authorization': `Bearer ${config.bearerToken}`,
+          'Content-Type': 'application/json'
+        }),
+        signal: expect.any(AbortSignal)
+      });
+      expect(result).toEqual(mockResponse);
+    });
+    
+    it('should update only name when only name is provided', async () => {
+      const functionId = 'test-function-id';
+      const updates = { name: 'Updated Function' };
+      const mockResponse = { id: functionId, name: updates.name };
+      fetchMock.mockResponseOnce(JSON.stringify(mockResponse));
+      
+      const result = await api.updateFunction(functionId, updates);
+      
+      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/functions/${functionId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: updates.name }),
+        headers: expect.anything(),
+        signal: expect.anything()
+      });
+      expect(result).toEqual(mockResponse);
+    });
+    
+    it('should update only description when only description is provided', async () => {
+      const functionId = 'test-function-id';
+      const updates = { description: 'Updated Description' };
+      const mockResponse = { id: functionId, description: updates.description };
+      fetchMock.mockResponseOnce(JSON.stringify(mockResponse));
+      
+      const result = await api.updateFunction(functionId, updates);
+      
+      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/functions/${functionId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ description: updates.description }),
+        headers: expect.anything(),
+        signal: expect.anything()
+      });
+      expect(result).toEqual(mockResponse);
+    });
+    
+    it('should validate function ID', async () => {
+      const updates = { name: 'Updated Function' };
+      
+      await expect(api.updateFunction()).rejects.toThrow('Function ID is required');
+      await expect(api.updateFunction('')).rejects.toThrow('Function ID cannot be empty');
+    });
+    
+    it('should validate function name if provided', async () => {
+      const functionId = 'test-function-id';
+      const invalidUpdates = { name: '' };
+      
+      await expect(api.updateFunction(functionId, invalidUpdates)).rejects.toThrow('Function name cannot be empty');
+    });
+    
+    it('should throw FunctionError on failure', async () => {
+      const functionId = 'test-function-id';
+      const updates = { name: 'Updated Function' };
+      fetchMock.mockReject(new Error('Network failure'));
+      
+      await expect(api.updateFunction(functionId, updates)).rejects.toThrow(FunctionError);
+      await expect(api.updateFunction(functionId, updates)).rejects.toThrow('Failed to update function');
+    });
+  });
 });

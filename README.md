@@ -174,6 +174,18 @@ glia-functions create-function --name "My Function" --description "Function desc
 glia-functions list-templates
 ```
 
+#### Update a Function
+```bash
+# Update a function's name
+glia-functions update-function --id "function-id" --name "New Function Name"
+
+# Update a function's description
+glia-functions update-function --id "function-id" --description "New function description"
+
+# Update both name and description
+glia-functions update-function --id "function-id" --name "New Name" --description "New description"
+```
+
 #### Initialize a Project
 ```bash
 # List available project templates

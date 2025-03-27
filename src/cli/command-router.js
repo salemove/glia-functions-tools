@@ -26,6 +26,9 @@ export async function routeCommand(commandName, options = {}) {
       case 'create-function':
         result = await commands.createFunction(options);
         break;
+      case 'update-function':
+        result = await commands.updateFunction(options);
+        break;
       case 'fetch-logs':
         result = await commands.fetchLogs(options);
         break;

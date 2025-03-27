@@ -1488,4 +1488,62 @@ export default class GliaApiClient {
     const operations = await this.offlineManager.operationQueue.getPendingOperations();
     return operations.length;
   }
+  
+  /**
+   * Update function details
+   * 
+   * @param {string} functionId - Function ID
+   * @param {Object} updates - Fields to update
+   * @param {string} [updates.name] - New function name
+   * @param {string} [updates.description] - New function description
+   * @returns {Promise<Object>} - Updated function details
+   */
+  async updateFunction(functionId, updates = {}) {
+    try {
+      validateFunctionId(functionId);
+      
+      // Validate name if provided
+      if (updates.name !== undefined) {
+        validateFunctionName(updates.name);
+      }
+      
+      // Create the update payload
+      const payload = {};
+      if (updates.name !== undefined) payload.name = updates.name;
+      if (updates.description !== undefined) payload.description = updates.description;
+      
+      // Using the correct endpoint from the OpenAPI spec
+      const endpoint = `/functions/${functionId}`;
+      return await this.makeRequest(endpoint, {
+        method: 'PATCH',
+        headers: this._prepareHeaders(),
+        body: JSON.stringify(payload)
+      });
+    } catch (error) {
+      const errorContext = {
+        operation: 'updateFunction',
+        siteId: this.siteId,
+        functionId,
+        updates
+      };
+      
+      if (error instanceof GliaError) {
+        throw new FunctionError(
+          `Failed to update function: ${error.message}`, 
+          { ...errorContext, originalError: error },
+          {
+            cause: error,
+            endpoint: error.endpoint,
+            method: error.method,
+            statusCode: error.statusCode,
+            requestId: error.requestId,
+            requestPayload: error.requestPayload,
+            responseBody: error.responseBody
+          }
+        );
+      } else {
+        throw new FunctionError(`Failed to update function: ${error.message}`, errorContext);
+      }
+    }
+  }
 }
