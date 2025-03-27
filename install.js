@@ -63,7 +63,29 @@ try {
   console.error(`${colors.yellow}Warning: Could not set execute permissions on the CLI script. You may need to do this manually: chmod +x "${cliPath}"${colors.reset}`);
 }
 
-// Run the installation
+// Always install/update dependencies to ensure they're current
+console.log(`${colors.cyan}Installing/updating local dependencies...${colors.reset}`);
+try {
+  // Always use npm install to handle overrides in package.json
+  execSync('npm install', { stdio: 'inherit', cwd: __dirname });
+  
+  // Fix any non-breaking vulnerabilities automatically
+  try {
+    console.log(`${colors.cyan}Fixing non-breaking security vulnerabilities...${colors.reset}`);
+    execSync('npm audit fix --silent', { stdio: 'inherit', cwd: __dirname });
+  } catch (auditError) {
+    // Audit fix failures shouldn't stop the installation process
+    console.log(`${colors.yellow}Note: Some vulnerabilities may require manual review. Run 'npm audit' for details.${colors.reset}`);
+  }
+  
+  console.log(`${colors.green}✓ Dependencies installed successfully!${colors.reset}\n`);
+} catch (error) {
+  console.error(`\n${colors.red}Dependency installation failed:${colors.reset}`, error.message);
+  console.error(`${colors.yellow}Please run 'npm install' manually before proceeding.${colors.reset}`);
+  process.exit(1);
+}
+
+// Run the global installation
 console.log(`${colors.cyan}Installing CLI globally...${colors.reset}`);
 try {
   execSync('npm install -g .', { stdio: 'inherit', cwd: __dirname });

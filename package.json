@@ -63,5 +63,13 @@
   },
   "bugs": {
     "url": "https://github.com/salemove/glia-functions-tools/issues"
+  },
+  "overrides": {
+    "jest": {
+      "glob": "^8.1.0"
+    },
+    "babel-jest": {
+      "inflight": "npm:@isaacs/inflight@^1.0.6"
+    }
   }
 }
