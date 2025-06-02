@@ -511,4 +511,89 @@ describe('GliaApiClient', () => {
       await expect(api.updateFunction(functionId, updates)).rejects.toThrow('Failed to update function');
     });
   });
+  
+  describe('updateVersion', () => {
+    it('should create a new version based on an existing one with only environment variables', async () => {
+      const functionId = 'test-function-id';
+      const versionId = 'test-version-id';
+      const options = {
+        environmentVariables: { KEY: 'value' }
+      };
+      const mockResponse = { 
+        self: '/functions/test-function-id/tasks/task-id',
+        status: 'processing'
+      };
+      fetchMock.mockResponseOnce(JSON.stringify(mockResponse));
+      
+      const result = await api.updateVersion(functionId, versionId, options);
+      
+      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/functions/${functionId}/versions/${versionId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          environment_variables: options.environmentVariables
+        }),
+        headers: expect.objectContaining({
+          'Authorization': `Bearer ${config.bearerToken}`,
+          'Content-Type': 'application/json'
+        }),
+        signal: expect.any(AbortSignal)
+      });
+      expect(result).toEqual(mockResponse);
+    });
+    
+    it('should create a new version based on an existing one with code and environment variables', async () => {
+      const functionId = 'test-function-id';
+      const versionId = 'test-version-id';
+      const options = {
+        code: 'function handler() { return "Hello World"; }',
+        environmentVariables: { KEY: 'value' },
+        compatibilityDate: '2023-01-01'
+      };
+      const mockResponse = { 
+        self: '/functions/test-function-id/tasks/task-id',
+        status: 'processing'
+      };
+      fetchMock.mockResponseOnce(JSON.stringify(mockResponse));
+      
+      const result = await api.updateVersion(functionId, versionId, options);
+      
+      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/functions/${functionId}/versions/${versionId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          code: options.code,
+          environment_variables: options.environmentVariables,
+          compatibility_date: options.compatibilityDate
+        }),
+        headers: expect.anything(),
+        signal: expect.anything()
+      });
+      expect(result).toEqual(mockResponse);
+    });
+    
+    it('should require at least code or environmentVariables', async () => {
+      const functionId = 'test-function-id';
+      const versionId = 'test-version-id';
+      const options = {}; // Empty options
+      
+      await expect(api.updateVersion(functionId, versionId, options)).rejects.toThrow(ValidationError);
+      await expect(api.updateVersion(functionId, versionId, options)).rejects.toThrow('At least one of code or environmentVariables must be provided');
+    });
+    
+    it('should validate function ID and version ID', async () => {
+      const options = { environmentVariables: { KEY: 'value' } };
+      
+      await expect(api.updateVersion()).rejects.toThrow('Function ID is required');
+      await expect(api.updateVersion('test-id')).rejects.toThrow('Version ID is required');
+    });
+    
+    it('should throw FunctionError on failure', async () => {
+      const functionId = 'test-function-id';
+      const versionId = 'test-version-id';
+      const options = { environmentVariables: { KEY: 'value' } };
+      fetchMock.mockReject(new Error('Network failure'));
+      
+      await expect(api.updateVersion(functionId, versionId, options)).rejects.toThrow(FunctionError);
+      await expect(api.updateVersion(functionId, versionId, options)).rejects.toThrow('Failed to update function version');
+    });
+  });
 });
