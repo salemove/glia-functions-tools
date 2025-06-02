@@ -17,7 +17,7 @@
  */
 
 import dotenv from 'dotenv';
-import { ConfigurationError } from './errors.js';
+import { ConfigurationError, AuthenticationError } from './errors.js';
 import * as fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -160,11 +160,17 @@ export async function loadConfig() {
   const localEnv = loadEnvFile(LOCAL_CONFIG_FILE);
   
   // Merge environment variables in order of precedence:
-  // 1. Local .env file (highest precedence)
-  // 2. Active profile config
-  // 3. Global config file
-  // 4. Process environment variables (already loaded)
-  Object.assign(process.env, globalEnv, profileEnv, localEnv);
+  // 1. Process environment variables (lowest precedence) 
+  // 2. Global config file
+  // 3. Active profile config
+  // 4. Local .env file (highest precedence)
+  // Fix: Changed order to correctly apply precedence (process.env needs to be last parameter)
+  const combinedEnv = { ...process.env, ...globalEnv, ...profileEnv, ...localEnv };
+  
+  // Assign back to process.env
+  Object.keys(combinedEnv).forEach(key => {
+    process.env[key] = combinedEnv[key];
+  });
   
   // Create final config object
   const config = {
@@ -233,9 +239,10 @@ export async function getApiConfig() {
 /**
  * Checks if the current bearer token is valid and not expired
  * 
+ * @param {boolean} [attemptRefresh=false] - Whether to attempt to refresh an expired token
  * @returns {Promise<boolean>} True if token exists, has not expired, and has a site ID
  */
-export async function hasValidBearerToken() {
+export async function hasValidBearerToken(attemptRefresh = false) {
   try {
     const config = await loadConfig();
     
@@ -250,6 +257,14 @@ export async function hasValidBearerToken() {
       const expiryTimeWithBuffer = config.tokenExpiresAt - (5 * 60 * 1000);
       
       if (now >= expiryTimeWithBuffer) {
+        console.log(`Token expired or about to expire. Current time: ${new Date(now).toISOString()}, expiry: ${new Date(config.tokenExpiresAt).toISOString()}`);
+        
+        // If requested, try to refresh the token automatically
+        if (attemptRefresh && config.keyId && config.keySecret) {
+          const refreshed = await refreshBearerTokenIfNeeded();
+          return refreshed;
+        }
+        
         return false; // Token has expired or is about to expire
       }
     }
@@ -281,6 +296,89 @@ export async function validateToken(token, apiUrl) {
     
     return response.ok;
   } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Automatically refreshes the bearer token if needed
+ * 
+ * @returns {Promise<boolean>} True if token was refreshed, false if no refresh was needed or possible
+ */
+export async function refreshBearerTokenIfNeeded() {
+  try {
+    const config = await loadConfig();
+    
+    // Skip if we don't have credentials to refresh the token
+    if (!config.keyId || !config.keySecret) {
+      console.log('Cannot refresh token: API credentials not found');
+      return false;
+    }
+    
+    // Check if we need to refresh the token
+    const needsRefresh = !config.bearerToken || 
+                        !config.tokenExpiresAt ||
+                        Date.now() >= (config.tokenExpiresAt - (5 * 60 * 1000)); // 5 min buffer
+    
+    if (!needsRefresh) {
+      return false; // Token is still valid
+    }
+    
+    console.log('Token expired or about to expire, refreshing...');
+    
+    // Fetch a new bearer token
+    const response = await fetch(`${config.apiUrl || 'https://api.glia.com'}/operator_authentication/tokens`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.salemove.v1+json'
+      },
+      body: JSON.stringify({
+        api_key_id: config.keyId,
+        api_key_secret: config.keySecret
+      })
+    });
+    
+    if (!response.ok) {
+      throw new AuthenticationError(`Failed to refresh token: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    // Calculate expiration time
+    const expiresInMs = data.expires_in ? data.expires_in * 1000 : 55 * 60 * 1000;
+    const expiresAt = Date.now() + expiresInMs;
+    
+    // Update the token in config
+    const tokenUpdates = {
+      'GLIA_BEARER_TOKEN': data.token,
+      'GLIA_TOKEN_EXPIRES_AT': expiresAt
+    };
+    
+    // Update process.env immediately
+    process.env.GLIA_BEARER_TOKEN = data.token;
+    process.env.GLIA_TOKEN_EXPIRES_AT = expiresAt.toString();
+    
+    // Update the storage based on active profile
+    const profileName = getCurrentProfileName();
+    
+    if (profileName !== 'default') {
+      // Update the profile
+      await updateProfile(profileName, tokenUpdates);
+    } else {
+      // Update global config
+      await updateGlobalConfig(tokenUpdates);
+    }
+    
+    // Also update local .env if it exists
+    if (fs.existsSync(LOCAL_CONFIG_FILE)) {
+      await updateEnvFile(tokenUpdates);
+    }
+    
+    console.log('Bearer token refreshed successfully');
+    return true;
+  } catch (error) {
+    console.error(`Error refreshing bearer token: ${error.message}`);
     return false;
   }
 }
@@ -426,7 +524,13 @@ export async function switchProfile(profileName) {
   
   // Check if profile exists
   if (!fs.existsSync(profilePath)) {
-    throw new ConfigurationError(`Profile ${profileName} does not exist`);
+    // Special handling for default profile - create it if missing
+    if (profileName === 'default') {
+      console.log(`Creating missing default profile at ${profilePath}`);
+      await createProfile('default');
+    } else {
+      throw new ConfigurationError(`Profile ${profileName} does not exist`);
+    }
   }
   
   // Update global config to use this profile

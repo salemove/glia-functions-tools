@@ -18,6 +18,11 @@ import BaseCommand from '../cli/base-command.js';
  */
 export async function updateFunction(options) {
   try {
+    // Validate that at least one field is being updated
+    if (options.name === undefined && options.description === undefined) {
+      throw new Error('Please provide at least one field to update (name or description)');
+    }
+    
     // Get API configuration
     const apiConfig = await getApiConfig();
     
@@ -30,13 +35,11 @@ export async function updateFunction(options) {
     if (options.description !== undefined) updates.description = options.description;
     
     // Update function
-    console.log(`Updating function "${options.id}"...`);
     const updatedFunction = await api.updateFunction(options.id, updates);
-    console.log('Function updated:', updatedFunction);
     
     return updatedFunction;
   } catch (error) {
-    console.error('Error updating function:', error);
+    // Don't handle errors here - propagate to caller for consistent handling
     throw error;
   }
 }
@@ -51,11 +54,8 @@ async function main() {
     .option('--description <description>', 'New function description')
     .action(async (options) => {
       try {
-        // Validate that at least one update field is provided
-        if (options.name === undefined && options.description === undefined) {
-          command.error('Please provide at least one field to update (--name or --description)');
-          return;
-        }
+        // Show operation status
+        command.info(`Updating function "${options.id}"...`);
         
         // Update the function
         const result = await updateFunction({
@@ -75,7 +75,8 @@ async function main() {
           command.info(`Description: ${result.description}`);
         }
       } catch (error) {
-        command.error(`Failed to update function: ${error.message}`);
+        // Let the BaseCommand's error handler process this consistently with other commands
+        throw error;
       }
     });
     

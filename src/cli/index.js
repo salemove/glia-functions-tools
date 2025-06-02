@@ -314,10 +314,11 @@ async function createBearerToken(keyId, keySecret, apiUrl) {
     
     const data = await response.json();
     
-    // Calculate expiration time (tokens typically expire after 24 hours)
-    // If the API doesn't provide an expiration time, we'll set a default of 23.5 hours
+    // Calculate expiration time
+    // The Glia API provides tokens that expire after 1 hour (3600 seconds)
+    // If the API doesn't provide an expiration time, we'll set a default of 55 minutes
     // to be safe and allow for refresh before actual expiration
-    const expiresInMs = data.expires_in ? data.expires_in * 1000 : 23.5 * 60 * 60 * 1000;
+    const expiresInMs = data.expires_in ? data.expires_in * 1000 : 55 * 60 * 1000;
     const expiresAt = Date.now() + expiresInMs;
     
     return {
@@ -902,6 +903,11 @@ const CLIFunctionDetailsMenu = async (functionId) => {
           description: 'Bundle and create a new function version or update env. variables.',
         },
         {
+          name: 'Manage environment variables',
+          value: 'manageEnvVars',
+          description: 'View, add, update, or delete environment variables for this function.',
+        },
+        {
           name: 'Update function details',
           value: 'updateFunction',
           description: 'Update function name and description.',
@@ -934,6 +940,7 @@ const CLIFunctionDetailsMenu = async (functionId) => {
       case 'updateFunction': await CLIUpdateFunction(functionId, functionDetails); return false;
       case 'functionVersions': await CLIFunctionVersions(functionId, functionDetails.current_version); return false;
       case 'functionInvoke': await CLIFunctionInvoke(functionId, functionDetails.invocation_uri); return false;
+      case 'manageEnvVars': await routeCommand('update-env-vars', { id: functionId, interactive: true }); return false;
       case 'back': await CLIBuildMenu(); return false;
     }
   } catch (error) {
@@ -1051,7 +1058,17 @@ const CLIFunctionVersions = async (functionId, currentVersion) => {
     let choices = versions.function_versions.map(item => ({
       name: `${currentVersion && currentVersion.id === item.id ? '(current)' : ''} ${item.id} (created at ${item.created_at})`,
       value: item.id,
+      description: item.id === currentVersion?.id ? 'Currently deployed version' : undefined
     }));
+
+    // Add special quick access option for env vars of current version
+    if (currentVersion) {
+      choices.unshift({
+        name: `Manage environment variables (current version)`,
+        value: `env_vars_${currentVersion.id}`,
+        description: `Quickly manage environment variables for the currently deployed version`
+      });
+    }
 
     choices.push({
       name: '(Back)',
@@ -1065,6 +1082,11 @@ const CLIFunctionVersions = async (functionId, currentVersion) => {
 
     if (versionSelect === 'back') {
       await CLIFunctionDetailsMenu(functionId);
+      return false;
+    } else if (versionSelect.startsWith('env_vars_')) {
+      // Extract version ID and route to env vars management
+      const versionId = versionSelect.replace('env_vars_', '');
+      await routeCommand('update-env-vars', { id: functionId, interactive: true });
       return false;
     }
 
@@ -1107,6 +1129,16 @@ const CLIFunctionVersion = async (functionId, versionId) => {
           description: 'Mark this function version as main.',
         },
         {
+          name: 'Update environment variables (CLI method)',
+          value: 'updateEnvironment',
+          description: 'Create a new version based on this one with updated environment variables',
+        },
+        {
+          name: 'Manage environment variables (interactive)',
+          value: 'manageEnvVars',
+          description: 'Interactive UI for adding/updating/removing environment variables',
+        },
+        {
           name: '(Back)',
           value: 'back'
         }
@@ -1115,6 +1147,8 @@ const CLIFunctionVersion = async (functionId, versionId) => {
     
     switch(answer) {
       case 'deployFunction': await CLIDeployFunction(functionId, versionId); return false;
+      case 'updateEnvironment': await CLIUpdateEnvironment(functionId, versionId, version); return false;
+      case 'manageEnvVars': await routeCommand('update-env-vars', { id: functionId, interactive: true }); return false;
       case 'back': await CLIFunctionDetailsMenu(functionId); return false;
     }
   } catch (error) {
@@ -1150,6 +1184,151 @@ const CLIDeployFunction = async (functionId, versionId) => {
 }
 
 /**
+ * Update environment variables for a function version
+ * Uses the standardized updateEnvVars command for consistency
+ * 
+ * @param {string} functionId - Function ID
+ * @param {string} versionId - Version ID to use as base
+ * @param {Object} version - Version details
+ */
+const CLIUpdateEnvironment = async (functionId, versionId, version) => {
+  try {
+    console.log(separator);
+    console.log(chalk.bold('Update environment variables:'));
+    
+    // Show current environment variables if available
+    const currentEnvVars = version.defined_environment_variables || [];
+    
+    if (currentEnvVars.length > 0) {
+      console.log(chalk.blue('Current environment variables:'));
+      currentEnvVars.forEach(varName => {
+        console.log(`- ${varName}`);
+      });
+      console.log('');
+    } else {
+      console.log(chalk.blue('No environment variables currently defined.'));
+      console.log('');
+    }
+    
+    // Ask for environment variables as JSON
+    const envString = await editor({
+      message: 'Enter environment variables as JSON:',
+      default: currentEnvVars.length > 0 
+        ? '{\n  // Existing variables - values are not shown for security\n  // Update as needed or add new variables\n' + 
+          currentEnvVars.map(varName => `  "${varName}": ""`).join(',\n') + 
+          '\n}'
+        : '{\n  "NEW_VARIABLE": "value",\n  "ANOTHER_VARIABLE": "another value"\n}',
+      postfix: '.json'
+    });
+    
+    let envVars;
+    try {
+      // Validate JSON
+      envVars = parseAndValidateJson(envString);
+      showInfo('Environment variables validated.');
+    } catch (err) {
+      showWarning(`Invalid JSON format: ${err.message}`);
+      await CLIFunctionVersion(functionId, versionId);
+      return false;
+    }
+    
+    // Confirm update
+    const confirmUpdate = await confirm({
+      message: 'Create new version with these environment variables?',
+      default: true
+    });
+    
+    if (!confirmUpdate) {
+      showInfo('Update cancelled');
+      await CLIFunctionVersion(functionId, versionId);
+      return false;
+    }
+    
+    // Get API configuration
+    const apiConfig = await getApiConfig();
+    
+    // Create API client
+    const api = new GliaApiClient(apiConfig);
+    
+    // Create a new version based on the existing one with updated environment variables
+    showInfo('Creating new version...');
+    
+    const options = {
+      environmentVariables: envVars
+    };
+    
+    // Use the updateVersion method which handles the PATCH endpoint
+    const result = await api.updateVersion(functionId, versionId, options);
+    
+    showSuccess('Function version creation task started');
+    console.log(result);
+    
+    // Offer to automatically deploy the new version once it's ready
+    const autoDeploy = await confirm({
+      message: 'Would you like to check and automatically deploy this version when it\'s ready?',
+      default: true
+    });
+    
+    if (autoDeploy) {
+      // Poll the task endpoint until the version is ready
+      showInfo('Waiting for version to be created...');
+      
+      let taskCompleted = false;
+      let newVersionId = null;
+      
+      // Extract task ID from the response
+      const taskPath = result.self;
+      const taskId = taskPath.split('/').pop();
+      
+      // Poll every 2 seconds until task completes or fails
+      while (!taskCompleted) {
+        await new Promise(resolve => setTimeout(resolve, 2000)); // 2-second delay
+        
+        try {
+          const taskResult = await api.getVersionCreationTask(functionId, taskId);
+          
+          if (taskResult.status === 'completed') {
+            taskCompleted = true;
+            newVersionId = taskResult.entity?.id;
+            showSuccess('New version created successfully');
+          } else if (taskResult.status === 'failed') {
+            taskCompleted = true;
+            showWarning('Version creation failed');
+          } else {
+            process.stdout.write('.');
+          }
+        } catch (error) {
+          showWarning(`Error checking task status: ${error.message}`);
+          break;
+        }
+      }
+      
+      // Deploy if we have a new version ID
+      if (newVersionId) {
+        const confirmDeploy = await confirm({
+          message: `Deploy new version ${newVersionId} now?`,
+          default: true
+        });
+        
+        if (confirmDeploy) {
+          try {
+            await api.deployVersion(functionId, newVersionId);
+            showSuccess('New version deployed successfully');
+          } catch (error) {
+            showWarning(`Error deploying new version: ${error.message}`);
+          }
+        }
+      }
+    }
+    
+    await CLIFunctionDetailsMenu(functionId);
+    return false;
+  } catch (error) {
+    handleError(error);
+  }
+}
+
+/**
  * View function logs
  * 
  * @param {string} functionId - Function ID
@@ -1159,16 +1338,119 @@ const CLIFunctionLogs = async (functionId) => {
     console.log(separator);
     console.log(chalk.bold('Function logs:'));
     
+    // Fetch logs options
+    const fetchAllLogs = await confirm({
+      message: 'Fetch all logs (follows pagination)?',
+      default: true
+    });
+    
+    const limitPerPage = await input({
+      message: 'Number of logs per page:',
+      default: '1000'
+    });
+    
+    const useTimeRange = await confirm({
+      message: 'Filter logs by time range?',
+      default: false
+    });
+    
+    let startTime = null;
+    let endTime = null;
+    
+    if (useTimeRange) {
+      // Helper function to get a default time X hours ago in ISO format
+      const getTimeAgo = (hoursAgo) => {
+        const date = new Date();
+        date.setHours(date.getHours() - hoursAgo);
+        return date.toISOString();
+      };
+      
+      startTime = await input({
+        message: 'Start time (ISO-8601 format):',
+        default: getTimeAgo(24) // Default to 24 hours ago
+      });
+      
+      endTime = await input({
+        message: 'End time (ISO-8601 format):',
+        default: new Date().toISOString() // Default to now
+      });
+    }
+    
+    console.log(chalk.blue('Fetching logs, please wait...'));
+    
     // Get API configuration
     const apiConfig = await getApiConfig();
     
     // Create API client
     const api = new GliaApiClient(apiConfig);
     
-    // Get logs
-    const logs = await api.getFunctionLogs(functionId);
+    // Create a mock BaseCommand for progress reporting
+    const mockCommand = {
+      info: (message) => console.log(chalk.blue(message))
+    };
     
-    process.stdout.write(JSON.stringify(logs, null, 2));
+    // Options for the fetch logs command
+    const options = {
+      functionId,
+      logsOptions: {
+        limit: parseInt(limitPerPage, 10),
+        startTime,
+        endTime
+      },
+      fetchAll: fetchAllLogs,
+      command: mockCommand
+    };
+    
+    // Import the fetchLogs function from commands
+    const { fetchLogs } = await import('../commands/fetchLogs.js');
+    
+    // Fetch logs with the requested options
+    const logs = await fetchLogs(options);
+    
+    // Show logs count
+    if (logs.logs && logs.logs.length > 0) {
+      console.log(chalk.green(`Found ${logs.logs.length} log entries`));
+      
+      // Display logs as a table with timestamps and messages
+      console.log(separator);
+      console.log(chalk.bold('Latest logs:'));
+      
+      // Sort logs by timestamp (most recent first)
+      const sortedLogs = [...logs.logs].sort((a, b) => 
+        new Date(b.timestamp) - new Date(a.timestamp)
+      );
+      
+      // Display up to 50 most recent logs
+      const displayLimit = 50;
+      const logsToShow = sortedLogs.slice(0, displayLimit);
+      
+      logsToShow.forEach(log => {
+        const timestamp = new Date(log.timestamp).toLocaleString();
+        console.log(`[${timestamp}] ${log.message}`);
+      });
+      
+      if (sortedLogs.length > displayLimit) {
+        console.log(chalk.blue(`\nShowing ${displayLimit} most recent logs out of ${sortedLogs.length} total`));
+      }
+      
+      // Offer to save logs to file
+      const saveToFile = await confirm({
+        message: 'Save logs to file?',
+        default: true
+      });
+      
+      if (saveToFile) {
+        const filePath = await input({
+          message: 'File path:',
+          default: './function-logs.json'
+        });
+        
+        await fs.writeFileSync(filePath, JSON.stringify(logs, null, 2));
+        console.log(chalk.green(`Logs saved to ${filePath}`));
+      }
+    } else {
+      console.log(chalk.yellow('No logs found for this function'));
+    }
     
     await CLIFunctionDetailsMenu(functionId);
     return false;
@@ -1235,8 +1517,8 @@ export async function runCLI() {
   try {
     CLIIntro();
     
-    // Check if we have valid API configuration
-    const hasToken = await hasValidBearerToken();
+    // Check if we have valid API configuration and attempt to refresh if expired
+    const hasToken = await hasValidBearerToken(true);
     
     if (hasToken) {
       // If user has a valid token, skip the main menu and go directly to the build menu
@@ -1670,6 +1952,89 @@ const CLIUpdateFunction = async (functionId, functionDetails) => {
     return false;
   } catch (error) {
     handleError(error);
+  }
+};
+
+/**
+ * Environment variables management menu
+ */
+const CLIManageEnvVars = async () => {
+  try {
+    console.log(separator);
+    console.log(chalk.bold('Environment Variables Management'));
+    
+    // Get API configuration
+    const apiConfig = await getApiConfig();
+    
+    // Create API client
+    const api = new GliaApiClient(apiConfig);
+    
+    // First get functions list
+    console.log(chalk.blue('Fetching functions list...'));
+    const list = await api.listFunctions();
+    
+    if (!list?.functions || list.functions.length === 0) {
+      showInfo('No functions found');
+      await CLIBuildMenu();
+      return false;
+    }
+    
+    // Create choices from functions
+    const choices = list.functions.map(item => ({
+      name: item.name,
+      value: item.id,
+    }));
+    
+    choices.push({
+      name: '(Back)',
+      value: 'back',
+    });
+    
+    // Select function
+    const functionId = await select({
+      message: 'Select function to manage environment variables:',
+      choices
+    });
+    
+    if (functionId === 'back') {
+      await CLIBuildMenu();
+      return false;
+    }
+    
+    // Get function details
+    const functionDetails = await api.getFunction(functionId);
+    
+    // Check if function has a current version
+    if (!functionDetails.current_version || !functionDetails.current_version.id) {
+      showWarning(`Function ${functionDetails.name} has no current version deployed.`);
+      const continueAnyway = await confirm({
+        message: 'Would you like to create a new version with environment variables?',
+        default: false
+      });
+      
+      if (!continueAnyway) {
+        await CLIBuildMenu();
+        return false;
+      }
+      
+      // If continuing, redirect to create new version with env vars
+      await CLINewVersion(functionId);
+      return false;
+    }
+    
+    // Directly use update-env-vars command in interactive mode
+    const result = await routeCommand('update-env-vars', { 
+      id: functionId, 
+      interactive: true 
+    }, false);
+    
+    // After completing environment variable management, return to build menu
+    await CLIBuildMenu();
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIBuildMenu();
+    return false;
   }
 };
 
