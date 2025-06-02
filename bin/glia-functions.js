@@ -259,7 +259,10 @@ program
         process.exit(1);
       }
       
-      // Run the update function command
+      // Show progress
+      console.log(chalk.blue('ℹ️  Info:'), `Updating function "${options.id}"...`);
+      
+      // Let routeCommand handle errors consistently
       const result = await routeCommand('update-function', options);
       
       // Display success message
@@ -280,7 +283,9 @@ program
       }, 100);
       
     } catch (error) {
-      console.error(chalk.red(`Error updating function: ${error.message}`));
+      // Use the standardized error handler from error-handler.js
+      const { handleError } = await import('../src/cli/error-handler.js');
+      handleError(error);
       
       // Delay exit to ensure error is flushed
       setTimeout(() => {

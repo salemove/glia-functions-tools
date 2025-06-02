@@ -131,6 +131,51 @@ program
     });
   });
 
+// Environment variables management command
+program
+  .command('update-env-vars')
+  .description('Manage environment variables for a function')
+  .requiredOption('--id <id>', 'Function ID')
+  .option('--list', 'List current environment variables')
+  .option('--env <envVars>', 'Environment variables to update (JSON string)')
+  .option('--env-file <path>', 'Path to JSON file containing environment variables')
+  .option('--no-deploy', 'Create new version but don\'t deploy it')
+  .option('--interactive', 'Interactive mode for adding/updating/deleting variables')
+  .option('--output <path>', 'Export environment variables to file (with --list)')
+  .action(async (options) => {
+    try {
+      // Parse env file if specified
+      if (options.envFile) {
+        try {
+          const fs = await import('fs');
+          if (!fs.existsSync(options.envFile)) {
+            console.error(`File not found: ${options.envFile}`);
+            process.exit(1);
+          }
+          
+          options.env = fs.readFileSync(options.envFile, 'utf8');
+          console.log(chalk.blue(`Loaded environment variables from ${options.envFile}`));
+        } catch (error) {
+          console.error(`Failed to read environment variables file: ${error.message}`);
+          process.exit(1);
+        }
+      }
+      
+      // Forward command to the router
+      await routeCommand('update-env-vars', {
+        id: options.id,
+        list: options.list,
+        env: options.env,
+        deploy: options.deploy,
+        interactive: options.interactive,
+        output: options.output
+      });
+    } catch (error) {
+      console.error(chalk.red(`Error managing environment variables: ${error.message}`));
+      process.exit(1);
+    }
+  });
+
 // Handle interactive mode when no arguments provided
 if (process.argv.length <= 2) {
   runCLI().catch(error => {
