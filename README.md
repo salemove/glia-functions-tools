@@ -203,6 +203,24 @@ glia-functions init --template api-integration --variables "projectName=My API,a
 glia-functions deploy --function-id <id> --version-id <id>
 ```
 
+#### Update Environment Variables
+```bash
+# Create a new version based on an existing one with new environment variables
+glia-functions update-version --function-id <id> --version-id <id> --env-vars '{"KEY":"new_value"}'
+
+# List current environment variables for a function
+glia-functions update-env-vars --id <function-id> --list
+
+# Update environment variables for a function (adds a new version with updated env vars)
+glia-functions update-env-vars --id <function-id> --env '{"KEY":"value","ANOTHER_KEY":"another_value"}'
+
+# Update environment variables without deploying
+glia-functions update-env-vars --id <function-id> --env '{"KEY":"value"}' --no-deploy
+
+# Interactive UI for adding/updating/removing environment variables
+glia-functions update-env-vars --id <function-id> --interactive
+```
+
 #### Invoke a Function
 ```bash
 glia-functions invoke-function --function-id <id> --payload '{"key": "value"}'
@@ -210,7 +228,17 @@ glia-functions invoke-function --function-id <id> --payload '{"key": "value"}'
 
 #### Fetch Function Logs
 ```bash
+# Fetch most recent logs (first page only)
 glia-functions fetch-logs --function-id <id>
+
+# Fetch all logs across all pages
+glia-functions fetch-logs --function-id <id> --all
+
+# Fetch logs with time range and custom output file
+glia-functions fetch-logs --function-id <id> --start-time "2023-10-19T00:00:00Z" --end-time "2023-10-20T00:00:00Z" --output ./my-logs.json
+
+# Specify maximum entries per page (default is 1000, which is the API maximum)
+glia-functions fetch-logs --function-id <id> --limit 500
 ```
 
 #### Run Local Development Server
