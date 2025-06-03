@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: lib/config.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: lib/config.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * Configuration management for Glia Functions CLI
+ * 
+ * Handles loading environment variables and managing configuration settings
+ * Supports both local (.env) and global (~/.glia-cli/config.env) credentials
+ * Includes profile management for multiple environments
+ * 
+ * The configuration system uses a layered approach for maximum flexibility:
+ * 1. CLI arguments (highest precedence)
+ * 2. Local .env file 
+ * 3. Active profile config
+ * 4. Global config file
+ * 5. Environment variables
+ * 6. Default values (lowest precedence)
+ * 
+ * @module config
+ */
+
+import dotenv from 'dotenv';
+import { ConfigurationError, AuthenticationError } from './errors.js';
+import * as fs from 'fs';
+import path from 'path';
+import os from 'os';
+
+// Default configuration values
+const DEFAULT_CONFIG = {
+  apiUrl: 'https://api.glia.com',
+  defaultProfile: 'default'
+};
+
+// Global config paths
+const GLOBAL_CONFIG_DIR = path.join(os.homedir(), '.glia-cli');
+const GLOBAL_CONFIG_FILE = path.join(GLOBAL_CONFIG_DIR, 'config.env');
+const PROFILES_DIR = path.join(GLOBAL_CONFIG_DIR, 'profiles');
+const LOCAL_CONFIG_FILE = './.env';
+
+// Ensure global config and profiles directories exist
+try {
+  if (!fs.existsSync(GLOBAL_CONFIG_DIR)) {
+    fs.mkdirSync(GLOBAL_CONFIG_DIR, { recursive: true });
+  }
+  if (!fs.existsSync(PROFILES_DIR)) {
+    fs.mkdirSync(PROFILES_DIR, { recursive: true });
+  }
+} catch (error) {
+  // Silent fail - we'll handle this during actual operations
+  console.error(`Warning: Could not create global config directory: ${error.message}`);
+}
+
+/**
+ * Gets the current active profile name from the global config
+ * 
+ * @returns {string} Current profile name or 'default'
+ */
+function getCurrentProfileName() {
+  try {
+    if (process.env.GLIA_PROFILE) {
+      return process.env.GLIA_PROFILE;
+    }
+    
+    // Try to get from global config
+    if (fs.existsSync(GLOBAL_CONFIG_FILE)) {
+      const globalConfig = loadEnvFile(GLOBAL_CONFIG_FILE);
+      if (globalConfig.GLIA_PROFILE) {
+        return globalConfig.GLIA_PROFILE;
+      }
+    }
+    
+    // Default profile if none specified
+    return DEFAULT_CONFIG.defaultProfile;
+  } catch (error) {
+    return DEFAULT_CONFIG.defaultProfile;
+  }
+}
+
+/**
+ * Gets the path to the active profile configuration file
+ * 
+ * @param {string} profileName - Profile name
+ * @returns {string} Path to profile config file
+ */
+function getProfilePath(profileName) {
+  return path.join(PROFILES_DIR, `${profileName}.env`);
+}
+
+/**
+ * Load from a specific dotenv file if it exists
+ *
+ * @param {string} filePath - Path to .env file
+ * @returns {Object} Environment variables loaded from the file or empty object
+ */
+function loadEnvFile(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) {
+      return {};
+    }
+    
+    // Load the env file and return parsed contents
+    const result = dotenv.config({ path: filePath });
+    
+    if (result.error) {
+      console.error(`Warning: Error loading ${filePath}: ${result.error.message}`);
+      return {};
+    }
+    
+    return result.parsed || {};
+  } catch (error) {
+    console.error(`Warning: Could not load ${filePath}: ${error.message}`);
+    return {};
+  }
+}
+
+/**
+ * Lists all available profiles
+ * 
+ * @returns {Array&lt;string>} List of profile names
+ */
+export function listProfiles() {
+  try {
+    if (!fs.existsSync(PROFILES_DIR)) {
+      return [];
+    }
+    
+    const files = fs.readdirSync(PROFILES_DIR);
+    return files
+      .filter(file => file.endsWith('.env'))
+      .map(file => file.replace(/\.env$/, ''));
+  } catch (error) {
+    console.error(`Warning: Error listing profiles: ${error.message}`);
+    return [];
+  }
+}
+
+/**
+ * Loads the configuration from environment variables and .env files
+ * Uses layered configuration resolution:
+ * 1. CLI args (already in process.env)
+ * 2. Local .env file 
+ * 3. Active profile config
+ * 4. Global config file
+ * 5. Default values
+ * 
+ * @returns {Object} The loaded configuration
+ */
+export async function loadConfig() {
+  // Start with process.env defaults
+  const originalEnvVars = { ...process.env };
+  
+  // Get active profile name
+  const profileName = getCurrentProfileName();
+  
+  // Load profile config if it exists (medium precedence)
+  const profilePath = getProfilePath(profileName);
+  const profileEnv = loadEnvFile(profilePath);
+  
+  // Load global config (lower precedence)
+  const globalEnv = loadEnvFile(GLOBAL_CONFIG_FILE);
+  
+  // Load local config (highest precedence)
+  const localEnv = loadEnvFile(LOCAL_CONFIG_FILE);
+  
+  // Merge environment variables in order of precedence:
+  // 1. Process environment variables (lowest precedence) 
+  // 2. Global config file
+  // 3. Active profile config
+  // 4. Local .env file (highest precedence)
+  // Fix: Changed order to correctly apply precedence (process.env needs to be last parameter)
+  const combinedEnv = { ...process.env, ...globalEnv, ...profileEnv, ...localEnv };
+  
+  // Assign back to process.env
+  Object.keys(combinedEnv).forEach(key => {
+    process.env[key] = combinedEnv[key];
+  });
+  
+  // Create final config object
+  const config = {
+    keyId: process.env.GLIA_KEY_ID,
+    keySecret: process.env.GLIA_KEY_SECRET,
+    siteId: process.env.GLIA_SITE_ID,
+    apiUrl: process.env.GLIA_API_URL || DEFAULT_CONFIG.apiUrl,
+    bearerToken: process.env.GLIA_BEARER_TOKEN,
+    tokenExpiresAt: process.env.GLIA_TOKEN_EXPIRES_AT ? 
+      parseInt(process.env.GLIA_TOKEN_EXPIRES_AT, 10) : null,
+    profile: profileName
+  };
+  
+  return config;
+}
+
+/**
+ * Validates the loaded configuration
+ * 
+ * @param {Object} config - The configuration to validate
+ * @param {Array&lt;string>} requiredFields - List of fields that must be present
+ * @returns {Object} The validated configuration
+ * @throws {ConfigurationError} If required configuration is missing
+ */
+export function validateConfig(config, requiredFields = []) {
+  const missingFields = [];
+  
+  for (const field of requiredFields) {
+    if (!config[field]) {
+      missingFields.push(field);
+    }
+  }
+  
+  if (missingFields.length > 0) {
+    throw new ConfigurationError(
+      `Missing required configuration: ${missingFields.join(', ')}`,
+      { missingFields }
+    );
+  }
+  
+  return config;
+}
+
+/**
+ * Gets configuration for authentication
+ * 
+ * @returns {Object} Authentication configuration
+ * @throws {ConfigurationError} If required auth configuration is missing
+ */
+export async function getAuthConfig() {
+  const config = await loadConfig();
+  return validateConfig(config, ['keyId', 'keySecret']);
+}
+
+/**
+ * Gets configuration for API operations
+ * 
+ * @returns {Object} API configuration
+ * @throws {ConfigurationError} If required API configuration is missing
+ */
+export async function getApiConfig() {
+  const config = await loadConfig();
+  return validateConfig(config, ['bearerToken', 'siteId', 'apiUrl']);
+}
+
+/**
+ * Checks if the current bearer token is valid and not expired
+ * 
+ * @param {boolean} [attemptRefresh=false] - Whether to attempt to refresh an expired token
+ * @returns {Promise&lt;boolean>} True if token exists, has not expired, and has a site ID
+ */
+export async function hasValidBearerToken(attemptRefresh = false) {
+  try {
+    const config = await loadConfig();
+    
+    if (!config.bearerToken || !config.siteId) {
+      return false;
+    }
+    
+    // Check if token has an expiration time
+    if (config.tokenExpiresAt) {
+      // Check if token has expired (adding a 5-min buffer)
+      const now = Date.now();
+      const expiryTimeWithBuffer = config.tokenExpiresAt - (5 * 60 * 1000);
+      
+      if (now >= expiryTimeWithBuffer) {
+        console.log(`Token expired or about to expire. Current time: ${new Date(now).toISOString()}, expiry: ${new Date(config.tokenExpiresAt).toISOString()}`);
+        
+        // If requested, try to refresh the token automatically
+        if (attemptRefresh &amp;&amp; config.keyId &amp;&amp; config.keySecret) {
+          const refreshed = await refreshBearerTokenIfNeeded();
+          return refreshed;
+        }
+        
+        return false; // Token has expired or is about to expire
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Validates a token against the API
+ * 
+ * @param {string} token - The token to validate
+ * @param {string} apiUrl - API URL
+ * @returns {Promise&lt;boolean>} True if token is valid
+ */
+export async function validateToken(token, apiUrl) {
+  if (!token || !apiUrl) return false;
+  
+  try {
+    // Simple request to test the token - just fetch user info
+    const response = await fetch(`${apiUrl}/operator_authentication/sessions/current`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.salemove.v1+json'
+      }
+    });
+    
+    return response.ok;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Automatically refreshes the bearer token if needed
+ * 
+ * @returns {Promise&lt;boolean>} True if token was refreshed, false if no refresh was needed or possible
+ */
+export async function refreshBearerTokenIfNeeded() {
+  try {
+    const config = await loadConfig();
+    
+    // Skip if we don't have credentials to refresh the token
+    if (!config.keyId || !config.keySecret) {
+      console.log('Cannot refresh token: API credentials not found');
+      return false;
+    }
+    
+    // Check if we need to refresh the token
+    const needsRefresh = !config.bearerToken || 
+                        !config.tokenExpiresAt ||
+                        Date.now() >= (config.tokenExpiresAt - (5 * 60 * 1000)); // 5 min buffer
+    
+    if (!needsRefresh) {
+      return false; // Token is still valid
+    }
+    
+    console.log('Token expired or about to expire, refreshing...');
+    
+    // Fetch a new bearer token
+    const response = await fetch(`${config.apiUrl || 'https://api.glia.com'}/operator_authentication/tokens`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.salemove.v1+json'
+      },
+      body: JSON.stringify({
+        api_key_id: config.keyId,
+        api_key_secret: config.keySecret
+      })
+    });
+    
+    if (!response.ok) {
+      throw new AuthenticationError(`Failed to refresh token: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    // Calculate expiration time
+    const expiresInMs = data.expires_in ? data.expires_in * 1000 : 55 * 60 * 1000;
+    const expiresAt = Date.now() + expiresInMs;
+    
+    // Update the token in config
+    const tokenUpdates = {
+      'GLIA_BEARER_TOKEN': data.token,
+      'GLIA_TOKEN_EXPIRES_AT': expiresAt
+    };
+    
+    // Update process.env immediately
+    process.env.GLIA_BEARER_TOKEN = data.token;
+    process.env.GLIA_TOKEN_EXPIRES_AT = expiresAt.toString();
+    
+    // Update the storage based on active profile
+    const profileName = getCurrentProfileName();
+    
+    if (profileName !== 'default') {
+      // Update the profile
+      await updateProfile(profileName, tokenUpdates);
+    } else {
+      // Update global config
+      await updateGlobalConfig(tokenUpdates);
+    }
+    
+    // Also update local .env if it exists
+    if (fs.existsSync(LOCAL_CONFIG_FILE)) {
+      await updateEnvFile(tokenUpdates);
+    }
+    
+    console.log('Bearer token refreshed successfully');
+    return true;
+  } catch (error) {
+    console.error(`Error refreshing bearer token: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * Updates an .env file with new values
+ * 
+ * @param {string} envPath - Path to the .env file
+ * @param {Object} updates - Key-value pairs to update in .env
+ * @returns {Promise&lt;void>}
+ */
+async function updateEnvFileAtPath(envPath, updates) {
+  let envContent = '';
+  try {
+    envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '';
+  } catch (error) {
+    throw new ConfigurationError(
+      `Failed to read env file ${envPath}: ${error.message}`,
+      { error, path: envPath }
+    );
+  }
+  
+  // Update existing values or add new ones
+  for (const [key, value] of Object.entries(updates)) {
+    const regex = new RegExp(`${key}\\s*=.*`, 'g');
+    
+    if (regex.test(envContent)) {
+      // Update existing value
+      envContent = envContent.replace(regex, `${key}=${value}`);
+    } else {
+      // Add new value
+      envContent += `\n${key}=${value}`;
+    }
+  }
+  
+  try {
+    fs.writeFileSync(envPath, envContent, { mode: 0o600 }); // Set secure permissions
+    
+    if (envPath === GLOBAL_CONFIG_FILE) {
+      // Ensure the global config file has secure permissions
+      fs.chmodSync(envPath, 0o600);
+    }
+  } catch (error) {
+    throw new ConfigurationError(
+      `Failed to write env file ${envPath}: ${error.message}`,
+      { error, path: envPath }
+    );
+  }
+}
+
+/**
+ * Updates the local .env file with new values
+ * 
+ * @param {Object} updates - Key-value pairs to update in .env
+ * @returns {Promise&lt;void>}
+ */
+export async function updateEnvFile(updates) {
+  return updateEnvFileAtPath(LOCAL_CONFIG_FILE, updates);
+}
+
+/**
+ * Updates the global config file with new values
+ * 
+ * @param {Object} updates - Key-value pairs to update in global config
+ * @returns {Promise&lt;void>}
+ */
+export async function updateGlobalConfig(updates) {
+  return updateEnvFileAtPath(GLOBAL_CONFIG_FILE, updates);
+}
+
+/**
+ * Creates a new named profile
+ * 
+ * @param {string} profileName - Name of the profile to create
+ * @param {Object} config - Configuration values for the profile
+ * @returns {Promise&lt;void>}
+ */
+export async function createProfile(profileName) {
+  if (!profileName || typeof profileName !== 'string') {
+    throw new ConfigurationError('Profile name is required');
+  }
+  
+  // Sanitize profile name (alphanumeric, dash, underscore only)
+  const sanitized = profileName.replace(/[^a-zA-Z0-9_-]/g, '');
+  if (sanitized !== profileName) {
+    throw new ConfigurationError('Profile name can only contain letters, numbers, dashes, and underscores');
+  }
+  
+  const profilePath = getProfilePath(profileName);
+  
+  // Check if profile already exists
+  if (fs.existsSync(profilePath)) {
+    throw new ConfigurationError(`Profile ${profileName} already exists`);
+  }
+  
+  // Create empty profile file
+  try {
+    fs.writeFileSync(profilePath, '', { mode: 0o600 });
+    return profileName;
+  } catch (error) {
+    throw new ConfigurationError(
+      `Failed to create profile ${profileName}: ${error.message}`,
+      { error }
+    );
+  }
+}
+
+/**
+ * Updates a named profile with new configuration values
+ * 
+ * @param {string} profileName - Name of the profile to update
+ * @param {Object} updates - Key-value pairs to update in the profile
+ * @returns {Promise&lt;void>}
+ */
+export async function updateProfile(profileName, updates) {
+  if (!profileName || typeof profileName !== 'string') {
+    throw new ConfigurationError('Profile name is required');
+  }
+  
+  const profilePath = getProfilePath(profileName);
+  
+  // Create profile if it doesn't exist
+  if (!fs.existsSync(profilePath)) {
+    await createProfile(profileName);
+  }
+  
+  return updateEnvFileAtPath(profilePath, updates);
+}
+
+/**
+ * Switches to a different named profile
+ * 
+ * @param {string} profileName - Name of the profile to switch to
+ * @returns {Promise&lt;void>}
+ * @throws {ConfigurationError} If the profile doesn't exist
+ */
+export async function switchProfile(profileName) {
+  if (!profileName || typeof profileName !== 'string') {
+    throw new ConfigurationError('Profile name is required');
+  }
+  
+  const profilePath = getProfilePath(profileName);
+  
+  // Check if profile exists
+  if (!fs.existsSync(profilePath)) {
+    // Special handling for default profile - create it if missing
+    if (profileName === 'default') {
+      console.log(`Creating missing default profile at ${profilePath}`);
+      await createProfile('default');
+    } else {
+      throw new ConfigurationError(`Profile ${profileName} does not exist`);
+    }
+  }
+  
+  // Update global config to use this profile
+  await updateGlobalConfig({
+    'GLIA_PROFILE': profileName
+  });
+  
+  // Update process.env for immediate effect
+  process.env.GLIA_PROFILE = profileName;
+  
+  return profileName;
+}
+
+/**
+ * Deletes a named profile
+ * 
+ * @param {string} profileName - Name of the profile to delete
+ * @returns {Promise&lt;void>}
+ * @throws {ConfigurationError} If trying to delete the active profile
+ */
+export async function deleteProfile(profileName) {
+  if (!profileName || typeof profileName !== 'string') {
+    throw new ConfigurationError('Profile name is required');
+  }
+  
+  // Don't allow deleting the default profile
+  if (profileName === DEFAULT_CONFIG.defaultProfile) {
+    throw new ConfigurationError(`Cannot delete the ${DEFAULT_CONFIG.defaultProfile} profile`);
+  }
+  
+  // Don't allow deleting the active profile
+  const currentProfile = getCurrentProfileName();
+  if (profileName === currentProfile) {
+    throw new ConfigurationError('Cannot delete the active profile. Switch to another profile first.');
+  }
+  
+  const profilePath = getProfilePath(profileName);
+  
+  // Check if profile exists
+  if (!fs.existsSync(profilePath)) {
+    throw new ConfigurationError(`Profile ${profileName} does not exist`);
+  }
+  
+  // Delete the profile file
+  try {
+    fs.unlinkSync(profilePath);
+  } catch (error) {
+    throw new ConfigurationError(
+      `Failed to delete profile ${profileName}: ${error.message}`,
+      { error }
+    );
+  }
+}
+
+/**
+ * Gets the CLI version from package.json
+ * 
+ * @returns {string} The CLI version
+ */
+export function getCliVersion() {
+  try {
+    const packageJson = JSON.parse(
+      fs.readFileSync(path.resolve('./package.json'), 'utf8')
+    );
+    return packageJson.version || '0.1.0';
+  } catch (error) {
+    // Default to development version if we can't read package.json
+    return '0.1.0-dev';
+  }
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-api.html">api</a></li><li><a href="module-config.html">config</a></li></ul><h3>Classes</h3><ul><li><a href="ApiError.html">ApiError</a></li><li><a href="AuthenticationError.html">AuthenticationError</a></li><li><a href="BaseCommand_BaseCommand.html">BaseCommand</a></li><li><a href="CircuitBreaker.html">CircuitBreaker</a></li><li><a href="ConfigurationError.html">ConfigurationError</a></li><li><a href="FunctionError.html">FunctionError</a></li><li><a href="GliaError.html">GliaError</a></li><li><a href="NetworkDetector.html">NetworkDetector</a></li><li><a href="NetworkError.html">NetworkError</a></li><li><a href="OfflineManager.html">OfflineManager</a></li><li><a href="OperationQueue.html">OperationQueue</a></li><li><a href="PersistentCacheStorage.html">PersistentCacheStorage</a></li><li><a href="RateLimitError.html">RateLimitError</a></li><li><a href="ResponseCache.html">ResponseCache</a></li><li><a href="ValidationError.html">ValidationError</a></li><li><a href="module-api.html">api</a></li></ul><h3>Global</h3><ul><li><a href="global.html#CLIAuth">CLIAuth</a></li><li><a href="global.html#CLIBuildMenu">CLIBuildMenu</a></li><li><a href="global.html#CLICreateProfile">CLICreateProfile</a></li><li><a href="global.html#CLIDeleteProfile">CLIDeleteProfile</a></li><li><a href="global.html#CLIDeployFunction">CLIDeployFunction</a></li><li><a href="global.html#CLIDevFunction">CLIDevFunction</a></li><li><a href="global.html#CLIFunctionDetailsMenu">CLIFunctionDetailsMenu</a></li><li><a href="global.html#CLIFunctionInvoke">CLIFunctionInvoke</a></li><li><a href="global.html#CLIFunctionLogs">CLIFunctionLogs</a></li><li><a href="global.html#CLIFunctionVersion">CLIFunctionVersion</a></li><li><a href="global.html#CLIFunctionVersions">CLIFunctionVersions</a></li><li><a href="global.html#CLIInitProject">CLIInitProject</a></li><li><a href="global.html#CLIListFunctions">CLIListFunctions</a></li><li><a href="global.html#CLIListProfiles">CLIListProfiles</a></li><li><a href="global.html#CLIMainMenu">CLIMainMenu</a></li><li><a href="global.html#CLIManageEnvVars">CLIManageEnvVars</a></li><li><a href="global.html#CLINewFunction">CLINewFunction</a></li><li><a href="global.html#CLINewVersion">CLINewVersion</a></li><li><a href="global.html#CLIProfileMenu">CLIProfileMenu</a></li><li><a href="global.html#CLISetup">CLISetup</a></li><li><a href="global.html#CLISwitchProfile">CLISwitchProfile</a></li><li><a href="global.html#CLIUpdateEnvironment">CLIUpdateEnvironment</a></li><li><a href="global.html#CLIUpdateFunction">CLIUpdateFunction</a></li><li><a href="global.html#DEFAULT_CACHE_CONFIG">DEFAULT_CACHE_CONFIG</a></li><li><a href="global.html#DEFAULT_OFFLINE_CONFIG">DEFAULT_OFFLINE_CONFIG</a></li><li><a href="global.html#DEFAULT_RETRY_CONFIG">DEFAULT_RETRY_CONFIG</a></li><li><a href="global.html#calculateBackoffDelay">calculateBackoffDelay</a></li><li><a href="global.html#createAndDeployVersion">createAndDeployVersion</a></li><li><a href="global.html#createBearerToken">createBearerToken</a></li><li><a href="global.html#createFromTemplate">createFromTemplate</a></li><li><a href="global.html#createFunction">createFunction</a></li><li><a href="global.html#createProjectFromTemplate">createProjectFromTemplate</a></li><li><a href="global.html#dev">dev</a></li><li><a href="global.html#displayRequestDetails">displayRequestDetails</a></li><li><a href="global.html#displayTroubleshootingHints">displayTroubleshootingHints</a></li><li><a href="global.html#displayValidationDetails">displayValidationDetails</a></li><li><a href="global.html#fetchAllLogs">fetchAllLogs</a></li><li><a href="global.html#fetchGfLogs">fetchGfLogs</a></li><li><a href="global.html#fetchLogs">fetchLogs</a></li><li><a href="global.html#formatEnvVars">formatEnvVars</a></li><li><a href="global.html#formatErrorForDisplay">formatErrorForDisplay</a></li><li><a href="global.html#getAllFilesInDir">getAllFilesInDir</a></li><li><a href="global.html#getProjectTemplate">getProjectTemplate</a></li><li><a href="global.html#getTemplate">getTemplate</a></li><li><a href="global.html#getTemplateDefaultVars">getTemplateDefaultVars</a></li><li><a href="global.html#getTemplateEnvVars">getTemplateEnvVars</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#initCommand">initCommand</a></li><li><a href="global.html#interactiveEnvVars">interactiveEnvVars</a></li><li><a href="global.html#invokeFunction">invokeFunction</a></li><li><a href="global.html#isRetryable">isRetryable</a></li><li><a href="global.html#listEnvVars">listEnvVars</a></li><li><a href="global.html#listFunctions">listFunctions</a></li><li><a href="global.html#listProjectTemplates">listProjectTemplates</a></li><li><a href="global.html#listTemplates">listTemplates</a></li><li><a href="global.html#listTemplatesCommand">listTemplatesCommand</a></li><li><a href="global.html#main">main</a></li><li><a href="global.html#makeApiRequest">makeApiRequest</a></li><li><a href="global.html#onInvoke">onInvoke</a></li><li><a href="global.html#parseAndValidateJson">parseAndValidateJson</a></li><li><a href="global.html#parseVariables">parseVariables</a></li><li><a href="global.html#replaceVariables">replaceVariables</a></li><li><a href="global.html#routeCommand">routeCommand</a></li><li><a href="global.html#runCLI">runCLI</a></li><li><a href="global.html#showDebug">showDebug</a></li><li><a href="global.html#showError">showError</a></li><li><a href="global.html#showInfo">showInfo</a></li><li><a href="global.html#showSuccess">showSuccess</a></li><li><a href="global.html#showWarning">showWarning</a></li><li><a href="global.html#sleep">sleep</a></li><li><a href="global.html#updateEnvVars">updateEnvVars</a></li><li><a href="global.html#updateFunction">updateFunction</a></li><li><a href="global.html#validateApiConfiguration">validateApiConfiguration</a></li><li><a href="global.html#validateDateString">validateDateString</a></li><li><a href="global.html#validateEnvironmentVariables">validateEnvironmentVariables</a></li><li><a href="global.html#validateFilePath">validateFilePath</a></li><li><a href="global.html#validateFunctionId">validateFunctionId</a></li><li><a href="global.html#validateFunctionName">validateFunctionName</a></li><li><a href="global.html#validateInput">validateInput</a></li><li><a href="global.html#validateTemplateVariables">validateTemplateVariables</a></li><li><a href="global.html#withRetry">withRetry</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

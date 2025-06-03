@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: commands/createTestHtml.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: commands/createTestHtml.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * Creates the HTML for the development server test page
+ * 
+ * @param {number} port - Server port number
+ * @returns {string} - HTML content
+ */
+export default function createTestHtml(port) {
+  return `&lt;!DOCTYPE html>
+&lt;html>
+&lt;head>
+  &lt;title>Glia Functions Development Server&lt;/title>
+  &lt;style>
+    body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; line-height: 1.5; }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { color: #4a5568; }
+    h2 { color: #6b7280; margin-top: 30px; }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-weight: 600; margin-bottom: 5px; color: #4a5568; }
+    input, textarea, select { width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box; font-family: inherit; font-size: 14px; }
+    textarea { min-height: 200px; font-family: monospace; }
+    button { background: #4f46e5; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: 600; }
+    button:hover { background: #3730a3; }
+    .result { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 15px; max-height: 400px; overflow: auto; font-family: monospace; white-space: pre-wrap; }
+    .result-container { margin-top: 20px; }
+    .tabs { display: flex; margin-bottom: -1px; }
+    .tab { padding: 8px 16px; cursor: pointer; border: 1px solid transparent; }
+    .tab.active { background: #fff; border: 1px solid #e2e8f0; border-bottom-color: #fff; border-top-left-radius: 4px; border-top-right-radius: 4px; }
+    .request-method { display: inline-block; width: 100px; }
+    .status { padding: 3px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+    .status-success { background: #c6f6d5; color: #22543d; }
+    .status-error { background: #fed7d7; color: #822727; }
+    .history-item { padding: 10px; border-bottom: 1px solid #e2e8f0; cursor: pointer; }
+    .history-item:hover { background: #f7fafc; }
+    .hidden { display: none; }
+  &lt;/style>
+&lt;/head>
+&lt;body>
+  &lt;div class="container">
+    &lt;h1>Glia Functions Development Server&lt;/h1>
+    
+    &lt;div class="card">
+      &lt;div class="tabs">
+        &lt;div class="tab active" data-tab="request">Request Builder&lt;/div>
+        &lt;div class="tab" data-tab="history">Request History&lt;/div>
+        &lt;div class="tab" data-tab="logs">Logs&lt;/div>
+      &lt;/div>
+      
+      &lt;div class="tab-content" id="request-tab">
+        &lt;div class="form-group">
+          &lt;label for="method">Method&lt;/label>
+          &lt;select id="method">
+            &lt;option value="POST">POST&lt;/option>
+            &lt;option value="GET">GET&lt;/option>
+            &lt;option value="PUT">PUT&lt;/option>
+            &lt;option value="DELETE">DELETE&lt;/option>
+          &lt;/select>
+        &lt;/div>
+        
+        &lt;div class="form-group">
+          &lt;label for="endpoint">Endpoint&lt;/label>
+          &lt;input type="text" id="endpoint" value="/" />
+        &lt;/div>
+        
+        &lt;div class="form-group">
+          &lt;label for="payload">Request Payload (JSON)&lt;/label>
+          &lt;textarea id="payload">{\n  "key": "value"\n}&lt;/textarea>
+        &lt;/div>
+        
+        &lt;button id="send">Send Request&lt;/button>
+        
+        &lt;div class="result-container">
+          &lt;label>Response&lt;/label>
+          &lt;div class="result" id="response">&lt;/div>
+        &lt;/div>
+      &lt;/div>
+      
+      &lt;div class="tab-content hidden" id="history-tab">
+        &lt;div id="history-list">&lt;/div>
+      &lt;/div>
+      
+      &lt;div class="tab-content hidden" id="logs-tab">
+        &lt;div class="result" id="logs">&lt;/div>
+      &lt;/div>
+    &lt;/div>
+  &lt;/div>
+  
+  &lt;script>
+    // Simple helper to make development easier
+    function $(id) { return document.getElementById(id); }
+    
+    // Store server port from Node.js
+    const serverPort = ${port};
+    
+    // Initialize application state
+    const state = {
+      history: [],
+      logs: []
+    };
+    
+    // Add tab switching functionality
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        
+        tab.classList.add('active');
+        const tabId = tab.dataset.tab;
+        $(tabId + '-tab').classList.remove('hidden');
+      });
+    });
+    
+    // Helper to render history items
+    function renderHistoryItem(item) {
+      const el = document.createElement('div');
+      el.className = 'history-item';
+      
+      const statusClass = item.status >= 200 &amp;&amp; item.status &lt; 300 ? 'status-success' : 'status-error';
+      
+      el.innerHTML = 
+        '&lt;div>' +
+          '&lt;span class="request-method">' + item.method + '&lt;/span>' +
+          '&lt;span>' + item.endpoint + '&lt;/span>' +
+          '&lt;span class="status ' + statusClass + '">' + item.status + '&lt;/span>' +
+          '&lt;small>' + item.duration + 'ms&lt;/small>' +
+        '&lt;/div>' +
+        '&lt;div>&lt;small>' + new Date(item.timestamp).toLocaleTimeString() + '&lt;/small>&lt;/div>';
+      
+      el.addEventListener('click', () => {
+        $('method').value = item.method;
+        $('endpoint').value = item.endpoint;
+        $('payload').value = JSON.stringify(item.payload, null, 2);
+        $('response').innerHTML = item.response;
+        
+        document.querySelector('.tab[data-tab="request"]').click();
+      });
+      
+      return el;
+    }
+    
+    // Update history list in UI
+    function updateHistoryList() {
+      const historyList = $('history-list');
+      historyList.innerHTML = '';
+      
+      if (state.history.length === 0) {
+        historyList.innerHTML = '&lt;p>No requests yet&lt;/p>';
+        return;
+      }
+      
+      state.history.forEach(item => {
+        historyList.appendChild(renderHistoryItem(item));
+      });
+    }
+    
+    // Poll for logs
+    function pollLogs() {
+      fetch('http://localhost:' + serverPort + '/__logs')
+        .then(response => response.json())
+        .then(data => {
+          if (data &amp;&amp; data.logs) {
+            const logsEl = $('logs');
+            logsEl.innerHTML = data.logs.join('\\n');
+            
+            // Auto-scroll to bottom if already at bottom
+            const isAtBottom = logsEl.scrollHeight - logsEl.clientHeight &lt;= logsEl.scrollTop + 50;
+            if (isAtBottom) {
+              logsEl.scrollTop = logsEl.scrollHeight;
+            }
+          }
+        })
+        .catch(error => console.error('Error fetching logs:', error));
+    }
+    
+    // Send request function
+    async function sendRequest() {
+      console.log('Send button clicked');
+      
+      try {
+        const method = $('method').value;
+        const endpoint = $('endpoint').value;
+        const payloadStr = $('payload').value;
+        
+        // Validate JSON
+        let payload;
+        try {
+          payload = JSON.parse(payloadStr);
+        } catch (e) {
+          console.error('JSON parse error:', e);
+          alert('Invalid JSON payload');
+          return;
+        }
+        
+        // Create URL
+        const url = endpoint.startsWith('/')
+          ? 'http://localhost:' + serverPort + endpoint
+          : 'http://localhost:' + serverPort + '/' + endpoint;
+        
+        console.log('Sending request to:', url);
+        
+        // Send request
+        const startTime = Date.now();
+        const response = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: method !== 'GET' ? JSON.stringify(payload) : undefined
+        });
+        const duration = Date.now() - startTime;
+        
+        // Process response
+        const responseData = await response.text();
+        let formattedResponse;
+        
+        try {
+          // Try to parse and format as JSON
+          const jsonResponse = JSON.parse(responseData);
+          formattedResponse = JSON.stringify(jsonResponse, null, 2);
+        } catch (e) {
+          // If not valid JSON, show as is
+          formattedResponse = responseData;
+        }
+        
+        $('response').innerHTML = formattedResponse;
+        
+        // Add to history
+        const historyItem = {
+          id: Date.now(),
+          timestamp: new Date().toISOString(),
+          method,
+          endpoint,
+          url,
+          payload,
+          response: formattedResponse,
+          status: response.status,
+          duration
+        };
+        
+        state.history.unshift(historyItem);
+        updateHistoryList();
+      } catch (error) {
+        console.error('Request error:', error);
+        $('response').innerHTML = 'Error: ' + error.message;
+      }
+    }
+    
+    // Initialize the app
+    function init() {
+      console.log('Initializing test UI');
+      
+      // Attach event handler to send button
+      const sendBtn = $('send');
+      if (sendBtn) {
+        sendBtn.addEventListener('click', sendRequest);
+        console.log('Event listener attached to send button');
+      } else {
+        console.error('Send button not found!');
+      }
+      
+      // Start polling for logs
+      setInterval(pollLogs, 1000);
+      
+      // Initialize history list
+      updateHistoryList();
+    }
+    
+    // Run initialization when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  &lt;/script>
+&lt;/body>
+&lt;/html>`;
+}</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-api.html">api</a></li><li><a href="module-config.html">config</a></li></ul><h3>Classes</h3><ul><li><a href="ApiError.html">ApiError</a></li><li><a href="AuthenticationError.html">AuthenticationError</a></li><li><a href="BaseCommand_BaseCommand.html">BaseCommand</a></li><li><a href="CircuitBreaker.html">CircuitBreaker</a></li><li><a href="ConfigurationError.html">ConfigurationError</a></li><li><a href="FunctionError.html">FunctionError</a></li><li><a href="GliaError.html">GliaError</a></li><li><a href="NetworkDetector.html">NetworkDetector</a></li><li><a href="NetworkError.html">NetworkError</a></li><li><a href="OfflineManager.html">OfflineManager</a></li><li><a href="OperationQueue.html">OperationQueue</a></li><li><a href="PersistentCacheStorage.html">PersistentCacheStorage</a></li><li><a href="RateLimitError.html">RateLimitError</a></li><li><a href="ResponseCache.html">ResponseCache</a></li><li><a href="ValidationError.html">ValidationError</a></li><li><a href="module-api.html">api</a></li></ul><h3>Global</h3><ul><li><a href="global.html#CLIAuth">CLIAuth</a></li><li><a href="global.html#CLIBuildMenu">CLIBuildMenu</a></li><li><a href="global.html#CLICreateProfile">CLICreateProfile</a></li><li><a href="global.html#CLIDeleteProfile">CLIDeleteProfile</a></li><li><a href="global.html#CLIDeployFunction">CLIDeployFunction</a></li><li><a href="global.html#CLIDevFunction">CLIDevFunction</a></li><li><a href="global.html#CLIFunctionDetailsMenu">CLIFunctionDetailsMenu</a></li><li><a href="global.html#CLIFunctionInvoke">CLIFunctionInvoke</a></li><li><a href="global.html#CLIFunctionLogs">CLIFunctionLogs</a></li><li><a href="global.html#CLIFunctionVersion">CLIFunctionVersion</a></li><li><a href="global.html#CLIFunctionVersions">CLIFunctionVersions</a></li><li><a href="global.html#CLIInitProject">CLIInitProject</a></li><li><a href="global.html#CLIListFunctions">CLIListFunctions</a></li><li><a href="global.html#CLIListProfiles">CLIListProfiles</a></li><li><a href="global.html#CLIMainMenu">CLIMainMenu</a></li><li><a href="global.html#CLIManageEnvVars">CLIManageEnvVars</a></li><li><a href="global.html#CLINewFunction">CLINewFunction</a></li><li><a href="global.html#CLINewVersion">CLINewVersion</a></li><li><a href="global.html#CLIProfileMenu">CLIProfileMenu</a></li><li><a href="global.html#CLISetup">CLISetup</a></li><li><a href="global.html#CLISwitchProfile">CLISwitchProfile</a></li><li><a href="global.html#CLIUpdateEnvironment">CLIUpdateEnvironment</a></li><li><a href="global.html#CLIUpdateFunction">CLIUpdateFunction</a></li><li><a href="global.html#DEFAULT_CACHE_CONFIG">DEFAULT_CACHE_CONFIG</a></li><li><a href="global.html#DEFAULT_OFFLINE_CONFIG">DEFAULT_OFFLINE_CONFIG</a></li><li><a href="global.html#DEFAULT_RETRY_CONFIG">DEFAULT_RETRY_CONFIG</a></li><li><a href="global.html#calculateBackoffDelay">calculateBackoffDelay</a></li><li><a href="global.html#createAndDeployVersion">createAndDeployVersion</a></li><li><a href="global.html#createBearerToken">createBearerToken</a></li><li><a href="global.html#createFromTemplate">createFromTemplate</a></li><li><a href="global.html#createFunction">createFunction</a></li><li><a href="global.html#createProjectFromTemplate">createProjectFromTemplate</a></li><li><a href="global.html#dev">dev</a></li><li><a href="global.html#displayRequestDetails">displayRequestDetails</a></li><li><a href="global.html#displayTroubleshootingHints">displayTroubleshootingHints</a></li><li><a href="global.html#displayValidationDetails">displayValidationDetails</a></li><li><a href="global.html#fetchAllLogs">fetchAllLogs</a></li><li><a href="global.html#fetchGfLogs">fetchGfLogs</a></li><li><a href="global.html#fetchLogs">fetchLogs</a></li><li><a href="global.html#formatEnvVars">formatEnvVars</a></li><li><a href="global.html#formatErrorForDisplay">formatErrorForDisplay</a></li><li><a href="global.html#getAllFilesInDir">getAllFilesInDir</a></li><li><a href="global.html#getProjectTemplate">getProjectTemplate</a></li><li><a href="global.html#getTemplate">getTemplate</a></li><li><a href="global.html#getTemplateDefaultVars">getTemplateDefaultVars</a></li><li><a href="global.html#getTemplateEnvVars">getTemplateEnvVars</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#initCommand">initCommand</a></li><li><a href="global.html#interactiveEnvVars">interactiveEnvVars</a></li><li><a href="global.html#invokeFunction">invokeFunction</a></li><li><a href="global.html#isRetryable">isRetryable</a></li><li><a href="global.html#listEnvVars">listEnvVars</a></li><li><a href="global.html#listFunctions">listFunctions</a></li><li><a href="global.html#listProjectTemplates">listProjectTemplates</a></li><li><a href="global.html#listTemplates">listTemplates</a></li><li><a href="global.html#listTemplatesCommand">listTemplatesCommand</a></li><li><a href="global.html#main">main</a></li><li><a href="global.html#makeApiRequest">makeApiRequest</a></li><li><a href="global.html#onInvoke">onInvoke</a></li><li><a href="global.html#parseAndValidateJson">parseAndValidateJson</a></li><li><a href="global.html#parseVariables">parseVariables</a></li><li><a href="global.html#replaceVariables">replaceVariables</a></li><li><a href="global.html#routeCommand">routeCommand</a></li><li><a href="global.html#runCLI">runCLI</a></li><li><a href="global.html#showDebug">showDebug</a></li><li><a href="global.html#showError">showError</a></li><li><a href="global.html#showInfo">showInfo</a></li><li><a href="global.html#showSuccess">showSuccess</a></li><li><a href="global.html#showWarning">showWarning</a></li><li><a href="global.html#sleep">sleep</a></li><li><a href="global.html#updateEnvVars">updateEnvVars</a></li><li><a href="global.html#updateFunction">updateFunction</a></li><li><a href="global.html#validateApiConfiguration">validateApiConfiguration</a></li><li><a href="global.html#validateDateString">validateDateString</a></li><li><a href="global.html#validateEnvironmentVariables">validateEnvironmentVariables</a></li><li><a href="global.html#validateFilePath">validateFilePath</a></li><li><a href="global.html#validateFunctionId">validateFunctionId</a></li><li><a href="global.html#validateFunctionName">validateFunctionName</a></li><li><a href="global.html#validateInput">validateInput</a></li><li><a href="global.html#validateTemplateVariables">validateTemplateVariables</a></li><li><a href="global.html#withRetry">withRetry</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: commands/listFunctions.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: commands/listFunctions.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * Command to list all functions
+ *
+ * This command lists all functions available for the site
+ */
+import { getApiConfig } from '../lib/config.js';
+import GliaApiClient from '../lib/api.js';
+import BaseCommand from '../cli/base-command.js';
+
+/**
+ * List all functions
+ * 
+ * @param {Object} options - Command options
+ * @param {boolean} options.detailed - Whether to show detailed output
+ * @returns {Promise&lt;Object>} Functions list
+ */
+export async function listFunctions(options = {}) {
+  try {
+    // Get API configuration
+    const apiConfig = await getApiConfig();
+    
+    // Create API client
+    const api = new GliaApiClient(apiConfig);
+    
+    // List functions
+    const functions = await api.listFunctions();
+    
+    return functions;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Command handler when run directly from CLI
+ */
+async function main() {
+  const command = new BaseCommand('list-functions', 'List all available functions')
+    .option('-d, --detailed', 'Show detailed output', false)
+    .action(async (options) => {
+      const result = await listFunctions({
+        detailed: options.detailed
+      });
+      
+      if (result.functions.length === 0) {
+        command.info('No functions found.');
+        return;
+      }
+      
+      if (options.detailed) {
+        command.info('Functions (detailed):');
+        console.log(command.formatJson(result));
+      } else {
+        command.info(`Found ${result.functions.length} functions:`);
+        
+        // Format as a simple table
+        const tableData = result.functions.map(fn => ({
+          'ID': fn.id,
+          'Name': fn.name,
+          'Description': fn.description || '(No description)'
+        }));
+        
+        console.log(command.formatTable(tableData, ['ID', 'Name', 'Description']));
+      }
+    });
+    
+  command.parse(process.argv);
+}
+
+// Run if called directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}
+
+export default listFunctions;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-api.html">api</a></li><li><a href="module-config.html">config</a></li></ul><h3>Classes</h3><ul><li><a href="ApiError.html">ApiError</a></li><li><a href="AuthenticationError.html">AuthenticationError</a></li><li><a href="BaseCommand_BaseCommand.html">BaseCommand</a></li><li><a href="CircuitBreaker.html">CircuitBreaker</a></li><li><a href="ConfigurationError.html">ConfigurationError</a></li><li><a href="FunctionError.html">FunctionError</a></li><li><a href="GliaError.html">GliaError</a></li><li><a href="NetworkDetector.html">NetworkDetector</a></li><li><a href="NetworkError.html">NetworkError</a></li><li><a href="OfflineManager.html">OfflineManager</a></li><li><a href="OperationQueue.html">OperationQueue</a></li><li><a href="PersistentCacheStorage.html">PersistentCacheStorage</a></li><li><a href="RateLimitError.html">RateLimitError</a></li><li><a href="ResponseCache.html">ResponseCache</a></li><li><a href="ValidationError.html">ValidationError</a></li><li><a href="module-api.html">api</a></li></ul><h3>Global</h3><ul><li><a href="global.html#CLIAuth">CLIAuth</a></li><li><a href="global.html#CLIBuildMenu">CLIBuildMenu</a></li><li><a href="global.html#CLICreateProfile">CLICreateProfile</a></li><li><a href="global.html#CLIDeleteProfile">CLIDeleteProfile</a></li><li><a href="global.html#CLIDeployFunction">CLIDeployFunction</a></li><li><a href="global.html#CLIDevFunction">CLIDevFunction</a></li><li><a href="global.html#CLIFunctionDetailsMenu">CLIFunctionDetailsMenu</a></li><li><a href="global.html#CLIFunctionInvoke">CLIFunctionInvoke</a></li><li><a href="global.html#CLIFunctionLogs">CLIFunctionLogs</a></li><li><a href="global.html#CLIFunctionVersion">CLIFunctionVersion</a></li><li><a href="global.html#CLIFunctionVersions">CLIFunctionVersions</a></li><li><a href="global.html#CLIInitProject">CLIInitProject</a></li><li><a href="global.html#CLIListFunctions">CLIListFunctions</a></li><li><a href="global.html#CLIListProfiles">CLIListProfiles</a></li><li><a href="global.html#CLIMainMenu">CLIMainMenu</a></li><li><a href="global.html#CLIManageEnvVars">CLIManageEnvVars</a></li><li><a href="global.html#CLINewFunction">CLINewFunction</a></li><li><a href="global.html#CLINewVersion">CLINewVersion</a></li><li><a href="global.html#CLIProfileMenu">CLIProfileMenu</a></li><li><a href="global.html#CLISetup">CLISetup</a></li><li><a href="global.html#CLISwitchProfile">CLISwitchProfile</a></li><li><a href="global.html#CLIUpdateEnvironment">CLIUpdateEnvironment</a></li><li><a href="global.html#CLIUpdateFunction">CLIUpdateFunction</a></li><li><a href="global.html#DEFAULT_CACHE_CONFIG">DEFAULT_CACHE_CONFIG</a></li><li><a href="global.html#DEFAULT_OFFLINE_CONFIG">DEFAULT_OFFLINE_CONFIG</a></li><li><a href="global.html#DEFAULT_RETRY_CONFIG">DEFAULT_RETRY_CONFIG</a></li><li><a href="global.html#calculateBackoffDelay">calculateBackoffDelay</a></li><li><a href="global.html#createAndDeployVersion">createAndDeployVersion</a></li><li><a href="global.html#createBearerToken">createBearerToken</a></li><li><a href="global.html#createFromTemplate">createFromTemplate</a></li><li><a href="global.html#createFunction">createFunction</a></li><li><a href="global.html#createProjectFromTemplate">createProjectFromTemplate</a></li><li><a href="global.html#dev">dev</a></li><li><a href="global.html#displayRequestDetails">displayRequestDetails</a></li><li><a href="global.html#displayTroubleshootingHints">displayTroubleshootingHints</a></li><li><a href="global.html#displayValidationDetails">displayValidationDetails</a></li><li><a href="global.html#fetchAllLogs">fetchAllLogs</a></li><li><a href="global.html#fetchGfLogs">fetchGfLogs</a></li><li><a href="global.html#fetchLogs">fetchLogs</a></li><li><a href="global.html#formatEnvVars">formatEnvVars</a></li><li><a href="global.html#formatErrorForDisplay">formatErrorForDisplay</a></li><li><a href="global.html#getAllFilesInDir">getAllFilesInDir</a></li><li><a href="global.html#getProjectTemplate">getProjectTemplate</a></li><li><a href="global.html#getTemplate">getTemplate</a></li><li><a href="global.html#getTemplateDefaultVars">getTemplateDefaultVars</a></li><li><a href="global.html#getTemplateEnvVars">getTemplateEnvVars</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#initCommand">initCommand</a></li><li><a href="global.html#interactiveEnvVars">interactiveEnvVars</a></li><li><a href="global.html#invokeFunction">invokeFunction</a></li><li><a href="global.html#isRetryable">isRetryable</a></li><li><a href="global.html#listEnvVars">listEnvVars</a></li><li><a href="global.html#listFunctions">listFunctions</a></li><li><a href="global.html#listProjectTemplates">listProjectTemplates</a></li><li><a href="global.html#listTemplates">listTemplates</a></li><li><a href="global.html#listTemplatesCommand">listTemplatesCommand</a></li><li><a href="global.html#main">main</a></li><li><a href="global.html#makeApiRequest">makeApiRequest</a></li><li><a href="global.html#onInvoke">onInvoke</a></li><li><a href="global.html#parseAndValidateJson">parseAndValidateJson</a></li><li><a href="global.html#parseVariables">parseVariables</a></li><li><a href="global.html#replaceVariables">replaceVariables</a></li><li><a href="global.html#routeCommand">routeCommand</a></li><li><a href="global.html#runCLI">runCLI</a></li><li><a href="global.html#showDebug">showDebug</a></li><li><a href="global.html#showError">showError</a></li><li><a href="global.html#showInfo">showInfo</a></li><li><a href="global.html#showSuccess">showSuccess</a></li><li><a href="global.html#showWarning">showWarning</a></li><li><a href="global.html#sleep">sleep</a></li><li><a href="global.html#updateEnvVars">updateEnvVars</a></li><li><a href="global.html#updateFunction">updateFunction</a></li><li><a href="global.html#validateApiConfiguration">validateApiConfiguration</a></li><li><a href="global.html#validateDateString">validateDateString</a></li><li><a href="global.html#validateEnvironmentVariables">validateEnvironmentVariables</a></li><li><a href="global.html#validateFilePath">validateFilePath</a></li><li><a href="global.html#validateFunctionId">validateFunctionId</a></li><li><a href="global.html#validateFunctionName">validateFunctionName</a></li><li><a href="global.html#validateInput">validateInput</a></li><li><a href="global.html#validateTemplateVariables">validateTemplateVariables</a></li><li><a href="global.html#withRetry">withRetry</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

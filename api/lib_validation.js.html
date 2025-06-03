@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: lib/validation.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: lib/validation.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * Input validation utilities for Glia Functions CLI
+ * 
+ * Provides standardized validation for function names, IDs, and other inputs
+ */
+
+import { ValidationError } from './errors.js';
+
+/**
+ * Validates a function name
+ * 
+ * @param {string} name - Function name to validate
+ * @returns {string} - The validated name
+ * @throws {ValidationError} - If name is invalid
+ */
+export function validateFunctionName(name) {
+  if (!name) {
+    throw new ValidationError('Function name is required');
+  }
+  
+  if (typeof name !== 'string') {
+    throw new ValidationError('Function name must be a string', { provided: typeof name });
+  }
+  
+  if (name.trim().length === 0) {
+    throw new ValidationError('Function name cannot be empty');
+  }
+  
+  if (!/^[a-zA-Z0-9-_\s]+$/.test(name)) {
+    throw new ValidationError(
+      'Function name must contain only alphanumeric characters, hyphens, underscores, and spaces',
+      { provided: name }
+    );
+  }
+  
+  return name;
+}
+
+/**
+ * Validates a function ID
+ * 
+ * @param {string} id - Function ID to validate
+ * @returns {string} - The validated ID
+ * @throws {ValidationError} - If ID is invalid
+ */
+export function validateFunctionId(id) {
+  if (!id) {
+    throw new ValidationError('Function ID is required');
+  }
+  
+  if (typeof id !== 'string') {
+    throw new ValidationError('Function ID must be a string', { provided: typeof id });
+  }
+  
+  if (id.trim().length === 0) {
+    throw new ValidationError('Function ID cannot be empty');
+  }
+  
+  return id;
+}
+
+/**
+ * Validates a file path
+ * 
+ * @param {string} path - File path to validate
+ * @returns {string} - The validated path
+ * @throws {ValidationError} - If path is invalid
+ */
+export function validateFilePath(path) {
+  if (!path) {
+    throw new ValidationError('File path is required');
+  }
+  
+  if (typeof path !== 'string') {
+    throw new ValidationError('File path must be a string', { provided: typeof path });
+  }
+  
+  if (path.trim().length === 0) {
+    throw new ValidationError('File path cannot be empty');
+  }
+  
+  return path;
+}
+
+/**
+ * Validates environment variables object
+ * 
+ * @param {object} env - Environment variables object to validate
+ * @returns {object} - The validated environment variables
+ * @throws {ValidationError} - If environment variables are invalid
+ */
+export function validateEnvironmentVariables(env) {
+  if (!env || typeof env !== 'object') {
+    throw new ValidationError('Environment variables must be an object', { provided: typeof env });
+  }
+  
+  // Check that all values are strings
+  for (const [key, value] of Object.entries(env)) {
+    if (typeof value !== 'string') {
+      throw new ValidationError(
+        `Environment variable "${key}" value must be a string`,
+        { key, type: typeof value }
+      );
+    }
+  }
+  
+  return env;
+}
+
+/**
+ * Validates a date string in YYYY-MM-DD format
+ * 
+ * @param {string} date - Date string to validate
+ * @returns {string} - The validated date string
+ * @throws {ValidationError} - If date string is invalid
+ */
+export function validateDateString(date) {
+  if (!date) {
+    throw new ValidationError('Date string is required');
+  }
+  
+  if (date === 'latest') {
+    return date; // Special case for 'latest'
+  }
+  
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new ValidationError(
+      'Date must be in YYYY-MM-DD format',
+      { provided: date }
+    );
+  }
+  
+  // Additional check that the date is valid
+  const parsedDate = new Date(date);
+  if (isNaN(parsedDate.getTime())) {
+    throw new ValidationError('Invalid date', { provided: date });
+  }
+  
+  // Check if the date is valid for the specified month
+  const year = parseInt(date.substring(0, 4), 10);
+  // Month in Date() is 0-indexed (0-11), but the parsed month is 1-indexed (1-12)
+  const month = parseInt(date.substring(5, 7), 10) - 1;
+  const day = parseInt(date.substring(8, 10), 10);
+  
+  // Get days in the specified month
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  
+  if (day &lt;= 0 || day > daysInMonth) {
+    throw new ValidationError('Invalid date - day out of range for month', { 
+      provided: date,
+      maxDaysInMonth: daysInMonth
+    });
+  }
+  
+  return date;
+}
+
+/**
+ * Parses and validates JSON input
+ * 
+ * @param {string} jsonString - JSON string to parse and validate
+ * @returns {object} - Parsed JSON object
+ * @throws {ValidationError} - If JSON string is invalid
+ */
+export function parseAndValidateJson(jsonString) {
+  if (!jsonString) {
+    throw new ValidationError('JSON string is required');
+  }
+  
+  try {
+    return JSON.parse(jsonString);
+  } catch (error) {
+    throw new ValidationError(
+      'Invalid JSON format',
+      { error: error.message, input: jsonString }
+    );
+  }
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-api.html">api</a></li><li><a href="module-config.html">config</a></li></ul><h3>Classes</h3><ul><li><a href="ApiError.html">ApiError</a></li><li><a href="AuthenticationError.html">AuthenticationError</a></li><li><a href="BaseCommand_BaseCommand.html">BaseCommand</a></li><li><a href="CircuitBreaker.html">CircuitBreaker</a></li><li><a href="ConfigurationError.html">ConfigurationError</a></li><li><a href="FunctionError.html">FunctionError</a></li><li><a href="GliaError.html">GliaError</a></li><li><a href="NetworkDetector.html">NetworkDetector</a></li><li><a href="NetworkError.html">NetworkError</a></li><li><a href="OfflineManager.html">OfflineManager</a></li><li><a href="OperationQueue.html">OperationQueue</a></li><li><a href="PersistentCacheStorage.html">PersistentCacheStorage</a></li><li><a href="RateLimitError.html">RateLimitError</a></li><li><a href="ResponseCache.html">ResponseCache</a></li><li><a href="ValidationError.html">ValidationError</a></li><li><a href="module-api.html">api</a></li></ul><h3>Global</h3><ul><li><a href="global.html#CLIAuth">CLIAuth</a></li><li><a href="global.html#CLIBuildMenu">CLIBuildMenu</a></li><li><a href="global.html#CLICreateProfile">CLICreateProfile</a></li><li><a href="global.html#CLIDeleteProfile">CLIDeleteProfile</a></li><li><a href="global.html#CLIDeployFunction">CLIDeployFunction</a></li><li><a href="global.html#CLIDevFunction">CLIDevFunction</a></li><li><a href="global.html#CLIFunctionDetailsMenu">CLIFunctionDetailsMenu</a></li><li><a href="global.html#CLIFunctionInvoke">CLIFunctionInvoke</a></li><li><a href="global.html#CLIFunctionLogs">CLIFunctionLogs</a></li><li><a href="global.html#CLIFunctionVersion">CLIFunctionVersion</a></li><li><a href="global.html#CLIFunctionVersions">CLIFunctionVersions</a></li><li><a href="global.html#CLIInitProject">CLIInitProject</a></li><li><a href="global.html#CLIListFunctions">CLIListFunctions</a></li><li><a href="global.html#CLIListProfiles">CLIListProfiles</a></li><li><a href="global.html#CLIMainMenu">CLIMainMenu</a></li><li><a href="global.html#CLIManageEnvVars">CLIManageEnvVars</a></li><li><a href="global.html#CLINewFunction">CLINewFunction</a></li><li><a href="global.html#CLINewVersion">CLINewVersion</a></li><li><a href="global.html#CLIProfileMenu">CLIProfileMenu</a></li><li><a href="global.html#CLISetup">CLISetup</a></li><li><a href="global.html#CLISwitchProfile">CLISwitchProfile</a></li><li><a href="global.html#CLIUpdateEnvironment">CLIUpdateEnvironment</a></li><li><a href="global.html#CLIUpdateFunction">CLIUpdateFunction</a></li><li><a href="global.html#DEFAULT_CACHE_CONFIG">DEFAULT_CACHE_CONFIG</a></li><li><a href="global.html#DEFAULT_OFFLINE_CONFIG">DEFAULT_OFFLINE_CONFIG</a></li><li><a href="global.html#DEFAULT_RETRY_CONFIG">DEFAULT_RETRY_CONFIG</a></li><li><a href="global.html#calculateBackoffDelay">calculateBackoffDelay</a></li><li><a href="global.html#createAndDeployVersion">createAndDeployVersion</a></li><li><a href="global.html#createBearerToken">createBearerToken</a></li><li><a href="global.html#createFromTemplate">createFromTemplate</a></li><li><a href="global.html#createFunction">createFunction</a></li><li><a href="global.html#createProjectFromTemplate">createProjectFromTemplate</a></li><li><a href="global.html#dev">dev</a></li><li><a href="global.html#displayRequestDetails">displayRequestDetails</a></li><li><a href="global.html#displayTroubleshootingHints">displayTroubleshootingHints</a></li><li><a href="global.html#displayValidationDetails">displayValidationDetails</a></li><li><a href="global.html#fetchAllLogs">fetchAllLogs</a></li><li><a href="global.html#fetchGfLogs">fetchGfLogs</a></li><li><a href="global.html#fetchLogs">fetchLogs</a></li><li><a href="global.html#formatEnvVars">formatEnvVars</a></li><li><a href="global.html#formatErrorForDisplay">formatErrorForDisplay</a></li><li><a href="global.html#getAllFilesInDir">getAllFilesInDir</a></li><li><a href="global.html#getProjectTemplate">getProjectTemplate</a></li><li><a href="global.html#getTemplate">getTemplate</a></li><li><a href="global.html#getTemplateDefaultVars">getTemplateDefaultVars</a></li><li><a href="global.html#getTemplateEnvVars">getTemplateEnvVars</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#initCommand">initCommand</a></li><li><a href="global.html#interactiveEnvVars">interactiveEnvVars</a></li><li><a href="global.html#invokeFunction">invokeFunction</a></li><li><a href="global.html#isRetryable">isRetryable</a></li><li><a href="global.html#listEnvVars">listEnvVars</a></li><li><a href="global.html#listFunctions">listFunctions</a></li><li><a href="global.html#listProjectTemplates">listProjectTemplates</a></li><li><a href="global.html#listTemplates">listTemplates</a></li><li><a href="global.html#listTemplatesCommand">listTemplatesCommand</a></li><li><a href="global.html#main">main</a></li><li><a href="global.html#makeApiRequest">makeApiRequest</a></li><li><a href="global.html#onInvoke">onInvoke</a></li><li><a href="global.html#parseAndValidateJson">parseAndValidateJson</a></li><li><a href="global.html#parseVariables">parseVariables</a></li><li><a href="global.html#replaceVariables">replaceVariables</a></li><li><a href="global.html#routeCommand">routeCommand</a></li><li><a href="global.html#runCLI">runCLI</a></li><li><a href="global.html#showDebug">showDebug</a></li><li><a href="global.html#showError">showError</a></li><li><a href="global.html#showInfo">showInfo</a></li><li><a href="global.html#showSuccess">showSuccess</a></li><li><a href="global.html#showWarning">showWarning</a></li><li><a href="global.html#sleep">sleep</a></li><li><a href="global.html#updateEnvVars">updateEnvVars</a></li><li><a href="global.html#updateFunction">updateFunction</a></li><li><a href="global.html#validateApiConfiguration">validateApiConfiguration</a></li><li><a href="global.html#validateDateString">validateDateString</a></li><li><a href="global.html#validateEnvironmentVariables">validateEnvironmentVariables</a></li><li><a href="global.html#validateFilePath">validateFilePath</a></li><li><a href="global.html#validateFunctionId">validateFunctionId</a></li><li><a href="global.html#validateFunctionName">validateFunctionName</a></li><li><a href="global.html#validateInput">validateInput</a></li><li><a href="global.html#validateTemplateVariables">validateTemplateVariables</a></li><li><a href="global.html#withRetry">withRetry</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

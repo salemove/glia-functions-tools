@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: commands/createAndDeployVersion.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: commands/createAndDeployVersion.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * Command to create and deploy a function version
+ *
+ * This command bundles a function's code, creates a new version,
+ * and deploys it as the main version.
+ */
+import fs from 'fs/promises';
+import { parseAndValidateJson } from '../lib/validation.js';
+import { getApiConfig } from '../lib/config.js';
+import GliaApiClient from '../lib/api.js';
+import BaseCommand from '../cli/base-command.js';
+
+/**
+ * Create and deploy a function version
+ * 
+ * @param {Object} options - Command options
+ * @param {string} options.functionId - Function ID
+ * @param {string} options.codePath - Path to function code
+ * @param {Object} options.envVars - Environment variables
+ * @param {string} options.compatibilityDate - Compatibility date
+ * @returns {Promise&lt;Object>} Deployment response
+ */
+export async function createAndDeployVersion(options) {
+  try {
+    // Get API configuration
+    const apiConfig = await getApiConfig();
+    
+    // Create API client
+    const api = new GliaApiClient(apiConfig);
+    
+    // Read function code
+    console.log(`Reading function code from ${options.codePath}...`);
+    const code = await fs.readFile(options.codePath, 'utf8');
+    
+    // Create version options
+    const versionOptions = {
+      environmentVariables: options.envVars,
+      compatibilityDate: options.compatibilityDate
+    };
+    
+    // Create version
+    console.log('Creating new function version...');
+    const version = await api.createVersion(options.functionId, code, versionOptions);
+    console.log('New version created:', version);
+    
+    // Wait for version to be ready by polling the task
+    console.log('Waiting for version creation to complete...');
+    
+    // Poll until version is ready (up to 2 minutes)
+    const maxAttempts = 24; // 24 attempts * 5 seconds = 2 minutes
+    let attempts = 0;
+    let versionId;
+    
+    while (attempts &lt; maxAttempts) {
+      attempts++;
+      
+      // Get version details from task
+      const task = await api.makeRequest(version.self);
+      
+      if (task.status === 'completed') {
+        versionId = task.entity.id;
+        console.log(`Version creation completed: ${versionId}`);
+        break;
+      } else if (task.status === 'failed') {
+        throw new Error(`Version creation failed: ${task.error || 'Unknown error'}`);
+      }
+      
+      // Wait 5 seconds before polling again
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+    
+    if (!versionId) {
+      throw new Error('Version creation timed out after 2 minutes');
+    }
+    
+    // Deploy version
+    console.log(`Deploying version ${versionId}...`);
+    const deployment = await api.deployVersion(options.functionId, versionId);
+    console.log('Deployment successful:', deployment);
+    
+    return deployment;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Command handler when run directly from CLI
+ */
+async function main() {
+  const command = new BaseCommand('create-and-deploy-version', 'Create and deploy a function version')
+    .requiredOption('--function-id &lt;id>', 'Function ID')
+    .requiredOption('--path &lt;path>', 'Path to function code')
+    .option('--env &lt;json>', 'Environment variables as JSON string', '{}')
+    .option('--compatibility-date &lt;date>', 'Compatibility date (YYYY-MM-DD)', null)
+    .option('--deploy', 'Whether to deploy the version after creation', true)
+    .action(async (options) => {
+      // Parse environment variables
+      let envVars;
+      try {
+        envVars = parseAndValidateJson(options.env);
+      } catch (error) {
+        command.error(`Invalid JSON for environment variables: ${error.message}`);
+        process.exit(1);
+      }
+      
+      command.info(`Creating version for function ${options.functionId}...`);
+      
+      try {
+        const result = await createAndDeployVersion({
+          functionId: options.functionId,
+          codePath: options.path,
+          envVars,
+          compatibilityDate: options.compatibilityDate,
+          deploy: options.deploy !== false
+        });
+        
+        command.success('Version created and deployed successfully');
+        command.info('Deployment details:');
+        console.log(command.formatJson(result));
+      } catch (error) {
+        command.error(`Deployment failed: ${error.message}`);
+        
+        // Provide more helpful error messages based on common issues
+        if (error.message.includes('not found')) {
+          command.info('Tip: Check that the function ID is correct.');
+        } else if (error.message.includes('file')) {
+          command.info('Tip: Make sure the function code file exists and is readable.');
+        }
+        
+        process.exit(1);
+      }
+    });
+    
+  command.parse(process.argv);
+}
+
+// Run if called directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}
+
+export default createAndDeployVersion;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-api.html">api</a></li><li><a href="module-config.html">config</a></li></ul><h3>Classes</h3><ul><li><a href="ApiError.html">ApiError</a></li><li><a href="AuthenticationError.html">AuthenticationError</a></li><li><a href="BaseCommand_BaseCommand.html">BaseCommand</a></li><li><a href="CircuitBreaker.html">CircuitBreaker</a></li><li><a href="ConfigurationError.html">ConfigurationError</a></li><li><a href="FunctionError.html">FunctionError</a></li><li><a href="GliaError.html">GliaError</a></li><li><a href="NetworkDetector.html">NetworkDetector</a></li><li><a href="NetworkError.html">NetworkError</a></li><li><a href="OfflineManager.html">OfflineManager</a></li><li><a href="OperationQueue.html">OperationQueue</a></li><li><a href="PersistentCacheStorage.html">PersistentCacheStorage</a></li><li><a href="RateLimitError.html">RateLimitError</a></li><li><a href="ResponseCache.html">ResponseCache</a></li><li><a href="ValidationError.html">ValidationError</a></li><li><a href="module-api.html">api</a></li></ul><h3>Global</h3><ul><li><a href="global.html#CLIAuth">CLIAuth</a></li><li><a href="global.html#CLIBuildMenu">CLIBuildMenu</a></li><li><a href="global.html#CLICreateProfile">CLICreateProfile</a></li><li><a href="global.html#CLIDeleteProfile">CLIDeleteProfile</a></li><li><a href="global.html#CLIDeployFunction">CLIDeployFunction</a></li><li><a href="global.html#CLIDevFunction">CLIDevFunction</a></li><li><a href="global.html#CLIFunctionDetailsMenu">CLIFunctionDetailsMenu</a></li><li><a href="global.html#CLIFunctionInvoke">CLIFunctionInvoke</a></li><li><a href="global.html#CLIFunctionLogs">CLIFunctionLogs</a></li><li><a href="global.html#CLIFunctionVersion">CLIFunctionVersion</a></li><li><a href="global.html#CLIFunctionVersions">CLIFunctionVersions</a></li><li><a href="global.html#CLIInitProject">CLIInitProject</a></li><li><a href="global.html#CLIListFunctions">CLIListFunctions</a></li><li><a href="global.html#CLIListProfiles">CLIListProfiles</a></li><li><a href="global.html#CLIMainMenu">CLIMainMenu</a></li><li><a href="global.html#CLIManageEnvVars">CLIManageEnvVars</a></li><li><a href="global.html#CLINewFunction">CLINewFunction</a></li><li><a href="global.html#CLINewVersion">CLINewVersion</a></li><li><a href="global.html#CLIProfileMenu">CLIProfileMenu</a></li><li><a href="global.html#CLISetup">CLISetup</a></li><li><a href="global.html#CLISwitchProfile">CLISwitchProfile</a></li><li><a href="global.html#CLIUpdateEnvironment">CLIUpdateEnvironment</a></li><li><a href="global.html#CLIUpdateFunction">CLIUpdateFunction</a></li><li><a href="global.html#DEFAULT_CACHE_CONFIG">DEFAULT_CACHE_CONFIG</a></li><li><a href="global.html#DEFAULT_OFFLINE_CONFIG">DEFAULT_OFFLINE_CONFIG</a></li><li><a href="global.html#DEFAULT_RETRY_CONFIG">DEFAULT_RETRY_CONFIG</a></li><li><a href="global.html#calculateBackoffDelay">calculateBackoffDelay</a></li><li><a href="global.html#createAndDeployVersion">createAndDeployVersion</a></li><li><a href="global.html#createBearerToken">createBearerToken</a></li><li><a href="global.html#createFromTemplate">createFromTemplate</a></li><li><a href="global.html#createFunction">createFunction</a></li><li><a href="global.html#createProjectFromTemplate">createProjectFromTemplate</a></li><li><a href="global.html#dev">dev</a></li><li><a href="global.html#displayRequestDetails">displayRequestDetails</a></li><li><a href="global.html#displayTroubleshootingHints">displayTroubleshootingHints</a></li><li><a href="global.html#displayValidationDetails">displayValidationDetails</a></li><li><a href="global.html#fetchAllLogs">fetchAllLogs</a></li><li><a href="global.html#fetchGfLogs">fetchGfLogs</a></li><li><a href="global.html#fetchLogs">fetchLogs</a></li><li><a href="global.html#formatEnvVars">formatEnvVars</a></li><li><a href="global.html#formatErrorForDisplay">formatErrorForDisplay</a></li><li><a href="global.html#getAllFilesInDir">getAllFilesInDir</a></li><li><a href="global.html#getProjectTemplate">getProjectTemplate</a></li><li><a href="global.html#getTemplate">getTemplate</a></li><li><a href="global.html#getTemplateDefaultVars">getTemplateDefaultVars</a></li><li><a href="global.html#getTemplateEnvVars">getTemplateEnvVars</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#initCommand">initCommand</a></li><li><a href="global.html#interactiveEnvVars">interactiveEnvVars</a></li><li><a href="global.html#invokeFunction">invokeFunction</a></li><li><a href="global.html#isRetryable">isRetryable</a></li><li><a href="global.html#listEnvVars">listEnvVars</a></li><li><a href="global.html#listFunctions">listFunctions</a></li><li><a href="global.html#listProjectTemplates">listProjectTemplates</a></li><li><a href="global.html#listTemplates">listTemplates</a></li><li><a href="global.html#listTemplatesCommand">listTemplatesCommand</a></li><li><a href="global.html#main">main</a></li><li><a href="global.html#makeApiRequest">makeApiRequest</a></li><li><a href="global.html#onInvoke">onInvoke</a></li><li><a href="global.html#parseAndValidateJson">parseAndValidateJson</a></li><li><a href="global.html#parseVariables">parseVariables</a></li><li><a href="global.html#replaceVariables">replaceVariables</a></li><li><a href="global.html#routeCommand">routeCommand</a></li><li><a href="global.html#runCLI">runCLI</a></li><li><a href="global.html#showDebug">showDebug</a></li><li><a href="global.html#showError">showError</a></li><li><a href="global.html#showInfo">showInfo</a></li><li><a href="global.html#showSuccess">showSuccess</a></li><li><a href="global.html#showWarning">showWarning</a></li><li><a href="global.html#sleep">sleep</a></li><li><a href="global.html#updateEnvVars">updateEnvVars</a></li><li><a href="global.html#updateFunction">updateFunction</a></li><li><a href="global.html#validateApiConfiguration">validateApiConfiguration</a></li><li><a href="global.html#validateDateString">validateDateString</a></li><li><a href="global.html#validateEnvironmentVariables">validateEnvironmentVariables</a></li><li><a href="global.html#validateFilePath">validateFilePath</a></li><li><a href="global.html#validateFunctionId">validateFunctionId</a></li><li><a href="global.html#validateFunctionName">validateFunctionName</a></li><li><a href="global.html#validateInput">validateInput</a></li><li><a href="global.html#validateTemplateVariables">validateTemplateVariables</a></li><li><a href="global.html#withRetry">withRetry</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

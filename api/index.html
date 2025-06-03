@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Home</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Home</h1>
+
+    
+
+
+
+    
+
+
+    <h3> </h3>
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+    <section>
+        <article><h1>Glia Functions CLI</h1>
+<p>Helper functions, tools, and examples for building and managing Glia Functions - a serverless functions platform similar to AWS Lambda or Cloudflare Workers using the workerd runtime for JavaScript.</p>
+<p><a href="./docs"><img src="https://img.shields.io/badge/docs-latest-brightgreen.svg" alt="Documentation Status"></a><br>
+<a href="./docs/api"><img src="https://img.shields.io/badge/api-reference-blue.svg" alt="API Reference"></a><br>
+<a href="./docs/commands/profiles.md"><img src="https://img.shields.io/badge/profiles-supported-orange.svg" alt="Profile Support"></a></p>
+<h2>Features</h2>
+<ul>
+<li><strong>Multi-environment support</strong> with named profiles</li>
+<li><strong>Robust API client</strong> with retry, caching, and offline capabilities</li>
+<li><strong>Interactive and command-driven interfaces</strong> for both guided and automated workflows</li>
+<li><strong>Create and manage</strong> serverless JavaScript functions</li>
+<li><strong>Function templates</strong> for common use cases and patterns</li>
+<li><strong>Project scaffolding</strong> with complete project templates</li>
+<li><strong>Deploy function versions</strong> with custom environment variables</li>
+<li><strong>Invoke functions</strong> with custom payloads</li>
+<li><strong>Local development server</strong> for testing functions without deployment</li>
+<li><strong>View function logs</strong> and details</li>
+<li><strong>Bundle dependencies</strong> using esbuild</li>
+<li><strong>Comprehensive documentation</strong> with architecture guides and command references</li>
+<li><strong>Extensive examples</strong> for common integration patterns</li>
+</ul>
+<h2>Prerequisites</h2>
+<ul>
+<li>Node.js 16+</li>
+<li>A Glia account with API access</li>
+<li>Your Glia Site ID, API Key and Secret</li>
+</ul>
+<h2>Installation</h2>
+<pre class="prettyprint source lang-bash"><code># Clone the repository
+git clone https://github.com/salemove/glia-functions-tools.git
+
+# Install dependencies
+cd glia-functions-tools
+npm install
+</code></pre>
+<h2>CLI Installation and Access</h2>
+<p>You have several options to install and access the Glia Functions CLI:</p>
+<h3>Option 1: Use without installing globally</h3>
+<p>After completing the installation steps above, you can run the CLI directly:</p>
+<pre class="prettyprint source lang-bash"><code># Option A: Using npm scripts
+npm run cli
+
+# Option B: Using the bin file directly
+./bin/glia-functions.js
+
+# Option C: Using node to execute the bin file
+node ./bin/glia-functions.js
+</code></pre>
+<h3>Option 2: Install globally</h3>
+<p>To use the <code>glia-functions</code> or <code>glia</code> commands from anywhere on your system:</p>
+<h4>Method A: Use the installation script (recommended)</h4>
+<pre class="prettyprint source lang-bash"><code># From the repository directory
+node install.js
+</code></pre>
+<h4>Method B: Manual global installation</h4>
+<pre class="prettyprint source lang-bash"><code># From the repository directory
+npm install -g .
+</code></pre>
+<p>After installing globally, you can simply use either of these commands:</p>
+<pre class="prettyprint source lang-bash"><code>glia-functions  # Full command name
+glia            # Shorter alias
+</code></pre>
+<h2>Quick Start</h2>
+<ol>
+<li>Run the CLI setup wizard using one of these methods:<pre class="prettyprint source lang-bash"><code># If installed globally
+glia
+
+# OR using npm scripts without global install
+npm run cli
+</code></pre>
+</li>
+<li>Select &quot;Setup project&quot; and enter your Glia credentials</li>
+<li>Create a new function via the CLI menu</li>
+<li>Deploy a basic function:<pre class="prettyprint source lang-bash"><code># First build your function
+npm run build ./path/to/your/function.js
+
+# Then create and deploy a version
+glia-functions create-version --function-id=your-function-id --path='./function-out.js' --deploy
+
+# OR if not installed globally
+npm run cli -- create-version --function-id=your-function-id --path='./function-out.js' --deploy
+</code></pre>
+</li>
+</ol>
+<h2>Environment Variables</h2>
+<p>Required environment variables for authentication:</p>
+<ul>
+<li><code>GLIA_KEY_ID</code> - Your Glia API key ID</li>
+<li><code>GLIA_KEY_SECRET</code> - Your Glia API key secret</li>
+<li><code>GLIA_SITE_ID</code> - Your Glia site ID</li>
+<li><code>GLIA_API_URL</code> - Glia API URL (defaults to https://api.glia.com)</li>
+<li><code>GLIA_BEARER_TOKEN</code> - Bearer token generated from your credentials (automatically set by the CLI)</li>
+</ul>
+<p>These can be set in a <code>.env</code> file in the project root or configured via the CLI setup wizard.</p>
+<h2>Building Your Function</h2>
+<p>Build a function for deployment:</p>
+<pre class="prettyprint source lang-bash"><code>npm run build ./path/to/your/function.js
+</code></pre>
+<p>This creates a bundled <code>function-out.js</code> file ready for deployment.</p>
+<h2>CLI Usage</h2>
+<p>The CLI supports two modes of operation:</p>
+<h3>Interactive Mode</h3>
+<p>Start the interactive CLI without any arguments:</p>
+<pre class="prettyprint source lang-bash"><code>./bin/glia-functions.js
+</code></pre>
+<p>This provides a menu-driven interface for:</p>
+<ul>
+<li>Setting up your environment</li>
+<li>Creating new functions</li>
+<li>Managing existing functions</li>
+<li>Creating and deploying function versions</li>
+<li>Viewing function logs</li>
+<li>Invoking functions</li>
+<li>Managing configuration profiles</li>
+</ul>
+<h3>Command Mode</h3>
+<p>For automation and direct execution, you can use direct command syntax:</p>
+<pre class="prettyprint source lang-bash"><code>glia-functions &lt;command> [options]
+</code></pre>
+<h4>List Functions</h4>
+<pre class="prettyprint source lang-bash"><code>glia-functions list-functions [--detailed]
+</code></pre>
+<h4>Create a Function</h4>
+<pre class="prettyprint source lang-bash"><code># Create a simple function
+glia-functions create-function --name &quot;My Function&quot; --description &quot;Function description&quot;
+
+# Create a function from a template
+glia-functions create-function --name &quot;My Function&quot; --description &quot;Function description&quot; --template api-integration
+
+# List available templates
+glia-functions list-templates
+</code></pre>
+<h4>Update a Function</h4>
+<pre class="prettyprint source lang-bash"><code># Update a function's name
+glia-functions update-function --id &quot;function-id&quot; --name &quot;New Function Name&quot;
+
+# Update a function's description
+glia-functions update-function --id &quot;function-id&quot; --description &quot;New function description&quot;
+
+# Update both name and description
+glia-functions update-function --id &quot;function-id&quot; --name &quot;New Name&quot; --description &quot;New description&quot;
+</code></pre>
+<h4>Initialize a Project</h4>
+<pre class="prettyprint source lang-bash"><code># List available project templates
+glia-functions init --list-templates
+
+# Create a project from a template
+glia-functions init --template api-integration --output ./my-api-project
+
+# Create a project with custom variables
+glia-functions init --template api-integration --variables &quot;projectName=My API,apiKey=my-key&quot;
+</code></pre>
+<h4>Deploy a Function Version</h4>
+<pre class="prettyprint source lang-bash"><code>glia-functions deploy --function-id &lt;id> --version-id &lt;id>
+</code></pre>
+<h4>Update Environment Variables</h4>
+<pre class="prettyprint source lang-bash"><code># Create a new version based on an existing one with new environment variables
+glia-functions update-version --function-id &lt;id> --version-id &lt;id> --env-vars '{&quot;KEY&quot;:&quot;new_value&quot;}'
+
+# List current environment variables for a function
+glia-functions update-env-vars --id &lt;function-id> --list
+
+# Update environment variables for a function (adds a new version with updated env vars)
+glia-functions update-env-vars --id &lt;function-id> --env '{&quot;KEY&quot;:&quot;value&quot;,&quot;ANOTHER_KEY&quot;:&quot;another_value&quot;}'
+
+# Update environment variables without deploying
+glia-functions update-env-vars --id &lt;function-id> --env '{&quot;KEY&quot;:&quot;value&quot;}' --no-deploy
+
+# Interactive UI for adding/updating/removing environment variables
+glia-functions update-env-vars --id &lt;function-id> --interactive
+</code></pre>
+<h4>Invoke a Function</h4>
+<pre class="prettyprint source lang-bash"><code>glia-functions invoke-function --function-id &lt;id> --payload '{&quot;key&quot;: &quot;value&quot;}'
+</code></pre>
+<h4>Fetch Function Logs</h4>
+<pre class="prettyprint source lang-bash"><code># Fetch most recent logs (first page only)
+glia-functions fetch-logs --function-id &lt;id>
+
+# Fetch all logs across all pages
+glia-functions fetch-logs --function-id &lt;id> --all
+
+# Fetch logs with time range and custom output file
+glia-functions fetch-logs --function-id &lt;id> --start-time &quot;2023-10-19T00:00:00Z&quot; --end-time &quot;2023-10-20T00:00:00Z&quot; --output ./my-logs.json
+
+# Specify maximum entries per page (default is 1000, which is the API maximum)
+glia-functions fetch-logs --function-id &lt;id> --limit 500
+</code></pre>
+<h4>Run Local Development Server</h4>
+<pre class="prettyprint source lang-bash"><code># Start local development server
+glia-functions dev --path ./function.js
+
+# With options
+glia-functions dev --path ./function.js --port 3000 --watch --env '{&quot;KEY&quot;:&quot;value&quot;}'
+</code></pre>
+<p>The local development server provides:</p>
+<ul>
+<li>A simulated workerd runtime environment for testing</li>
+<li>Web UI for sending test requests to your function</li>
+<li>Real-time console logging display</li>
+<li>Environment variable configuration interface</li>
+<li>Request history tracking</li>
+<li>Hot reloading when files change (with --watch flag)</li>
+</ul>
+<p>See the <a href="./docs/dev-server.md">Development Server Documentation</a> for detailed usage.</p>
+<h4>Using Profiles</h4>
+<pre class="prettyprint source lang-bash"><code># List available profiles
+glia-functions profiles list
+
+# Create a new profile
+glia-functions profiles create --name production
+
+# Switch to a profile
+glia-functions profiles switch --name production
+
+# Use a specific profile for a single command
+glia-functions list-functions --profile staging
+</code></pre>
+<p>For comprehensive command documentation, see the <a href="./docs/commands/index.md">Command Reference</a>.</p>
+<h3>Legacy Command-line Scripts (Deprecated)</h3>
+<p>The individual command scripts still work for backward compatibility:</p>
+<pre class="prettyprint source lang-bash"><code># Individual commands (deprecated)
+node ./src/commands/listFunctions.js
+node ./src/commands/createAndDeployVersion.js --id=$FUNCTION_ID --path='./function-out.js' --env='{&quot;key&quot;: &quot;value&quot;}'
+node ./src/commands/invokeFunction.js --uri=$INVOCATION_URI
+node ./src/commands/fetchLogs.js --id=$FUNCTION_ID
+</code></pre>
+<p>For detailed CLI usage information, see the <a href="./docs/cli-usage.md">CLI Usage Documentation</a>.</p>
+<h2>Examples</h2>
+<p>The <code>/examples</code> directory contains ready-to-use function examples demonstrating various integration patterns:</p>
+<ul>
+<li><code>iva-as-ivr</code>: Build an Intelligent Virtual Assistant with voice interactions</li>
+<li><code>genai</code>: Integrate with generative AI services</li>
+<li><code>bedrock-agent</code>: AWS Bedrock integration example</li>
+<li><code>s3-export</code>: AWS S3 data export capabilities</li>
+<li><code>teams-presence</code>: Microsoft Teams presence integration</li>
+<li>And more...</li>
+</ul>
+<p>See the <a href="./examples/README.md">Examples Documentation</a> for details on each example.</p>
+<h2>Migration Guide</h2>
+<p>The project is undergoing an architectural migration to improve code quality and maintainability. During this transition:</p>
+<ul>
+<li><strong>Legacy paths are deprecated</strong> but still work for backward compatibility</li>
+<li>All new development should use the modern architecture</li>
+</ul>
+<h3>Deprecated Paths (Legacy)</h3>
+<p>The following path is deprecated and will be removed in a future release:</p>
+<ul>
+<li><code>index.js</code> - Use <code>bin/glia-functions.js</code> instead</li>
+</ul>
+<p>The following directories have been removed as part of the architecture migration:</p>
+<ul>
+<li><code>utils/</code> - Use <code>src/utils/</code> instead (removed March 2025)</li>
+<li><code>commands/</code> - Use <code>src/commands/</code> instead (removed March 2025)</li>
+</ul>
+<h3>Migration Path</h3>
+<p>If you've built scripts that rely on the legacy structure, please update your imports to use the new paths:</p>
+<p><strong>Before:</strong></p>
+<pre class="prettyprint source lang-javascript"><code>import createGliaFunction from './utils/create-gf.js';
+import { createFunction } from './commands/index.js';
+</code></pre>
+<p><strong>After:</strong></p>
+<pre class="prettyprint source lang-javascript"><code>import { createGliaFunction } from './src/utils/index.js'; 
+import { createFunction } from './src/commands/index.js';
+</code></pre>
+<h2>Project Structure</h2>
+<pre class="prettyprint source"><code>glia-functions-tools/
+├── bin/                      # Executable entry points
+│   └── glia-functions.js     # Main CLI executable
+├── src/                      # Source code (core implementation)
+│   ├── commands/             # Command implementations
+│   ├── utils/                # Utility functions
+│   ├── lib/                  # Core libraries
+│   ├── cli/                  # CLI implementation
+│   └── templates/            # Function templates
+├── examples/                 # Example functions
+├── backup/                   # Backup of removed legacy code
+├── index.js                  # Legacy CLI entry point (deprecated)
+├── config/                   # Configuration files
+└── docs/                     # Documentation
+</code></pre>
+<p>For more details on the migration, see the <a href="./docs/architecture-migration.md">Architecture Migration Plan</a>.</p>
+<h2>Contributing</h2>
+<p>Contributions are welcome! Please feel free to submit a Pull Request.</p>
+<h2>License</h2>
+<p>See the <a href="LICENSE">LICENSE</a> file for details.</p></article>
+    </section>
+
+
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-api.html">api</a></li><li><a href="module-config.html">config</a></li></ul><h3>Classes</h3><ul><li><a href="ApiError.html">ApiError</a></li><li><a href="AuthenticationError.html">AuthenticationError</a></li><li><a href="BaseCommand_BaseCommand.html">BaseCommand</a></li><li><a href="CircuitBreaker.html">CircuitBreaker</a></li><li><a href="ConfigurationError.html">ConfigurationError</a></li><li><a href="FunctionError.html">FunctionError</a></li><li><a href="GliaError.html">GliaError</a></li><li><a href="NetworkDetector.html">NetworkDetector</a></li><li><a href="NetworkError.html">NetworkError</a></li><li><a href="OfflineManager.html">OfflineManager</a></li><li><a href="OperationQueue.html">OperationQueue</a></li><li><a href="PersistentCacheStorage.html">PersistentCacheStorage</a></li><li><a href="RateLimitError.html">RateLimitError</a></li><li><a href="ResponseCache.html">ResponseCache</a></li><li><a href="ValidationError.html">ValidationError</a></li><li><a href="module-api.html">api</a></li></ul><h3>Global</h3><ul><li><a href="global.html#CLIAuth">CLIAuth</a></li><li><a href="global.html#CLIBuildMenu">CLIBuildMenu</a></li><li><a href="global.html#CLICreateProfile">CLICreateProfile</a></li><li><a href="global.html#CLIDeleteProfile">CLIDeleteProfile</a></li><li><a href="global.html#CLIDeployFunction">CLIDeployFunction</a></li><li><a href="global.html#CLIDevFunction">CLIDevFunction</a></li><li><a href="global.html#CLIFunctionDetailsMenu">CLIFunctionDetailsMenu</a></li><li><a href="global.html#CLIFunctionInvoke">CLIFunctionInvoke</a></li><li><a href="global.html#CLIFunctionLogs">CLIFunctionLogs</a></li><li><a href="global.html#CLIFunctionVersion">CLIFunctionVersion</a></li><li><a href="global.html#CLIFunctionVersions">CLIFunctionVersions</a></li><li><a href="global.html#CLIInitProject">CLIInitProject</a></li><li><a href="global.html#CLIListFunctions">CLIListFunctions</a></li><li><a href="global.html#CLIListProfiles">CLIListProfiles</a></li><li><a href="global.html#CLIMainMenu">CLIMainMenu</a></li><li><a href="global.html#CLIManageEnvVars">CLIManageEnvVars</a></li><li><a href="global.html#CLINewFunction">CLINewFunction</a></li><li><a href="global.html#CLINewVersion">CLINewVersion</a></li><li><a href="global.html#CLIProfileMenu">CLIProfileMenu</a></li><li><a href="global.html#CLISetup">CLISetup</a></li><li><a href="global.html#CLISwitchProfile">CLISwitchProfile</a></li><li><a href="global.html#CLIUpdateEnvironment">CLIUpdateEnvironment</a></li><li><a href="global.html#CLIUpdateFunction">CLIUpdateFunction</a></li><li><a href="global.html#DEFAULT_CACHE_CONFIG">DEFAULT_CACHE_CONFIG</a></li><li><a href="global.html#DEFAULT_OFFLINE_CONFIG">DEFAULT_OFFLINE_CONFIG</a></li><li><a href="global.html#DEFAULT_RETRY_CONFIG">DEFAULT_RETRY_CONFIG</a></li><li><a href="global.html#calculateBackoffDelay">calculateBackoffDelay</a></li><li><a href="global.html#createAndDeployVersion">createAndDeployVersion</a></li><li><a href="global.html#createBearerToken">createBearerToken</a></li><li><a href="global.html#createFromTemplate">createFromTemplate</a></li><li><a href="global.html#createFunction">createFunction</a></li><li><a href="global.html#createProjectFromTemplate">createProjectFromTemplate</a></li><li><a href="global.html#dev">dev</a></li><li><a href="global.html#displayRequestDetails">displayRequestDetails</a></li><li><a href="global.html#displayTroubleshootingHints">displayTroubleshootingHints</a></li><li><a href="global.html#displayValidationDetails">displayValidationDetails</a></li><li><a href="global.html#fetchAllLogs">fetchAllLogs</a></li><li><a href="global.html#fetchGfLogs">fetchGfLogs</a></li><li><a href="global.html#fetchLogs">fetchLogs</a></li><li><a href="global.html#formatEnvVars">formatEnvVars</a></li><li><a href="global.html#formatErrorForDisplay">formatErrorForDisplay</a></li><li><a href="global.html#getAllFilesInDir">getAllFilesInDir</a></li><li><a href="global.html#getProjectTemplate">getProjectTemplate</a></li><li><a href="global.html#getTemplate">getTemplate</a></li><li><a href="global.html#getTemplateDefaultVars">getTemplateDefaultVars</a></li><li><a href="global.html#getTemplateEnvVars">getTemplateEnvVars</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#initCommand">initCommand</a></li><li><a href="global.html#interactiveEnvVars">interactiveEnvVars</a></li><li><a href="global.html#invokeFunction">invokeFunction</a></li><li><a href="global.html#isRetryable">isRetryable</a></li><li><a href="global.html#listEnvVars">listEnvVars</a></li><li><a href="global.html#listFunctions">listFunctions</a></li><li><a href="global.html#listProjectTemplates">listProjectTemplates</a></li><li><a href="global.html#listTemplates">listTemplates</a></li><li><a href="global.html#listTemplatesCommand">listTemplatesCommand</a></li><li><a href="global.html#main">main</a></li><li><a href="global.html#makeApiRequest">makeApiRequest</a></li><li><a href="global.html#onInvoke">onInvoke</a></li><li><a href="global.html#parseAndValidateJson">parseAndValidateJson</a></li><li><a href="global.html#parseVariables">parseVariables</a></li><li><a href="global.html#replaceVariables">replaceVariables</a></li><li><a href="global.html#routeCommand">routeCommand</a></li><li><a href="global.html#runCLI">runCLI</a></li><li><a href="global.html#showDebug">showDebug</a></li><li><a href="global.html#showError">showError</a></li><li><a href="global.html#showInfo">showInfo</a></li><li><a href="global.html#showSuccess">showSuccess</a></li><li><a href="global.html#showWarning">showWarning</a></li><li><a href="global.html#sleep">sleep</a></li><li><a href="global.html#updateEnvVars">updateEnvVars</a></li><li><a href="global.html#updateFunction">updateFunction</a></li><li><a href="global.html#validateApiConfiguration">validateApiConfiguration</a></li><li><a href="global.html#validateDateString">validateDateString</a></li><li><a href="global.html#validateEnvironmentVariables">validateEnvironmentVariables</a></li><li><a href="global.html#validateFilePath">validateFilePath</a></li><li><a href="global.html#validateFunctionId">validateFunctionId</a></li><li><a href="global.html#validateFunctionName">validateFunctionName</a></li><li><a href="global.html#validateInput">validateInput</a></li><li><a href="global.html#validateTemplateVariables">validateTemplateVariables</a></li><li><a href="global.html#withRetry">withRetry</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a>
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
