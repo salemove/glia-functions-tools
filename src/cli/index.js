@@ -113,12 +113,12 @@ const CLISetup = async () => {
   try {
     const APIKey = await input({  
       name: 'APIKey',
-      message: 'API key:'
+      message: 'User API Key ID:'
     });
 
     const APISecret = await input({  
       name: 'APISecret',
-      message: 'API secret:'
+      message: 'User API Key Secret:'
     });
       
     const SiteID = await input({  
