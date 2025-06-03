@@ -1,0 +1,60 @@
+{
+  "name": "basic-function",
+  "displayName": "Basic Function",
+  "description": "A simple Glia Function with error handling and testing",
+  "version": "1.0.0",
+  "variables": {
+    "projectName": {
+      "description": "Project name (used in package.json and README)",
+      "default": "my-glia-function",
+      "required": true
+    },
+    "description": {
+      "description": "Project description",
+      "default": "A Glia Function created with the basic template",
+      "required": true
+    },
+    "version": {
+      "description": "Project version",
+      "default": "0.1.0",
+      "required": false
+    },
+    "author": {
+      "description": "Project author",
+      "default": "",
+      "required": false
+    },
+    "environment": {
+      "description": "Target environment",
+      "default": "production",
+      "required": false,
+      "enum": ["production", "beta", "development"]
+    },
+    "profile": {
+      "description": "Glia CLI profile to use",
+      "default": "default",
+      "required": false
+    },
+    "functionId": {
+      "description": "Function ID (can be set later)",
+      "default": "",
+      "required": false
+    },
+    "payload": {
+      "description": "Default test payload",
+      "default": "{\"test\": \"data\"}",
+      "required": false
+    }
+  },
+  "files": [
+    "README.md",
+    "function.js",
+    "package.json",
+    "test/function.test.js",
+    ".env.example"
+  ],
+  "postInit": [
+    "Copy .env.example to .env",
+    "Install dependencies: npm install"
+  ]
+}

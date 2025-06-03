@@ -1,0 +1,31 @@
+{
+  "name": "{{projectName}}",
+  "version": "{{version}}",
+  "description": "{{description}}",
+  "main": "function.js",
+  "type": "module",
+  "scripts": {
+    "build": "glia-functions build ./function.js",
+    "build:watch": "glia-functions build ./function.js --watch",
+    "create": "glia-functions create-function --name \"{{projectName}}\" --description \"{{description}}\"",
+    "deploy": "glia-functions create-version --function-id={{functionId}} --path='./function-out.js' --deploy",
+    "invoke": "glia-functions invoke-function --function-id={{functionId}} --payload='{{payload}}'",
+    "logs": "glia-functions fetch-logs --function-id={{functionId}}",
+    "test": "jest"
+  },
+  "keywords": [
+    "glia",
+    "serverless",
+    "function"
+  ],
+  "author": "{{author}}",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.6.2"
+  },
+  "glia": {
+    "functionName": "{{projectName}}",
+    "environment": "{{environment}}",
+    "profile": "{{profile}}"
+  }
+}

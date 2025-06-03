@@ -7,3 +7,7 @@ function-out.js
 .vscode
 .DS_Store
 function-out.js
+docs
+CLAUDE.md
+backup
+coverage
