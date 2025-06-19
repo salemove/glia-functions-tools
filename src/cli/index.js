@@ -72,6 +72,13 @@ const CLIMainMenu = async () => {
       value: 'auth',
       description: '(Re)Generate a new bearer token',
     });
+    
+    // Add the change site option when we have credentials
+    choices.push({
+      name: 'Change active site',
+      value: 'changeSite',
+      description: 'Switch to a different site within the current profile',
+    });
   }
   
   // Profile management
@@ -97,6 +104,7 @@ const CLIMainMenu = async () => {
       case 'auth': await CLIAuth();  return false;
       case 'build': await CLIBuildMenu(); return false;
       case 'profiles': await CLIProfileMenu(); return false;
+      case 'changeSite': await CLIChangeSite(); return false;
       case 'exit': 
         console.log(chalk.green('Exiting Glia Functions CLI. Goodbye!'));
         process.exit(0); // Explicitly exit with success code
@@ -286,15 +294,19 @@ const CLISetup = async () => {
  * @param {string} keyId - API key ID
  * @param {string} keySecret - API key secret
  * @param {string} apiUrl - API URL
+ * @param {string} siteId - Site ID to verify token permissions
  * @returns {Promise<Object>} Object containing token and expiration
  */
-async function createBearerToken(keyId, keySecret, apiUrl) {
+async function createBearerToken(keyId, keySecret, apiUrl, siteId) {
   try {
     if (!keyId || !keySecret) {
       throw new AuthenticationError('API key ID and secret are required');
     }
     
     const credentials = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+    
+    // Show that we're attempting to generate a token
+    console.log(chalk.blue(`Requesting token from ${apiUrl}/operator_authentication/tokens...`));
     
     const response = await fetch(`${apiUrl}/operator_authentication/tokens`, {
       method: 'POST',
@@ -321,10 +333,87 @@ async function createBearerToken(keyId, keySecret, apiUrl) {
     const expiresInMs = data.expires_in ? data.expires_in * 1000 : 55 * 60 * 1000;
     const expiresAt = Date.now() + expiresInMs;
     
-    return {
+    const tokenInfo = {
       token: data.token,
       expiresAt
     };
+    
+    // If site ID was provided, validate that the token has access to it
+    if (siteId) {
+      try {
+        console.log(chalk.blue(`Validating token has access to site ${siteId}...`));
+        
+        // Test that the token has access to the requested site
+        const siteResponse = await fetch(`${apiUrl}/sites/${siteId}`, {
+          headers: {
+            'Authorization': `Bearer ${tokenInfo.token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.salemove.v1+json'
+          }
+        });
+        
+        if (!siteResponse.ok) {
+          console.log(chalk.yellow(`Warning: Token was generated but does not have access to site ${siteId}`));
+          console.log(chalk.yellow(`API returned: ${siteResponse.status} ${siteResponse.statusText}`));
+          
+          if (siteResponse.status === 403) {
+            console.log(chalk.yellow('The API key may not have permissions for this site.'));
+            
+            // Try to get a list of sites that this token does have access to
+            try {
+              console.log(chalk.blue('Checking which sites this token has access to...'));
+              const sitesResponse = await fetch(`${apiUrl}/sites`, {
+                headers: {
+                  'Authorization': `Bearer ${tokenInfo.token}`,
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/vnd.salemove.v1+json'
+                }
+              });
+              
+              if (sitesResponse.ok) {
+                const sitesData = await sitesResponse.json();
+                
+                if (sitesData.sites && sitesData.sites.length > 0) {
+                  console.log(chalk.green(`Found ${sitesData.sites.length} sites that this token has access to.`));
+                  
+                  // Show the first few sites
+                  const sitesToShow = sitesData.sites.slice(0, 3);
+                  sitesToShow.forEach((site) => {
+                    console.log(chalk.green(`- ${site.id}: ${site.name || '[No name]'}`));
+                  });
+                  
+                  if (sitesData.sites.length > 3) {
+                    console.log(chalk.green(`  and ${sitesData.sites.length - 3} more...`));
+                  }
+                  
+                  // Store available sites on tokenInfo
+                  tokenInfo.availableSites = sitesData.sites;
+                  
+                  // If this is the first site, suggest using it automatically
+                  if (sitesData.sites.length === 1) {
+                    const firstSite = sitesData.sites[0];
+                    tokenInfo.suggestedSiteId = firstSite.id;
+                    console.log(chalk.blue(`Suggest using site ID: ${firstSite.id}`));
+                  } else {
+                    console.log(chalk.blue('You can use one of these site IDs for this profile.'));
+                  }
+                } else {
+                  console.log(chalk.yellow('This token does not have access to any sites.'));
+                }
+              }
+            } catch (sitesError) {
+              console.log(chalk.yellow(`Could not fetch available sites: ${sitesError.message}`));
+            }
+          }
+        } else {
+          console.log(chalk.green(`✓ Token has confirmed access to site ${siteId}`));
+        }
+      } catch (validationError) {
+        console.log(chalk.yellow(`Warning: Could not validate token access to site: ${validationError.message}`));
+      }
+    }
+    
+    return tokenInfo;
   } catch (error) {
     if (error instanceof AuthenticationError) {
       throw error;
@@ -344,7 +433,8 @@ const CLIAuth = async () => {
     const tokenInfo = await createBearerToken(
       authConfig.keyId, 
       authConfig.keySecret, 
-      authConfig.apiUrl || 'https://api.glia.com'
+      authConfig.apiUrl || 'https://api.glia.com',
+      authConfig.siteId
     );
     
     // Determine where to store the token
@@ -720,7 +810,10 @@ const CLIListFunctions = async () => {
     
     try {
       // Get API configuration
-      const apiConfig = await getApiConfig();
+      let apiConfig = await getApiConfig();
+      
+      // Get verbose flag from environment or process arguments
+      const isVerbose = process.env.GLIA_VERBOSE === 'true' || process.argv.includes('--verbose') || process.argv.includes('-v');
       
       // Check if configuration looks reasonable 
       const configIssues = validateApiConfiguration(apiConfig);
@@ -735,10 +828,37 @@ const CLIListFunctions = async () => {
       
       // Try to retrieve the site details first to validate the token and site ID
       try {
+        // Check if we need/can refresh the token first before trying the connection
+        if (!apiConfig.bearerToken && apiConfig.keyId && apiConfig.keySecret) {
+          try {
+            const refreshed = await refreshBearerTokenIfNeeded();
+            if (refreshed) {
+              showInfo('Bearer token refreshed successfully.');
+              
+              // Reload config to get the new token
+              apiConfig = await getApiConfig();
+              showInfo('Using refreshed credentials.');
+            }
+          } catch (refreshError) {
+            console.error(chalk.yellow('Could not refresh token:'), refreshError.message);
+          }
+        }
+        
+        // Only show debug info when in verbose mode
+        if (isVerbose) {
+          console.log(chalk.blue('Debug info:'));
+          console.log(chalk.blue('- API URL:'), apiConfig.apiUrl);
+          console.log(chalk.blue('- Site ID:'), apiConfig.siteId);
+          console.log(chalk.blue('- Has API Key ID:'), !!apiConfig.keyId);
+          console.log(chalk.blue('- Has API Key Secret:'), !!apiConfig.keySecret);
+          console.log(chalk.blue('- Has Bearer Token:'), !!apiConfig.bearerToken);
+          console.log(chalk.blue('- Token expires:'), apiConfig.tokenExpiresAt ? new Date(apiConfig.tokenExpiresAt).toLocaleString() : 'n/a');
+        }
+        
         // Create simple fetch request to test connectivity
         const connectivityTest = await fetch(`${apiConfig.apiUrl}/sites/${apiConfig.siteId}`, {
           headers: {
-            'Authorization': `Bearer ${apiConfig.bearerToken}`,
+            'Authorization': `Bearer ${apiConfig.bearerToken || ''}`,
             'Content-Type': 'application/json',
             'Accept': 'application/vnd.salemove.v1+json'
           }
@@ -749,6 +869,96 @@ const CLIListFunctions = async () => {
         }
       } catch (connectError) {
         console.error(chalk.red('Connection test failed:'), connectError.message);
+        
+        // Check if we have credentials but no valid token or got 401/403 error
+        if (apiConfig.keyId && apiConfig.keySecret && 
+            ((!apiConfig.bearerToken) || 
+             (connectError.message && (connectError.message.includes('401') || connectError.message.includes('403'))))) {
+          showWarning('You have API credentials but authentication failed. Attempting to generate a new token...');
+          
+          try {
+            // Create a token using existing credentials
+            const tokenInfo = await createBearerToken(
+              apiConfig.keyId,
+              apiConfig.keySecret,
+              apiConfig.apiUrl || 'https://api.glia.com',
+              apiConfig.siteId
+            );
+            
+            // Check if we need to update the site ID - if token has sites but doesn't have access to current site ID
+            let siteIdUpdated = false;
+            if (tokenInfo.availableSites && tokenInfo.availableSites.length > 0) {
+              if (tokenInfo.suggestedSiteId) {
+                // A single site is available - offer to use it automatically
+                const useSuggestedSite = await confirm({
+                  message: `Update your profile to use site ID "${tokenInfo.suggestedSiteId}"?`,
+                  default: true
+                });
+                
+                if (useSuggestedSite) {
+                  apiConfig.siteId = tokenInfo.suggestedSiteId;
+                  siteIdUpdated = true;
+                  showInfo(`Site ID updated to "${tokenInfo.suggestedSiteId}"`);
+                }
+              } else if (tokenInfo.availableSites.length > 1) {
+                // Multiple sites available - ask user to choose
+                const siteChoices = tokenInfo.availableSites.map(site => ({
+                  name: `${site.name || site.id}`,
+                  value: site.id
+                }));
+                
+                siteChoices.push({
+                  name: '(Cancel - keep current site ID)',
+                  value: null
+                });
+                
+                showInfo('Select a site ID that your API key has access to:');
+                const chosenSiteId = await select({
+                  message: 'Choose site ID:',
+                  choices: siteChoices
+                });
+                
+                if (chosenSiteId) {
+                  apiConfig.siteId = chosenSiteId;
+                  siteIdUpdated = true;
+                  showInfo(`Site ID updated to "${chosenSiteId}"`);
+                }
+              }
+            }
+            
+            // Update token in profile
+            const currentProfile = process.env.GLIA_PROFILE || 'default';
+            const updates = {
+              'GLIA_BEARER_TOKEN': tokenInfo.token,
+              'GLIA_TOKEN_EXPIRES_AT': tokenInfo.expiresAt
+            };
+            
+            // Also update site ID if it was changed
+            if (siteIdUpdated) {
+              updates['GLIA_SITE_ID'] = apiConfig.siteId;
+              // Update process.env with the new site ID
+              process.env.GLIA_SITE_ID = apiConfig.siteId;
+            }
+            
+            if (currentProfile === 'default') {
+              await updateGlobalConfig(updates);
+            } else {
+              await updateProfile(currentProfile, updates);
+            }
+            
+            // Update process.env with the new token
+            process.env.GLIA_BEARER_TOKEN = tokenInfo.token;
+            process.env.GLIA_TOKEN_EXPIRES_AT = tokenInfo.expiresAt;
+            
+            showSuccess('Authentication successful. Retrying connection...');
+            
+            // Try again with the new token - use recursion to avoid duplicating code
+            return await CLIListFunctions();
+          } catch (authError) {
+            showWarning(`Authentication failed: ${authError.message}`);
+          }
+        }
+        
         showWarning('Could not connect to API. Your configuration may be incorrect.');
         
         const rerunSetup = await confirm({
@@ -1520,14 +1730,9 @@ export async function runCLI() {
     // Check if we have valid API configuration and attempt to refresh if expired
     const hasToken = await hasValidBearerToken(true);
     
-    if (hasToken) {
-      // If user has a valid token, skip the main menu and go directly to the build menu
-      console.log(chalk.green('✓ Existing authentication detected, skipping setup...'));
-      await CLIBuildMenu();
-    } else {
-      // No valid token, show regular menu
-      await CLIMainMenu();
-    }
+    // Always show main menu first for better UX - this gives users the choice to
+    // authenticate, manage profiles, or access functions from the highest level menu
+    await CLIMainMenu();
     
     // If execution reaches here (after all menus have returned), 
     // it means we should exit the program gracefully
@@ -1545,6 +1750,150 @@ export async function runCLI() {
 if (import.meta.url === `file://${process.argv[1]}`) {
   runCLI();
 }
+
+/**
+ * Change the current site within the active profile
+ */
+const CLIChangeSite = async () => {
+  try {
+    // Get current profile and site info
+    const currentProfile = process.env.GLIA_PROFILE || 'default';
+    const currentSiteId = process.env.GLIA_SITE_ID;
+    
+    console.log(chalk.blue('Current active profile:'), chalk.bold(currentProfile));
+    console.log(chalk.blue('Current active site ID:'), chalk.bold(currentSiteId || 'none'));
+    console.log(separator);
+    
+    // Get API configuration to access token
+    let config;
+    try {
+      config = await getApiConfig();
+    } catch (configError) {
+      showWarning('Could not load configuration. You may need to run setup first.');
+      await CLIMainMenu();
+      return false;
+    }
+    
+    if (!config.bearerToken) {
+      // Try to generate token if we have credentials
+      if (config.keyId && config.keySecret) {
+        try {
+          const tokenInfo = await createBearerToken(
+            config.keyId,
+            config.keySecret,
+            config.apiUrl || 'https://api.glia.com'
+          );
+          
+          config.bearerToken = tokenInfo.token;
+          
+          // Update token in current profile
+          const updates = {
+            'GLIA_BEARER_TOKEN': tokenInfo.token,
+            'GLIA_TOKEN_EXPIRES_AT': tokenInfo.expiresAt
+          };
+          
+          if (currentProfile === 'default') {
+            await updateGlobalConfig(updates);
+          } else {
+            await updateProfile(currentProfile, updates);
+          }
+          
+          // Update process.env
+          process.env.GLIA_BEARER_TOKEN = tokenInfo.token;
+          process.env.GLIA_TOKEN_EXPIRES_AT = tokenInfo.expiresAt;
+        } catch (tokenError) {
+          showWarning(`Could not generate token: ${tokenError.message}`);
+          await CLIMainMenu();
+          return false;
+        }
+      } else {
+        showWarning('No API credentials available. Please run setup first.');
+        await CLIMainMenu();
+        return false;
+      }
+    }
+    
+    // Fetch the list of sites this token has access to
+    console.log(chalk.blue('Fetching available sites...'));
+    try {
+      const sitesResponse = await fetch(`${config.apiUrl}/sites`, {
+        headers: {
+          'Authorization': `Bearer ${config.bearerToken}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/vnd.salemove.v1+json'
+        }
+      });
+      
+      if (!sitesResponse.ok) {
+        throw new Error(`${sitesResponse.status} ${sitesResponse.statusText}`);
+      }
+      
+      const sitesData = await sitesResponse.json();
+      
+      if (!sitesData.sites || sitesData.sites.length === 0) {
+        showWarning('Your API key does not have access to any sites.');
+        await CLIMainMenu();
+        return false;
+      }
+      
+      // Create choices for site selection
+      const siteChoices = sitesData.sites.map(site => ({
+        name: `${site.name || '[Unnamed site]'} (${site.id})${site.id === currentSiteId ? ' (current)' : ''}`,
+        value: site.id,
+        disabled: site.id === currentSiteId
+      }));
+      
+      siteChoices.push({
+        name: '(Cancel)',
+        value: 'cancel'
+      });
+      
+      // Let user select a site
+      const selectedSiteId = await select({
+        message: 'Select site to use:',
+        choices: siteChoices
+      });
+      
+      if (selectedSiteId === 'cancel') {
+        await CLIMainMenu();
+        return false;
+      }
+      
+      // Update site ID in config and profile
+      const selectedSite = sitesData.sites.find(site => site.id === selectedSiteId);
+      const siteName = selectedSite.name || selectedSiteId;
+      
+      // Update profile with new site ID
+      if (currentProfile === 'default') {
+        await updateGlobalConfig({
+          'GLIA_SITE_ID': selectedSiteId
+        });
+      } else {
+        await updateProfile(currentProfile, {
+          'GLIA_SITE_ID': selectedSiteId
+        });
+      }
+      
+      // Update current process.env
+      process.env.GLIA_SITE_ID = selectedSiteId;
+      
+      showSuccess(`Switched to site: ${siteName} (${selectedSiteId})`);
+      showInfo('The new site will be used for all subsequent operations.');
+      showInfo('You are still using the same profile and API credentials.');
+      
+      await CLIMainMenu();
+      return false;
+    } catch (error) {
+      showError(`Failed to fetch available sites: ${error.message}`);
+      await CLIMainMenu();
+      return false;
+    }
+  } catch (error) {
+    handleError(error);
+    await CLIMainMenu();
+    return false;
+  }
+};
 
 /**
  * Profile management menu for the CLI
@@ -1712,6 +2061,109 @@ const CLISwitchProfile = async () => {
     
     // Switch to the profile
     await switchProfile(profileName);
+    
+    // Create a token if we have credentials but no token
+    const config = await loadConfig();
+    
+    // Debug info after profile switch
+    console.log(chalk.blue('Profile switch debug info:'));
+    console.log(chalk.blue('- Profile:'), profileName);
+    console.log(chalk.blue('- API URL:'), config.apiUrl);
+    console.log(chalk.blue('- Site ID:'), config.siteId);
+    console.log(chalk.blue('- Has API Key ID:'), !!config.keyId);
+    console.log(chalk.blue('- Has API Key Secret:'), !!config.keySecret);
+    console.log(chalk.blue('- Has Bearer Token:'), !!config.bearerToken);
+    console.log(chalk.blue('- Token expires:'), config.tokenExpiresAt ? new Date(config.tokenExpiresAt).toLocaleString() : 'n/a');
+    
+    if (config.keyId && config.keySecret) {
+      try {
+        // If no token or token is expired, create a new one
+        if (!config.bearerToken || !config.tokenExpiresAt || 
+            Date.now() >= (config.tokenExpiresAt - (5 * 60 * 1000))) {
+          
+          // Create a token using existing credentials
+          console.log(chalk.blue('Generating new token with credentials from profile...'));
+          const tokenInfo = await createBearerToken(
+            config.keyId,
+            config.keySecret,
+            config.apiUrl || 'https://api.glia.com',
+            config.siteId
+          );
+          
+          // Check if we need to update site ID
+          let siteIdUpdated = false;
+          if (tokenInfo.availableSites && tokenInfo.availableSites.length > 0) {
+            if (tokenInfo.suggestedSiteId) {
+              // A single site is available - offer to use it automatically
+              const useSuggestedSite = await confirm({
+                message: `Update profile to use site ID "${tokenInfo.suggestedSiteId}"?`,
+                default: true
+              });
+              
+              if (useSuggestedSite) {
+                config.siteId = tokenInfo.suggestedSiteId;
+                siteIdUpdated = true;
+                showInfo(`Site ID updated to "${tokenInfo.suggestedSiteId}"`);
+              }
+            } else if (tokenInfo.availableSites.length > 1) {
+              // Multiple sites available - ask user to choose
+              const siteChoices = tokenInfo.availableSites.map(site => ({
+                name: `${site.name || site.id}`,
+                value: site.id
+              }));
+              
+              siteChoices.push({
+                name: '(Cancel - keep current site ID)',
+                value: null
+              });
+              
+              showInfo('Select a site ID that your API key has access to:');
+              const chosenSiteId = await select({
+                message: 'Choose site ID:',
+                choices: siteChoices
+              });
+              
+              if (chosenSiteId) {
+                config.siteId = chosenSiteId;
+                siteIdUpdated = true;
+                showInfo(`Site ID updated to "${chosenSiteId}"`);
+              }
+            }
+          }
+          
+          // Prepare updates for the profile
+          const updates = {
+            'GLIA_BEARER_TOKEN': tokenInfo.token,
+            'GLIA_TOKEN_EXPIRES_AT': tokenInfo.expiresAt
+          };
+          
+          // Also update site ID if it was changed
+          if (siteIdUpdated) {
+            updates['GLIA_SITE_ID'] = config.siteId;
+            // Update process.env with the new site ID
+            process.env.GLIA_SITE_ID = config.siteId;
+          }
+          
+          // Update token in profile
+          if (profileName === 'default') {
+            await updateGlobalConfig(updates);
+          } else {
+            await updateProfile(profileName, updates);
+          }
+          
+          // Update process.env with the new token
+          process.env.GLIA_BEARER_TOKEN = tokenInfo.token;
+          process.env.GLIA_TOKEN_EXPIRES_AT = tokenInfo.expiresAt;
+          
+          showInfo(`Bearer token generated for profile '${profileName}'`);
+        }
+      } catch (tokenError) {
+        // Non-fatal error, just log it
+        showWarning(`Note: Could not generate token: ${tokenError.message}`);
+      }
+    } else {
+      showWarning(`Profile '${profileName}' does not have API credentials. You may need to run setup to add them.`);
+    }
     
     showSuccess(`Switched to profile '${profileName}'`);
     

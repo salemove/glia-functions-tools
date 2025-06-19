@@ -26,67 +26,608 @@ function createTestPageHtml(port, initialEnvironment = {}) {
     '<html>',
     '<head>',
     '<title>Glia Functions Tester</title>',
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+    '<script type="module" src="/improved-dark-mode.js"></script>',
+    '<!-- Prism Design System -->',
     '<style>',
-    'body { font-family: sans-serif; margin: 20px; }',
-    '.container { max-width: 800px; margin: 0 auto; }',
-    '.tabs { display: flex; margin-bottom: 10px; }',
-    '.tab { padding: 10px 20px; cursor: pointer; border: 1px solid #ddd; border-bottom: none; border-radius: 4px 4px 0 0; }',
-    '.tab.active { background-color: #f5f5f5; }',
-    '.tab-content { display: none; border: 1px solid #ddd; padding: 15px; border-radius: 0 4px 4px 4px; }',
+    '/* Prism Design System Tokens */',
+    ':root {',
+    '  /* Theme Toggle */',
+    '  --gl-theme: light;',
+    '  /* Base Color Palette */',
+    '  /* Yellow */',
+    '  --gl-color-yellow-900: #bf6b00;',
+    '  --gl-color-yellow-800: #d97900;',
+    '  --gl-color-yellow-700: #ff8e00;',
+    '  --gl-color-yellow-600: #ff9e1f;',
+    '  --gl-color-yellow-500: #ffae3d;',
+    '  --gl-color-yellow-400: #ffbd5c;',
+    '  --gl-color-yellow-300: #ffcd7a;',
+    '  --gl-color-yellow-200: #ffdd99;',
+    '  --gl-color-yellow-100: #ffecb7;',
+    '  --gl-color-yellow-50: #ffedb0;',
+    '  ',
+    '  /* Green */',
+    '  --gl-color-green-900: #006000;',
+    '  --gl-color-green-800: #007f0e;',
+    '  --gl-color-green-700: #18901c;',
+    '  --gl-color-green-600: #34a02c;',
+    '  --gl-color-green-500: #4fb13c;',
+    '  --gl-color-green-400: #6bc14d;',
+    '  --gl-color-green-300: #87d25e;',
+    '  --gl-color-green-200: #a2e26f;',
+    '  --gl-color-green-100: #bef280;',
+    '  --gl-color-green-50: #e7f5e6;',
+    '  ',
+    '  /* Red */',
+    '  --gl-color-red-900: #86003d;',
+    '  --gl-color-red-800: #a80142;',
+    '  --gl-color-red-700: #bc0f42;',
+    '  --gl-color-red-600: #cf2b42;',
+    '  --gl-color-red-500: #e34242;',
+    '  --gl-color-red-400: #f65a43;',
+    '  --gl-color-red-300: #ff7243;',
+    '  --gl-color-red-200: #ff8a44;',
+    '  --gl-color-red-100: #ffa744;',
+    '  --gl-color-red-50: #fde3e8;',
+    '  ',
+    '  /* Blue */',
+    '  --gl-color-blue-900: #1b3cc1;',
+    '  --gl-color-blue-800: #0d5ee0;',
+    '  --gl-color-blue-700: #0f6bff;',
+    '  --gl-color-blue-600: #007fff;',
+    '  --gl-color-blue-500: #1e90ff;',
+    '  --gl-color-blue-400: #3da0ff;',
+    '  --gl-color-blue-300: #5cb0ff;',
+    '  --gl-color-blue-200: #7bc0ff;',
+    '  --gl-color-blue-100: #99d0ff;',
+    '  --gl-color-blue-50: #e3ecfb;',
+    '  ',
+    '  /* Purple */',
+    '  --gl-color-purple-900: #2c0735;',
+    '  --gl-color-purple-800: #4e148c;',
+    '  --gl-color-purple-700: #5936bf;',
+    '  --gl-color-purple-600: #6a51d3;',
+    '  --gl-color-purple-500: #7b6ce7;',
+    '  --gl-color-purple-400: #8c87fb;',
+    '  --gl-color-purple-300: #9d9dfb;',
+    '  --gl-color-purple-200: #afb3fb;',
+    '  --gl-color-purple-100: #c1c9fb;',
+    '  --gl-color-purple-50: #f2e5ff;',
+    '  ',
+    '  /* Gray */',
+    '  --gl-color-gray-900: #2e2f32;',
+    '  --gl-color-gray-800: #404449;',
+    '  --gl-color-gray-700: #50575f;',
+    '  --gl-color-gray-600: #616a75;',
+    '  --gl-color-gray-500: #727d8a;',
+    '  --gl-color-gray-400: #b6bbc1;',
+    '  --gl-color-gray-300: #d3d6da;',
+    '  --gl-color-gray-200: #dfe1e3;',
+    '  --gl-color-gray-100: #f3f3f3;',
+    '  --gl-color-gray-50: #f7f7f7;',
+    '  ',
+    '  /* Base Colors */',
+    '  --gl-color-white: #ffffff;',
+    '  --gl-color-black: #000000;',
+    '  --gl-color-transparent: transparent;',
+    '',
+    '  /* Semantic Colors */',
+    '  /* Border Colors */',
+    '  --gl-color-border-info: var(--gl-color-purple-800);',
+    '  --gl-color-border-attention: var(--gl-color-yellow-800);',
+    '  --gl-color-border-success: var(--gl-color-green-800);',
+    '  --gl-color-border-danger: var(--gl-color-red-800);',
+    '  --gl-color-border-primary: var(--gl-color-blue-800);',
+    '  --gl-color-border-secondary: var(--gl-color-purple-600);',
+    '  --gl-color-border-default: var(--gl-color-gray-200);',
+    '  --gl-color-border-strong: var(--gl-color-gray-400);',
+    '  --gl-color-border-focus: var(--gl-color-blue-600);',
+    '  --gl-color-border-disabled: var(--gl-color-gray-200);',
+    '',
+    '  /* Text Colors */',
+    '  --gl-color-text-default: var(--gl-color-purple-900);',
+    '  --gl-color-text-muted: var(--gl-color-gray-400);',
+    '  --gl-color-text-neutral: var(--gl-color-gray-600);',
+    '  --gl-color-text-inverse: var(--gl-color-white);',
+    '  --gl-color-text-primary: var(--gl-color-blue-800);',
+    '  --gl-color-text-secondary: var(--gl-color-purple-800);',
+    '  --gl-color-text-danger: var(--gl-color-red-800);',
+    '  --gl-color-text-success: var(--gl-color-green-800);',
+    '  --gl-color-text-warning: var(--gl-color-yellow-800);',
+    '  --gl-color-text-info: var(--gl-color-purple-800);',
+    '  --gl-color-text-disabled: var(--gl-color-gray-400);',
+    '  --gl-color-text-highlight: var(--gl-color-blue-500);',
+    '',
+    '  /* Background Colors */',
+    '  --gl-color-bg-default: var(--gl-color-white);',
+    '  --gl-color-bg-muted: var(--gl-color-gray-50);',
+    '  --gl-color-bg-neutral: var(--gl-color-gray-100);',
+    '  --gl-color-bg-danger: var(--gl-color-red-700);',
+    '  --gl-color-bg-success: var(--gl-color-green-700);',
+    '  --gl-color-bg-warning: var(--gl-color-yellow-700);',
+    '  --gl-color-bg-info: var(--gl-color-purple-700);',
+    '  --gl-color-bg-primary: var(--gl-color-blue-700);',
+    '  --gl-color-bg-secondary: var(--gl-color-purple-700);',
+    '  --gl-color-bg-contrast: var(--gl-color-purple-900);',
+    '  --gl-color-bg-disabled: var(--gl-color-gray-100);',
+    '',
+    '  /* Subtle Background Colors */',
+    '  --gl-color-bg-danger-subtle: var(--gl-color-red-50);',
+    '  --gl-color-bg-success-subtle: var(--gl-color-green-50);',
+    '  --gl-color-bg-warning-subtle: var(--gl-color-yellow-50);',
+    '  --gl-color-bg-info-subtle: var(--gl-color-purple-50);',
+    '  --gl-color-bg-primary-subtle: var(--gl-color-blue-50);',
+    '  --gl-color-bg-secondary-subtle: var(--gl-color-purple-50);',
+    '',
+    '  /* Typography */',
+    '  /* Font Families */',
+    '  --gl-font-family-sans: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;',
+    '  --gl-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;',
+    '  --gl-font-family-display: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;',
+    '  ',
+    '  /* Font Sizes */',
+    '  --gl-font-size-8: 28px;',
+    '  --gl-font-size-7: 24px;',
+    '  --gl-font-size-6: 20px;',
+    '  --gl-font-size-5: 18px;',
+    '  --gl-font-size-4: 16px;',
+    '  --gl-font-size-3: 14px;',
+    '  --gl-font-size-2: 12px;',
+    '  --gl-font-size-1: 10px;',
+    '',
+    '  /* Line Heights */',
+    '  --gl-line-height-tight: 1.2;',
+    '  --gl-line-height-normal: 1.5;',
+    '  --gl-line-height-relaxed: 1.75;',
+    '  --gl-line-height-loose: 2;',
+    '',
+    '  /* Font Weights */',
+    '  --gl-font-weight-light: 300;',
+    '  --gl-font-weight-normal: 400;',
+    '  --gl-font-weight-medium: 500;',
+    '  --gl-font-weight-semibold: 600;',
+    '  --gl-font-weight-bold: 700;',
+    '  --gl-font-weight-extrabold: 800;',
+    '  ',
+    '  /* Letter Spacings */',
+    '  --gl-letter-spacing-tight: -0.025em;',
+    '  --gl-letter-spacing-normal: 0;',
+    '  --gl-letter-spacing-wide: 0.025em;',
+    '  --gl-letter-spacing-wider: 0.05em;',
+    '',
+    '  /* Spacing */',
+    '  --gl-spacing-9: 64px;',
+    '  --gl-spacing-8: 48px;',
+    '  --gl-spacing-7: 40px;',
+    '  --gl-spacing-6: 32px;',
+    '  --gl-spacing-5: 24px;',
+    '  --gl-spacing-4: 16px;',
+    '  --gl-spacing-3: 12px;',
+    '  --gl-spacing-2: 8px;',
+    '  --gl-spacing-1: 4px;',
+    '  --gl-spacing-0: 0;',
+    '  --gl-spacing-auto: auto;',
+    '',
+    '  /* Border Radius */',
+    '  --gl-radii-5: 9999px; /* pill */',
+    '  --gl-radii-4: 16px;   /* xl */',
+    '  --gl-radii-3: 8px;    /* lg */',
+    '  --gl-radii-2: 6px;    /* md */',
+    '  --gl-radii-1: 4px;    /* sm */',
+    '  --gl-radii-0: 0;      /* none */',
+    '',
+    '  /* Box Shadows / Elevations */',
+    '  --gl-elevation-3: 0 10px 30px 0 rgba(0, 0, 0, 0.2);  /* high */',
+    '  --gl-elevation-2: 0 4px 16px 0 rgba(0, 0, 0, 0.24);  /* medium */',
+    '  --gl-elevation-1: 0 8px 24px 0 rgba(0, 0, 0, 0.16);  /* low */',
+    '  --gl-elevation-0: 0 0 0 0 rgba(0, 0, 0, 0);          /* none */',
+    '  --gl-focus-ring: 0 0 0 3px var(--gl-color-blue-300);',
+    '  --gl-inner-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);',
+    '',
+    '  /* Z-indices */',
+    '  --gl-z-index-dropdown: 1000;',
+    '  --gl-z-index-sticky: 1020;',
+    '  --gl-z-index-fixed: 1030;',
+    '  --gl-z-index-modal-backdrop: 1040;',
+    '  --gl-z-index-modal: 1050;',
+    '  --gl-z-index-popover: 1060;',
+    '  --gl-z-index-tooltip: 1070;',
+    '',
+    '  /* Animation & Transitions */',
+    '  --gl-transition-fast: 150ms;',
+    '  --gl-transition-normal: 250ms;',
+    '  --gl-transition-slow: 350ms;',
+    '  --gl-transition-very-slow: 500ms;',
+    '  --gl-easing-standard: cubic-bezier(0.4, 0.0, 0.2, 1);',
+    '  --gl-easing-decelerate: cubic-bezier(0.0, 0.0, 0.2, 1);',
+    '  --gl-easing-accelerate: cubic-bezier(0.4, 0.0, 1, 1);',
+    '',
+    '  /* Opacity */',
+    '  --gl-opacity-0: 0;',
+    '  --gl-opacity-25: 0.25;',
+    '  --gl-opacity-50: 0.5;',
+    '  --gl-opacity-75: 0.75;',
+    '  --gl-opacity-100: 1;',
+    '  ',
+    '  /* Misc */',
+    '  --gl-container-max-width: 1200px;',
+    '  --gl-input-height: 40px;',
+    '  --gl-input-height-sm: 32px;',
+    '  --gl-input-height-lg: 48px;',
+    '}',
+    '',
+    '/* Dark Mode Theme Variables */',
+    '[data-theme="dark"] {',
+    '  /* Set theme identifier */',
+    '  --gl-theme: dark;',
+    '  ',
+    '  /* Text Colors */',
+    '  --gl-color-text-default: var(--gl-color-white);',
+    '  --gl-color-text-muted: var(--gl-color-gray-400);',
+    '  --gl-color-text-neutral: var(--gl-color-gray-300);',
+    '  --gl-color-text-inverse: var(--gl-color-gray-900);',
+    '  --gl-color-text-primary: var(--gl-color-blue-300);',
+    '  --gl-color-text-secondary: var(--gl-color-purple-300);',
+    '  --gl-color-text-danger: var(--gl-color-red-300);',
+    '  --gl-color-text-success: var(--gl-color-green-300);',
+    '  --gl-color-text-warning: var(--gl-color-yellow-300);',
+    '  --gl-color-text-info: var(--gl-color-purple-300);',
+    '  --gl-color-text-disabled: var(--gl-color-gray-600);',
+    '  --gl-color-text-highlight: var(--gl-color-blue-300);',
+    '  ',
+    '  /* Background Colors */',
+    '  --gl-color-bg-default: var(--gl-color-gray-900);',
+    '  --gl-color-bg-muted: var(--gl-color-gray-800);',
+    '  --gl-color-bg-neutral: var(--gl-color-gray-700);',
+    '  ',
+    '  /* Border Colors */',
+    '  --gl-color-border-default: var(--gl-color-gray-600);',
+    '  --gl-color-border-strong: var(--gl-color-gray-500);',
+    '  ',
+    '  /* Box Shadows / Elevations */',
+    '  --gl-elevation-3: 0 10px 30px 0 rgba(0, 0, 0, 0.5);',
+    '  --gl-elevation-2: 0 4px 16px 0 rgba(0, 0, 0, 0.5);',
+    '  --gl-elevation-1: 0 8px 24px 0 rgba(0, 0, 0, 0.5);',
+    '  --gl-focus-ring: 0 0 0 3px var(--gl-color-blue-700);',
+    '  ',
+    '  /* Monaco Editor Colors */',
+    '  --monaco-background: var(--gl-color-gray-900);',
+    '  --monaco-foreground: var(--gl-color-gray-200);',
+    '  --monaco-line-highlight: rgba(255, 255, 255, 0.1);',
+    '  --monaco-selection: rgba(79, 84, 92, 0.4);',
+    '}',
+    '',
+    '/* Base Styles */',
+    'body { ',
+    '  font-family: var(--gl-font-family-sans); ',
+    '  margin: 0; ',
+    '  padding: 0; ',
+    '  color: var(--gl-color-text-default);',
+    '  background-color: var(--gl-color-bg-muted);',
+    '  font-size: var(--gl-font-size-3);',
+    '  line-height: 1.5;',
+    '}',
+    '.container { ',
+    '  max-width: 900px; ',
+    '  margin: 0 auto; ',
+    '  padding: var(--gl-spacing-4);',
+    '}',
+    '.header-bar {',
+    '  background-color: var(--gl-color-purple-800);',
+    '  color: var(--gl-color-white);',
+    '  padding: var(--gl-spacing-3) 0;',
+    '  margin-bottom: var(--gl-spacing-5);',
+    '  box-shadow: var(--gl-elevation-1);',
+    '}',
+    '.header-bar h1 {',
+    '  margin: 0;',
+    '  color: var(--gl-color-white);',
+    '}',
+    '.tabs { ',
+    '  display: flex; ',
+    '  border-bottom: 1px solid var(--gl-color-border-default); ',
+    '  margin-bottom: var(--gl-spacing-4);',
+    '}',
+    '.tab { ',
+    '  padding: var(--gl-spacing-3) var(--gl-spacing-5); ',
+    '  cursor: pointer; ',
+    '  font-weight: 500;',
+    '  border-bottom: 2px solid transparent;',
+    '  color: var(--gl-color-text-neutral);',
+    '  transition: all 0.2s;',
+    '}',
+    '.tab.active { ',
+    '  border-bottom: 2px solid var(--gl-color-border-primary); ',
+    '  color: var(--gl-color-text-primary);',
+    '}',
+    '.tab:hover:not(.active) {',
+    '  color: var(--gl-color-text-default);',
+    '  background-color: var(--gl-color-bg-neutral);',
+    '}',
+    '.tab:focus {',
+    '  outline: 2px solid var(--gl-color-blue-600);',
+    '  outline-offset: -2px;',
+    '}',
+    '.card {',
+    '  background: var(--gl-color-bg-default);',
+    '  border-radius: var(--gl-radii-2);',
+    '  box-shadow: var(--gl-elevation-1);',
+    '  margin-bottom: var(--gl-spacing-5);',
+    '}',
+    '.tab-content { ',
+    '  display: none; ',
+    '  padding: var(--gl-spacing-4); ',
+    '}',
     '.tab-content.active { display: block; }',
-    'textarea { width: 100%; height: 200px; font-family: monospace; }',
-    'pre { background: #f5f5f5; padding: 10px; overflow: auto; max-height: 400px; font-family: monospace; }',
-    '.flex-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }',
+    'textarea { ',
+    '  width: 100%; ',
+    '  height: 200px; ',
+    '  font-family: var(--gl-font-family-mono);',
+    '  border: 1px solid var(--gl-color-border-default);',
+    '  border-radius: var(--gl-radii-1);',
+    '  padding: var(--gl-spacing-3);',
+    '  font-size: var(--gl-font-size-3);',
+    '  resize: vertical;',
+    '  box-sizing: border-box;',
+    '}',
+    'textarea:focus, input:focus, select:focus {',
+    '  outline: none;',
+    '  border-color: var(--gl-color-blue-600);',
+    '  box-shadow: 0 0 0 2px var(--gl-color-blue-50);',
+    '}',
+    'pre { ',
+    '  background: var(--gl-color-bg-neutral); ',
+    '  padding: var(--gl-spacing-3); ',
+    '  border-radius: var(--gl-radii-1);',
+    '  overflow: auto; ',
+    '  max-height: 400px; ',
+    '  font-family: var(--gl-font-family-mono);',
+    '  font-size: var(--gl-font-size-2);',
+    '}',
+    '.flex-row { ',
+    '  display: flex; ',
+    '  gap: var(--gl-spacing-3); ',
+    '  align-items: center; ',
+    '  margin-bottom: var(--gl-spacing-3);',
+    '}',
     '.flex-grow { flex-grow: 1; }',
-    '.notification { background: #e2f2ff; color: #0066cc; padding: 10px; margin: 10px 0; border-radius: 4px; display: none; }',
-    '.history-item { cursor: pointer; padding: 5px; border: 1px solid #eee; margin: 2px 0; }',
-    '.history-item:hover { background-color: #f0f0f0; }',
-    '.env-group { margin-bottom: 15px; }',
-    '.env-row { display: flex; gap: 10px; margin-bottom: 5px; }',
-    '.env-row input { flex-grow: 1; padding: 5px; }',
-    '.btn { padding: 8px 16px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; }',
-    '.btn:hover { background: #0052a3; }',
-    '.btn-sm { padding: 5px 10px; font-size: 12px; }',
-    '.btn-danger { background: #dc3545; }',
-    '.btn-danger:hover { background: #bd2130; }',
+    '.notification { ',
+    '  background: var(--gl-color-bg-primary-subtle); ',
+    '  color: var(--gl-color-text-primary); ',
+    '  padding: var(--gl-spacing-3); ',
+    '  margin: var(--gl-spacing-3) 0; ',
+    '  border-radius: var(--gl-radii-2); ',
+    '  display: none; ',
+    '  border-left: 4px solid var(--gl-color-border-primary);',
+    '}',
+    '.notification a {',
+    '  color: var(--gl-color-text-primary);',
+    '  font-weight: 500;',
+    '}',
+    '.history-item { ',
+    '  cursor: pointer; ',
+    '  padding: var(--gl-spacing-3); ',
+    '  border: 1px solid var(--gl-color-border-default); ',
+    '  border-radius: var(--gl-radii-1);',
+    '  margin: var(--gl-spacing-2) 0;',
+    '  transition: background-color 0.2s;',
+    '}',
+    '.history-item:hover { background-color: var(--gl-color-bg-neutral); }',
+    '.env-group { margin-bottom: var(--gl-spacing-5); }',
+    '.env-row { ',
+    '  display: flex; ',
+    '  gap: var(--gl-spacing-3); ',
+    '  margin-bottom: var(--gl-spacing-2);',
+    '}',
+    '.env-row input { ',
+    '  flex-grow: 1; ',
+    '  padding: var(--gl-spacing-2);',
+    '  border: 1px solid var(--gl-color-border-default);',
+    '  border-radius: var(--gl-radii-1);',
+    '  font-size: var(--gl-font-size-3);',
+    '  font-family: var(--gl-font-family-sans);',
+    '}',
+    '.btn { ',
+    '  padding: var(--gl-spacing-2) var(--gl-spacing-4); ',
+    '  background: var(--gl-color-bg-primary); ',
+    '  color: var(--gl-color-text-inverse); ',
+    '  border: none; ',
+    '  border-radius: var(--gl-radii-1); ',
+    '  cursor: pointer;',
+    '  font-weight: 500;',
+    '  font-size: var(--gl-font-size-3);',
+    '  font-family: var(--gl-font-family-sans);',
+    '  transition: background-color 0.2s;',
+    '  white-space: nowrap;',
+    '}',
+    '.btn:hover { background: var(--gl-color-blue-800); }',
+    '.btn:focus {',
+    '  outline: 2px solid var(--gl-color-blue-600);',
+    '  outline-offset: 2px;',
+    '}',
+    '.btn-sm { ',
+    '  padding: var(--gl-spacing-1) var(--gl-spacing-3); ',
+    '  font-size: var(--gl-font-size-2);',
+    '}',
+    '.btn-danger { background: var(--gl-color-bg-danger); }',
+    '.btn-danger:hover { background: var(--gl-color-red-800); }',
+    '.form-group { margin-bottom: var(--gl-spacing-4); }',
+    '.form-group label { ',
+    '  display: block; ',
+    '  margin-bottom: var(--gl-spacing-2); ',
+    '  font-weight: 500;',
+    '  color: var(--gl-color-text-default);',
+    '}',
+    'select { ',
+    '  padding: var(--gl-spacing-2); ',
+    '  border: 1px solid var(--gl-color-border-default); ',
+    '  border-radius: var(--gl-radii-1); ',
+    '  font-size: var(--gl-font-size-3);',
+    '  background-color: var(--gl-color-bg-default);',
+    '  min-width: 100px;',
+    '}',
+    'input[type="text"] { ',
+    '  padding: var(--gl-spacing-2); ',
+    '  border: 1px solid var(--gl-color-border-default); ',
+    '  border-radius: var(--gl-radii-1); ',
+    '  font-size: var(--gl-font-size-3);',
+    '  width: 100%;',
+    '  box-sizing: border-box;',
+    '}',
+    'h1 { ',
+    '  color: var(--gl-color-text-default); ',
+    '  margin-top: var(--gl-spacing-2);',
+    '  margin-bottom: var(--gl-spacing-4);',
+    '  font-size: 24px;',
+    '  font-weight: 600;',
+    '}',
+    'h3 { ',
+    '  margin-top: var(--gl-spacing-4);',
+    '  margin-bottom: var(--gl-spacing-2);',
+    '  font-weight: 600;',
+    '  font-size: var(--gl-font-size-4);',
+    '}',
+    '.status-badge {',
+    '  display: inline-block;',
+    '  padding: 2px 8px;',
+    '  border-radius: var(--gl-radii-5);',
+    '  font-size: var(--gl-font-size-2);',
+    '  font-weight: 500;',
+    '}',
+    '.status-success {',
+    '  background: var(--gl-color-bg-success-subtle);',
+    '  color: var(--gl-color-text-success);',
+    '}',
+    '.status-error {',
+    '  background: var(--gl-color-bg-danger-subtle);',
+    '  color: var(--gl-color-text-danger);',
+    '}',
+    '.btn-theme {',
+    '  background: transparent;',
+    '  padding: var(--gl-spacing-2);',
+    '  border-radius: var(--gl-radii-5);',
+    '  color: var(--gl-color-white);',
+    '  font-size: var(--gl-font-size-4);',
+    '  line-height: 1;',
+    '  cursor: pointer;',
+    '  border: none;',
+    '  position: relative;',
+    '  width: 40px;',
+    '  height: 40px;',
+    '  display: flex;',
+    '  align-items: center;',
+    '  justify-content: center;',
+    '}',
+    '.btn-theme:hover {',
+    '  background-color: rgba(255, 255, 255, 0.1);',
+    '}',
+    '.btn-theme:focus {',
+    '  outline: 2px solid var(--gl-color-blue-600);',
+    '  outline-offset: 2px;',
+    '}',
+    '.icon-light, .icon-dark {',
+    '  position: absolute;',
+    '  transition: opacity 0.3s ease, transform 0.3s ease;',
+    '}',
+    '[data-theme="dark"] .icon-light {',
+    '  opacity: 1;',
+    '  transform: scale(1);',
+    '}',
+    '[data-theme="dark"] .icon-dark {',
+    '  opacity: 0;',
+    '  transform: scale(0.5);',
+    '}',
+    '[data-theme="light"] .icon-light {',
+    '  opacity: 0;',
+    '  transform: scale(0.5);',
+    '}',
+    '[data-theme="light"] .icon-dark {',
+    '  opacity: 1;',
+    '  transform: scale(1);',
+    '}',
+    '.header-content {',
+    '  display: flex;',
+    '  justify-content: space-between;',
+    '  align-items: center;',
+    '  margin-bottom: 0;',
+    '}',
+    '@media (max-width: 768px) {',
+    '  .tabs { flex-wrap: wrap; }',
+    '  .tab { flex: 1 1 auto; text-align: center; }',
+    '  .flex-row { flex-direction: column; align-items: stretch; }',
+    '  .flex-row .btn { align-self: flex-start; }',
+    '  .header-content { flex-direction: row; }',
+    '}',
+    '',
+    '/* Monaco Editor Dark Mode Styles */',
+    '[data-theme="dark"] .monaco-editor {',
+    '  background-color: var(--monaco-background) !important;',
+    '  color: var(--monaco-foreground) !important;',
+    '}',
+    '[data-theme="dark"] .monaco-editor .margin {',
+    '  background-color: var(--gl-color-gray-800) !important;',
+    '}',
+    '[data-theme="dark"] .monaco-editor .line-numbers {',
+    '  color: var(--gl-color-gray-400) !important;',
+    '}',
+    '[data-theme="dark"] .monaco-editor .current-line {',
+    '  background-color: var(--monaco-line-highlight) !important;',
+    '}',
+    '[data-theme="dark"] .monaco-editor .selection {',
+    '  background-color: var(--monaco-selection) !important;',
+    '}',
     '</style>',
     '</head>',
     '<body>',
+    '<div class="header-bar">',
+    '  <div class="container">',
+    '    <div class="flex-row header-content">',
+    '      <h1>Glia Functions Test UI</h1>',
+    '      <button id="theme-toggle" class="btn btn-theme" aria-label="Toggle dark mode">',
+    '        <span class="icon-light">☀️</span>',
+    '        <span class="icon-dark">🌙</span>',
+    '      </button>',
+    '    </div>',
+    '  </div>',
+    '</div>',
+    '',
     '<div class="container">',
-    '  <h1>Glia Functions Test UI</h1>',
-    '  <div id="rebuild-notification" class="notification">',
+    '  <div id="rebuild-notification" class="notification" role="alert">',
     '    Function has been rebuilt! <a href="#" onclick="window.location.reload()">Reload page</a> to use the latest version.',
     '  </div>',
     '  ',
-    '  <div class="tabs">',
-    '    <div class="tab active" data-tab="request-tab">Request Builder</div>',
-    '    <div class="tab" data-tab="env-tab">Environment Variables</div>',
-    '    <div class="tab" data-tab="history-tab">Request History</div>',
-    '    <div class="tab" data-tab="logs-tab">Logs</div>',
+    '  <div class="tabs" role="tablist">',
+    '    <div class="tab active" data-tab="request-tab" role="tab" aria-selected="true" tabindex="0">Request Builder</div>',
+    '    <div class="tab" data-tab="env-tab" role="tab" aria-selected="false" tabindex="0">Environment Variables</div>',
+    '    <div class="tab" data-tab="history-tab" role="tab" aria-selected="false" tabindex="0">Request History</div>',
+    '    <div class="tab" data-tab="logs-tab" role="tab" aria-selected="false" tabindex="0">Logs</div>',
     '  </div>',
     '',
-    '  <div id="request-tab" class="tab-content active">',
-    '    <div class="flex-row">',
-    '      <select id="method">',
-    '        <option value="POST">POST</option>',
-    '        <option value="GET">GET</option>',
-    '        <option value="PUT">PUT</option>',
-    '        <option value="DELETE">DELETE</option>',
-    '      </select>',
-    '      <input type="text" id="endpoint" value="/" class="flex-grow" placeholder="/endpoint-path" />',
-    '      <button onclick="sendRequest()" class="btn">Send Request</button>',
+    '  <div id="request-tab" class="tab-content card active" role="tabpanel">',
+    '    <div class="form-group">',
+    '      <div class="flex-row">',
+    '        <select id="method" aria-label="HTTP Method">',
+    '          <option value="POST">POST</option>',
+    '          <option value="GET">GET</option>',
+    '          <option value="PUT">PUT</option>',
+    '          <option value="DELETE">DELETE</option>',
+    '        </select>',
+    '        <input type="text" id="endpoint" value="/" class="flex-grow" placeholder="/endpoint-path" aria-label="Endpoint path" />',
+    '        <button onclick="sendRequest()" class="btn">Send Request</button>',
+    '      </div>',
     '    </div>',
-    '    <div>',
-    '      <h3>Request Payload</h3>',
+    '    <div class="form-group">',
+    '      <label for="payload">Request Payload</label>',
     '      <textarea id="payload">{"key": "value"}</textarea>',
     '    </div>',
     '    <div>',
     '      <h3>Response</h3>',
-    '      <pre id="response">Response will appear here</pre>',
+    '      <pre id="response" aria-live="polite">Response will appear here</pre>',
     '    </div>',
     '  </div>',
     '',
-    '  <div id="env-tab" class="tab-content">',
+    '  <div id="env-tab" class="tab-content card" role="tabpanel">',
     '    <h3>Environment Variables</h3>',
     '    <p>These environment variables will be available to your function during execution.</p>',
     '    <div id="env-variables" class="env-group">',
@@ -98,29 +639,38 @@ function createTestPageHtml(port, initialEnvironment = {}) {
     '    </div>',
     '  </div>',
     '',
-    '  <div id="history-tab" class="tab-content">',
+    '  <div id="history-tab" class="tab-content card" role="tabpanel">',
     '    <h3>Request History</h3>',
-    '    <div id="history-list">',
+    '    <div id="history-list" aria-live="polite">',
     '      <!-- Request history items will be added here -->',
     '      <p>No requests yet. Send a request to add it to history.</p>',
     '    </div>',
     '  </div>',
     '',
-    '  <div id="logs-tab" class="tab-content">',
+    '  <div id="logs-tab" class="tab-content card" role="tabpanel">',
     '    <h3>Console Logs</h3>',
     '    <div class="flex-row">',
     '      <button onclick="clearLogs()" class="btn btn-sm">Clear Logs</button>',
     '    </div>',
-    '    <pre id="logs">Loading logs...</pre>',
+    '    <pre id="logs" aria-live="polite">Loading logs...</pre>',
     '  </div>',
     '</div>',
     '',
     '<script>',
+    '  // Load improved dark mode implementation',
+    '  const script = document.createElement("script");',
+    '  script.type = "module";',
+    '  script.src = "/improved-dark-mode.js";',
+    '  document.head.appendChild(script);',
+    '',
     '  // Initial environment variables',
     '  let environment = ' + JSON.stringify(initialEnvJson) + ';',
     '  let requestHistory = [];',
     '',
     '  document.addEventListener("DOMContentLoaded", function() {',
+    '    // Initialize theme',
+    '    initializeTheme();',
+    '    ',
     '    // Initialize tabs',
     '    setupTabs();',
     '    ',
@@ -149,6 +699,61 @@ function createTestPageHtml(port, initialEnvironment = {}) {
     '    }',
     '  });',
     '',
+    '  // Theme management functions',
+    '  function initializeTheme() {',
+    '    // Set up theme toggle button',
+    '    const themeToggle = document.getElementById("theme-toggle");',
+    '    themeToggle.addEventListener("click", toggleTheme);',
+    '    ',
+    '    // Apply saved theme or detect system preference',
+    '    applyTheme(getThemePreference());',
+    '    ',
+    '    // Watch for system preference changes',
+    '    if (window.matchMedia) {',
+    '      const colorSchemeQuery = window.matchMedia("(prefers-color-scheme: dark)");',
+    '      ',
+    '      // Apply change if preference changes (and user hasn\'t manually set a preference)',
+    '      colorSchemeQuery.addEventListener("change", (e) => {',
+    '        const savedTheme = localStorage.getItem("theme");',
+    '        if (!savedTheme) {',
+    '          applyTheme(e.matches ? "dark" : "light");',
+    '        }',
+    '      });',
+    '    }',
+    '  }',
+    '  ',
+    '  function getThemePreference() {',
+    '    // Check for saved preference',
+    '    const savedTheme = localStorage.getItem("theme");',
+    '    if (savedTheme) {',
+    '      return savedTheme;',
+    '    }',
+    '    ',
+    '    // Check system preference',
+    '    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {',
+    '      return "dark";',
+    '    }',
+    '    ',
+    '    // Default to light',
+    '    return "light";',
+    '  }',
+    '  ',
+    '  function applyTheme(theme) {',
+    '    document.documentElement.setAttribute("data-theme", theme);',
+    '    localStorage.setItem("theme", theme);',
+    '    ',
+    '    // Update monaco editor theme if it exists (it may not be initialized yet)',
+    '    if (window.monaco && window.monaco.editor) {',
+    '      monaco.editor.setTheme(theme === "dark" ? "vs-dark" : "vs");',
+    '    }',
+    '  }',
+    '  ',
+    '  function toggleTheme() {',
+    '    const currentTheme = document.documentElement.getAttribute("data-theme") || "light";',
+    '    const newTheme = currentTheme === "light" ? "dark" : "light";',
+    '    applyTheme(newTheme);',
+    '  }',
+    '  ',
     '  function setupTabs() {',
     '    const tabs = document.querySelectorAll(".tab");',
     '    tabs.forEach(tab => {',
@@ -242,7 +847,17 @@ function createTestPageHtml(port, initialEnvironment = {}) {
     '      historyItem.onclick = () => loadHistoryItem(index);',
     '      ',
     '      const time = new Date(item.timestamp).toLocaleTimeString();',
-    '      historyItem.textContent = `${time} - ${item.method} ${item.endpoint}`;',
+    '      historyItem.innerHTML = `',
+    '        <div class="flex-row">',
+    '          <strong>${item.method}</strong>',
+    '          <span class="flex-grow">${item.endpoint}</span>',
+    '          <span class="status-badge ${item.error ? "status-error" : "status-success"}">',
+    '            ${item.error ? "Error" : "Success"}',
+    '          </span>',
+    '        </div>',
+    '        <div><small>${time}</small></div>',
+    '      `;',
+    '      historyItem.setAttribute("aria-label", `${item.method} request to ${item.endpoint} at ${time}. ${item.error ? "Error" : "Success"}`);',
     '      historyList.appendChild(historyItem);',
     '    });',
     '  }',
@@ -321,16 +936,19 @@ function createTestPageHtml(port, initialEnvironment = {}) {
     '    keyInput.placeholder = "Variable Name";',
     '    keyInput.value = key;',
     '    keyInput.className = "env-key";',
+    '    keyInput.setAttribute("aria-label", key ? `Variable name: ${key}` : "Variable name");',
     '    ',
     '    const valueInput = document.createElement("input");',
     '    valueInput.type = "text";',
     '    valueInput.placeholder = "Value";',
     '    valueInput.value = value;',
     '    valueInput.className = "env-value";',
+    '    valueInput.setAttribute("aria-label", key ? `Value for ${key}` : "Variable value");',
     '    ',
     '    const removeBtn = document.createElement("button");',
     '    removeBtn.textContent = "Remove";',
     '    removeBtn.className = "btn btn-sm btn-danger";',
+    '    removeBtn.setAttribute("aria-label", `Remove environment variable ${key || "new"}`);',
     '    removeBtn.onclick = function() {',
     '      envContainer.removeChild(row);',
     '    };',
@@ -545,6 +1163,74 @@ export async function dev(options = {}) {
     // Cache the HTML to avoid recreating it for every request
     const testPageHtml = createTestPageHtml(port, env);
     
+    // Prepare the dark mode script - first check if it exists in the function directory
+    let darkModeScript = '';
+    const darkModeFilePath = path.resolve(path.dirname(functionPath), 'improved-dark-mode.js');
+    if (fs.existsSync(darkModeFilePath)) {
+      darkModeScript = await fs.promises.readFile(darkModeFilePath, 'utf8');
+      showInfo(`Using custom dark mode script from: ${darkModeFilePath}`);
+    } else {
+      // Create a default dark mode script
+      darkModeScript = `
+        // Default improved dark mode implementation
+        document.addEventListener('DOMContentLoaded', () => {
+          console.log('Improved dark mode module loaded');
+          
+          // Enhanced theme detection and persistence
+          const themeToggle = document.getElementById('theme-toggle');
+          const prefersDarkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+          
+          // Function to detect and apply the best theme
+          function detectTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+              return savedTheme;
+            }
+            return prefersDarkQuery.matches ? 'dark' : 'light';
+          }
+          
+          // Apply theme to all necessary elements
+          function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            
+            // Apply to monaco editor if loaded
+            if (window.monaco && window.monaco.editor) {
+              monaco.editor.setTheme(theme === 'dark' ? 'vs-dark' : 'vs');
+            }
+            
+            // Emit custom event for other components
+            document.dispatchEvent(new CustomEvent('themeChange', { detail: { theme } }));
+          }
+          
+          // Initialize with correct theme
+          applyTheme(detectTheme());
+          
+          // Listen for system preference changes
+          prefersDarkQuery.addEventListener('change', (e) => {
+            // Only auto-switch if user hasn't manually set a preference
+            if (!localStorage.getItem('theme')) {
+              applyTheme(e.matches ? 'dark' : 'light');
+            }
+          });
+          
+          // Setup theme toggle button with enhanced feedback
+          if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+              const currentTheme = document.documentElement.getAttribute('data-theme');
+              const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+              applyTheme(newTheme);
+              
+              // Visual feedback for theme change
+              themeToggle.classList.add('theme-changed');
+              setTimeout(() => themeToggle.classList.remove('theme-changed'), 500);
+            });
+          }
+        });
+      `;
+      showInfo('Using default dark mode implementation');
+    }
+    
     // Create service worker script with test HTML directly inside 
     const createWorkerScript = (functionCode) => `
 // Service Worker entry point
@@ -559,6 +1245,7 @@ globalThis._rebuilding = false;
 globalThis.self = globalThis; // Provide window/self for compatibility
 globalThis.window = globalThis; // Add window global for browser APIs
 globalThis._version = "${Date.now()}";
+globalThis._darkModeScript = ${JSON.stringify(darkModeScript)};
 
 const originalConsoleLog = console.log;
 const originalConsoleError = console.error;
@@ -673,6 +1360,22 @@ async function handleRequest(request) {
     });
   }
   
+  // Serve the improved dark mode implementation
+  if (request.method === 'GET' && url.pathname === '/improved-dark-mode.js') {
+    // Return a cached version of the dark mode implementation
+    // This is populated by the host server when it starts up
+    if (globalThis._darkModeScript) {
+      return new Response(globalThis._darkModeScript, {
+        headers: { 'Content-Type': 'application/javascript' }
+      });
+    } else {
+      // Return a simple implementation if not initialized yet
+      return new Response("console.log('Dark mode script not yet loaded');", {
+        headers: { 'Content-Type': 'application/javascript' }
+      });
+    }
+  }
+  
   try {
     // Log incoming request
     console.log(\`\${request.method} \${url.pathname}\`);
@@ -774,8 +1477,9 @@ ${functionCode}
       
       // Set rebuilding flag to false in the worker
       try {
-        const context = await mf.getGlobalScope();
-        context._rebuilding = false;
+        // In Miniflare v4, getGlobalScope is no longer available
+        // Instead, we'll modify the worker script to handle this via fetch
+        globalThis._rebuilding = false;
       } catch (error) {
         console.error('Failed to set rebuilding flag:', error);
       }
@@ -792,8 +1496,8 @@ ${functionCode}
         // Set rebuilding flag in the worker
         if (mf) {
           try {
-            const context = await mf.getGlobalScope();
-            context._rebuilding = true;
+            // In Miniflare v4, use global variable directly
+            globalThis._rebuilding = true;
           } catch (error) {
             console.error('Failed to set rebuilding flag:', error);
           }
@@ -801,6 +1505,16 @@ ${functionCode}
         
         // Get the latest function code
         const newFunctionCode = await fs.promises.readFile(outputPath, 'utf8');
+        
+        // Check if the dark mode script has changed
+        const darkModeFilePath = path.resolve(path.dirname(functionPath), 'improved-dark-mode.js');
+        if (fs.existsSync(darkModeFilePath)) {
+          const newDarkModeScript = await fs.promises.readFile(darkModeFilePath, 'utf8');
+          if (newDarkModeScript !== darkModeScript) {
+            darkModeScript = newDarkModeScript;
+            showInfo('Dark mode script updated');
+          }
+        }
         
         // Generate a new worker script
         workerScript = createWorkerScript(newFunctionCode);
@@ -832,6 +1546,24 @@ ${functionCode}
           }
         }
       });
+      
+      // Watch dark mode script if it exists
+      const darkModeFilePath = path.resolve(path.dirname(functionPath), 'improved-dark-mode.js');
+      if (fs.existsSync(darkModeFilePath)) {
+        showInfo(`Watching ${path.basename(darkModeFilePath)} for changes...`);
+        watchFile(darkModeFilePath, { interval: 1000 }, async (curr, prev) => {
+          if (curr.mtime > prev.mtime) {
+            showInfo(`Dark mode script changed. Updating...`);
+            try {
+              darkModeScript = await fs.promises.readFile(darkModeFilePath, 'utf8');
+              await updateWorker();
+              showSuccess('Dark mode script updated');
+            } catch (error) {
+              showError(`Failed to update dark mode script: ${error.message}`);
+            }
+          }
+        });
+      }
     }
     
     // Create HTTP server to handle requests
@@ -839,6 +1571,15 @@ ${functionCode}
       try {
         // Convert Node.js request to Fetch Request
         const url = new URL(req.url, `http://localhost:${port}`);
+        
+        // Serve the improved dark mode implementation file
+        if (url.pathname === '/improved-dark-mode.js' && req.method === 'GET') {
+          // Serve the same dark mode script that was loaded or created during server startup
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/javascript');
+          res.end(darkModeScript);
+          return;
+        }
         
         // Handle environment updates
         if (url.pathname === '/__env' && req.method === 'POST') {
@@ -889,8 +1630,10 @@ ${functionCode}
           // Update logs in worker
           if (mf) {
             try {
-              const context = await mf.getGlobalScope();
-              context._logs = [];
+              // Dispatch a request to the worker to clear logs
+              await mf.dispatchFetch('http://localhost/__logs/clear', {
+                method: 'POST'
+              });
             } catch (error) {
               console.error('Failed to clear logs in worker:', error);
             }

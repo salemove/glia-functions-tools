@@ -8,7 +8,7 @@ Helper functions, tools, and examples for building and managing Glia Functions -
 
 ## Features
 
-- **Multi-environment support** with named profiles
+- **Multi-environment support** with named profiles and site switching
 - **Robust API client** with retry, caching, and offline capabilities
 - **Interactive and command-driven interfaces** for both guided and automated workflows
 - **Create and manage** serverless JavaScript functions
@@ -260,7 +260,7 @@ The local development server provides:
 
 See the [Development Server Documentation](./docs/dev-server.md) for detailed usage.
 
-#### Using Profiles
+#### Using Profiles and Sites
 ```bash
 # List available profiles
 glia-functions profiles list
@@ -270,6 +270,9 @@ glia-functions profiles create --name production
 
 # Switch to a profile
 glia-functions profiles switch --name production
+
+# Change active site within current profile
+glia-functions change-site
 
 # Use a specific profile for a single command
 glia-functions list-functions --profile staging

@@ -505,7 +505,20 @@ export class NetworkDetector {
     
     // Log status changes
     if (wasOffline !== this.isOffline) {
-      console.log(`[Network] Status changed: ${this.isOffline ? 'offline' : 'online'}`);
+      // Only log network changes at 'info' level if offline, debug if online
+      if (this.isOffline) {
+        // Always show when going offline as this is important information
+        console.info(`[Network] Status changed: offline`);
+      } else {
+        // Only show when going back online at debug level
+        if (typeof process !== 'undefined' && 
+            (process.env.GLIA_VERBOSE === 'true' || process.argv.includes('--verbose') || process.argv.includes('-v'))) {
+          console.info(`[Network] Status changed: online`);
+        } else {
+          // Keep this at debug level which won't be shown by default
+          console.debug(`[Network] Status changed: online`);
+        }
+      }
       
       // Notify callback if registered
       if (this.onStatusChange) {
@@ -529,6 +542,9 @@ export class OfflineManager {
   constructor(options = {}) {
     this.config = { ...DEFAULT_OFFLINE_CONFIG, ...options };
     this.enabled = this.config.enabled;
+    
+    // Set log level from options or default to info
+    this.logLevel = options.logLevel || 'info';
     
     if (this.enabled) {
       // Initialize operation queue
@@ -563,7 +579,12 @@ export class OfflineManager {
       // But don't assume offline if this check fails (give benefit of doubt)
       try {
         const initialStatus = await this.networkDetector.checkNow();
-        console.log(`[Offline] Initial network status: ${initialStatus ? 'offline' : 'online'}`);
+        // Only log initial offline status at info level, not online status
+        if (initialStatus) {
+          console.info(`[Offline] Initial network status: offline`);
+        } else if (this.logLevel === 'debug' || this.logLevel === 'trace') {
+          console.debug(`[Offline] Initial network status: online`);
+        }
       } catch (checkError) {
         console.warn('[Offline] Initial network check failed, assuming online:', checkError.message);
         // Force online status initially - better to start with optimistic assumption
@@ -572,12 +593,32 @@ export class OfflineManager {
       
       // Start periodic network checking with improved status change handling
       this.networkDetector.startChecking((isOffline) => {
-        // Handle network status changes
-        console.log(`[Offline] Network status changed: ${isOffline ? 'offline' : 'online'}`);
+        // Handle network status changes - only log when offline or in verbose mode
+        if (isOffline) {
+          console.info(`[Offline] Network status changed: offline`);
+        } else if (this.logLevel === 'debug' || this.logLevel === 'trace' || 
+                  (typeof process !== 'undefined' && 
+                   (process.env.GLIA_VERBOSE === 'true' || 
+                    process.argv.includes('--verbose') || 
+                    process.argv.includes('-v')))) {
+          console.info(`[Offline] Network status changed: online`);
+        }
         
         // Auto-process queue when coming back online
         if (!isOffline) {
-          console.log('[Offline] Network is back online, processing queued operations');
+          if (this.logLevel === 'debug' || this.logLevel === 'trace') {
+            // Only show debug messages in verbose mode
+            const isVerbose = typeof process !== 'undefined' && 
+                (process.env.GLIA_VERBOSE === 'true' || 
+                 process.argv.includes('--verbose') || 
+                 process.argv.includes('-v'));
+                 
+            if (this.logLevel === 'debug' || this.logLevel === 'trace' || isVerbose) {
+              console.debug('[Offline] Processing queued operations after network reconnection');
+            }
+          } else {
+            console.info('[Offline] Processing pending operations');
+          }
           this.processQueue((operation) => {
             // Extract operation details
             const { endpoint, options, requestOptions } = operation;
@@ -697,7 +738,17 @@ export class OfflineManager {
       return [];
     }
     
-    console.log(`[Offline] Processing ${pendingOperations.length} queued operations`);
+    if (this.logLevel === 'debug' || this.logLevel === 'trace') {
+      // Only show debug messages in verbose mode
+      const isVerbose = typeof process !== 'undefined' && 
+          (process.env.GLIA_VERBOSE === 'true' || 
+           process.argv.includes('--verbose') || 
+           process.argv.includes('-v'));
+           
+      if (this.logLevel === 'debug' || this.logLevel === 'trace' || isVerbose) {
+        console.debug(`[Offline] Processing ${pendingOperations.length} queued operations`);
+      }
+    }
     
     // Process each operation
     const results = [];
@@ -716,7 +767,17 @@ export class OfflineManager {
         
         // Remove the operation from the queue
         await this.operationQueue.remove(queuedOp.id);
-        console.log(`[Offline] Successfully processed operation ${queuedOp.id}`);
+        if (this.logLevel === 'debug' || this.logLevel === 'trace') {
+          // Only show debug messages in verbose mode
+          const isVerbose = typeof process !== 'undefined' && 
+              (process.env.GLIA_VERBOSE === 'true' || 
+               process.argv.includes('--verbose') || 
+               process.argv.includes('-v'));
+               
+          if (this.logLevel === 'debug' || this.logLevel === 'trace' || isVerbose) {
+            console.debug(`[Offline] Successfully processed operation ${queuedOp.id}`);
+          }
+        }
       } catch (error) {
         // Store the error
         results.push({
@@ -777,8 +838,14 @@ export class OfflineManager {
         method: options.method || 'GET',
       });
       
-      if (this.config.logLevel === 'debug') {
-        console.log(`[Offline] Saved to persistent cache: ${endpoint}`);
+      // Only log caching at debug level or in verbose mode
+      const isVerbose = typeof process !== 'undefined' && 
+          (process.env.GLIA_VERBOSE === 'true' || 
+           process.argv.includes('--verbose') || 
+           process.argv.includes('-v'));
+           
+      if (this.logLevel === 'debug' || this.logLevel === 'trace' || isVerbose) {
+        console.debug(`[Offline] Saved to persistent cache: ${endpoint}`);
       }
     } catch (error) {
       console.error(`Failed to save data to persistent cache for ${endpoint}:`, error);
