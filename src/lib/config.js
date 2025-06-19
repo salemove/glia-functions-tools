@@ -160,16 +160,20 @@ export async function loadConfig() {
   const localEnv = loadEnvFile(LOCAL_CONFIG_FILE);
   
   // Merge environment variables in order of precedence:
-  // 1. Process environment variables (lowest precedence) 
+  // 1. Default values (lowest precedence)
   // 2. Global config file
   // 3. Active profile config
-  // 4. Local .env file (highest precedence)
-  // Fix: Changed order to correctly apply precedence (process.env needs to be last parameter)
-  const combinedEnv = { ...process.env, ...globalEnv, ...profileEnv, ...localEnv };
+  // 4. Local .env file
+  // 5. Process environment variables (highest precedence - CLI arguments)
+  // Fix: Changed order to correctly apply precedence (process.env needs to be LAST parameter)
+  const combinedEnv = { ...globalEnv, ...profileEnv, ...localEnv, ...process.env };
   
   // Assign back to process.env
+  // Skip assigning empty values to prevent overriding valid credentials
   Object.keys(combinedEnv).forEach(key => {
-    process.env[key] = combinedEnv[key];
+    if (combinedEnv[key] !== '' && combinedEnv[key] !== null && combinedEnv[key] !== undefined) {
+      process.env[key] = combinedEnv[key];
+    }
   });
   
   // Create final config object
@@ -540,6 +544,16 @@ export async function switchProfile(profileName) {
   
   // Update process.env for immediate effect
   process.env.GLIA_PROFILE = profileName;
+  
+  // Clear token-related environment variables to ensure they're reloaded from the new profile
+  delete process.env.GLIA_BEARER_TOKEN;
+  delete process.env.GLIA_TOKEN_EXPIRES_AT;
+  
+  // Reload config from the new profile
+  await loadConfig();
+  
+  // Force token refresh on next API call
+  await refreshBearerTokenIfNeeded();
   
   return profileName;
 }

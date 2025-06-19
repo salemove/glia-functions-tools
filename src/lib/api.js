@@ -46,6 +46,12 @@ export const DEFAULT_API_CONFIG = {
     prefetchEnabled: false,     // Prefetching disabled by default
     idempotencyEnabled: true,   // Enable idempotency keys by default
     idempotencyHeader: 'X-Idempotency-Key'
+  },
+  // Logging configuration
+  logging: {
+    level: 'info',           // Default log level: 'silent', 'error', 'warn', 'info', 'debug', 'trace'
+    includeTimestamps: true, // Include timestamps in log messages
+    includeRequestIds: false // Include request IDs in all log messages
   }
 };
 
@@ -120,7 +126,9 @@ export default class GliaApiClient {
     this.offlineManager = new OfflineManager({
       ...offlineConfig,
       // Use a more reliable network check URL - Google's connectivity check
-      networkCheckUrl: 'https://www.gstatic.com/generate_204'
+      networkCheckUrl: 'https://www.gstatic.com/generate_204',
+      // Pass through the log level
+      logLevel: this.logLevel
     });
     
     // Initialize offline manager with better error handling
@@ -141,7 +149,18 @@ export default class GliaApiClient {
     }
       
     // Configure request logging
-    this.logRequests = config.logRequests || false;
+    const loggingConfig = {
+      ...DEFAULT_API_CONFIG.logging,
+      ...(config.logging || {})
+    };
+    
+    // Set log level and features
+    this.logLevel = config.logLevel || loggingConfig.level || 'info';
+    // Valid log levels: 'silent', 'error', 'warn', 'info', 'debug', 'trace'
+    this.includeTimestamps = loggingConfig.includeTimestamps;
+    this.includeRequestIds = loggingConfig.includeRequestIds;
+    // For backward compatibility
+    this.logRequests = (config.logRequests || this.logLevel === 'debug' || this.logLevel === 'trace');
   }
   
   /**
@@ -467,10 +486,11 @@ export default class GliaApiClient {
       const executeRequest = async () => {
         try {
           const headers = this._prepareHeaders(options.headers);
-          const response = await fetch(url, {
-            headers,
-            ...options
-          });
+          const requestOptions = {
+            ...options,
+            headers // Apply headers last to prevent them from being overridden
+          };
+          const response = await fetch(url, requestOptions);
           
           // Extract and process response metadata
           const responseInfo = this._extractResponseMetadata(response);
@@ -1675,8 +1695,8 @@ export default class GliaApiClient {
     if (this.offlineManager) {
       this.offlineManager.setEnabled(enabled);
       
-      if (this.logRequests) {
-        console.log(`[API] Offline mode ${enabled ? 'enabled' : 'disabled'}`);
+      if (this.logLevel !== 'silent') {
+        console.info(`[API] Offline mode ${enabled ? 'enabled' : 'disabled'}`);
       }
     }
   }

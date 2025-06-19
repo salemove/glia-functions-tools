@@ -28,6 +28,11 @@ export class BaseCommand {
     this.name = name;
     this.description = description;
     this.command = new Command(name).description(description);
+    
+    // Add global verbose option that all commands inherit
+    this.command.option('-v, --verbose', 'Enable verbose output', false);
+    this.command.option('--debug', 'Enable debug output (even more verbose)', false);
+    this.command.option('-q, --quiet', 'Suppress informational output', false);
   }
 
   /**
@@ -181,6 +186,33 @@ export class BaseCommand {
    */
   parse(argv) {
     this.command.parse(argv);
+  }
+  
+  /**
+   * Determine the appropriate log level based on command options
+   * 
+   * @param {Object} options - Command options
+   * @returns {string} Log level
+   */
+  getLogLevel(options = {}) {
+    if (options.debug) return 'debug';
+    if (options.verbose) return 'info';
+    if (options.quiet) return 'error';
+    return 'warn'; // Default - only show warnings and errors
+  }
+
+  /**
+   * Get an API client with appropriate configuration
+   * 
+   * @param {Object} options - Command options
+   * @returns {Promise<GliaApiClient>} The API client
+   */
+  async getApiClient(options = {}) {
+    const apiConfig = await getApiConfig();
+    return new GliaApiClient({
+      ...apiConfig,
+      logLevel: this.getLogLevel(options)
+    });
   }
 
   /**

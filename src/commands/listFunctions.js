@@ -16,11 +16,9 @@ import BaseCommand from '../cli/base-command.js';
  */
 export async function listFunctions(options = {}) {
   try {
-    // Get API configuration
-    const apiConfig = await getApiConfig();
-    
-    // Create API client
-    const api = new GliaApiClient(apiConfig);
+    // Get API configuration and create API client
+    const command = new BaseCommand('list-functions-internal', '');
+    const api = await command.getApiClient(options);
     
     // List functions
     const functions = await api.listFunctions();

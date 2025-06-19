@@ -39,6 +39,27 @@ export default async function switchProfileCommand(options) {
     // Switch to the profile
     await switchProfile(profileName);
     
+    // Clear any API caches to ensure we're using the new profile's credentials
+    try {
+      // Import and clear the cache to ensure we use fresh credentials with the new profile
+      const { ResponseCache } = await import('../../lib/cache.js');
+      const apiModule = await import('../../lib/api.js');
+      
+      // If there's a shared API client instance, clear its cache
+      if (global.apiClient && global.apiClient.cache) {
+        global.apiClient.cache.clear();
+        showInfo('API cache cleared for new profile.');
+      } else {
+        // Create a temporary cache just to clear any persistent storage
+        const tempCache = new ResponseCache({ persistent: true });
+        tempCache.clear();
+        showInfo('Persistent cache cleared for new profile.');
+      }
+    } catch (cacheError) {
+      // Non-fatal error, just log it
+      showWarning(`Note: Could not clear API cache: ${cacheError.message}`);
+    }
+    
     showSuccess(`Switched to profile '${profileName}'`);
     showInfo('The new profile will be used for all subsequent operations.');
     
