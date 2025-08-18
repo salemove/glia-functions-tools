@@ -1,0 +1,25 @@
+fetch:
+  summary: Fetch Direct ID Token encryption key
+  tags:
+    - Direct ID Token
+  # yamllint disable rule:line-length
+  description: |
+    Fetches the public key that can be used to encrypt the tokens for Direct ID Token authentication.
+
+    The endpoint returns an array that contains one public key in JSON Web Key Set format.
+
+    ### Implementation
+
+    For more information on how to set up Direct ID Token authentication, see:
+    * <a href="https://docs.glia.com/glia-how-to/docs/implementing-direct-id-token-authentication" target="implementing-direct-id-token-authentication">Implementing Direct ID Authentication</a>
+    * [`POST /sites/{site_id}/visitor_authentication_providers` endpoint](https://docs.glia.com/glia-dev/reference/post_sites-site-id-visitor-authentication-providers)
+
+    ### Authorization and Permissions
+
+    Does not require the `Authorization` header.
+
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/direct_id_keys.yaml#/client_id'
+  responses:
+    $ref: '../responses/direct_id_keys.yaml#/success'

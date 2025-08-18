@@ -1,0 +1,54 @@
+---
+site_ids:
+  name: site_ids[]
+  description: |
+    Required filter to fetch functions for the sites with the specified site IDs.
+  schema:
+    type: array
+    items:
+      type: string
+  example:
+    - def34343-e888-43ae-99e0-07a676e9a111
+    - def34343-e777-43ae-99e0-07a676e9a111
+function_id:
+  name: function_id
+  description: ID of the function.
+  schema:
+    type: string
+  example: '32d64c96-22d3-47e2-816e-76795a155600'
+task_id:
+  name: task_id
+  description: ID of the function version creation task.
+  schema:
+    type: string
+  example: '3c4e06be-8c0d-41ca-9df7-ab88c1b88833'
+from:
+  name: from
+  # yamllint disable rule:line-length
+  description: |
+    Timestamp in the ISO-8601 format to filter logs in the response. The result includes the log messages starting from the specified time.
+  # yamllint enable rule:line-length
+  schema:
+    type: string
+  example: '2023-10-19T12:16:08Z'
+to:
+  name: to
+  description: Timestamp in the ISO-8601 format to filter logs in the response. The result includes the log messages up to the specified time. Must refer to a later time than `from`.
+  schema:
+    type: string
+  example: '2023-10-19T12:18:08Z'
+per_page:
+  name: per_page
+  description: >
+    Specifies the number of log messages per page. Must be in the range of 1 to 1000. The default value is `1000`.
+  schema:
+    type: integer
+    minimum: 1
+    maximum: 1000
+  example: 500
+integration_id:
+  name: integration_id
+  description: ID of the integration.
+  schema:
+    type: string
+  example: 'bf5ab8d1-f14e-4205-b8af-bb517f910101'

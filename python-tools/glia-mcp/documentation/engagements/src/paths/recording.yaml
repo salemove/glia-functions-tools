@@ -1,0 +1,76 @@
+---
+update:
+  summary: Update engagement recording
+  tags:
+    - Recording
+  # yamllint disable rule:line-length
+  description: |
+    Updates the engagement recording state.
+
+    * Pause the recording - Set the `action` to `pause`.
+    * Resume the recording - Set the `action` to `resume`.
+    * Stop the recording - Set the `action` to `stop`.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or site's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+      * The user must be a participant in the engagement.
+      * Base of the user's role, one of:
+        * `operator`
+        * `manager`
+        * `super_manager`
+    * [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens) - Updates engagement recording that is taking place on the site of the site API key. Requires:
+      * Scope: `engagements:update`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/engagements.yaml#/engagement_id'
+  requestBody:
+    required: true
+    description: |
+      There are multiple schemas available depending on the action.
+      Please choose schema type to see available body parameters.
+    content:
+      application/json:
+        schema:
+          oneOf:
+            - $ref: '../schemas/recording.yaml#/pause'
+            - $ref: '../schemas/recording.yaml#/resume'
+            - $ref: '../schemas/recording.yaml#/stop'
+        examples:
+          'Pausing the engagement recording':
+            value:
+              action: pause
+          'Resuming the engagement recording':
+            value:
+              action: resume
+          'Stopping the engagement recording':
+            value:
+              action: stop
+  responses:
+    '200':
+      description: The engagement recording state has been changed.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/recording.yaml#/response'
+
+    '204':
+      description: Engagement recording already in requested state.
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '404':
+      description: >
+        Engagement is not found or it is not being recorded.
+    '409':
+      description: Engagement or engagement recording is in an invalid state for the action.
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+    '500':
+      $ref: '../../../common_components/responses/errors.yaml#/500_internal_server_error'

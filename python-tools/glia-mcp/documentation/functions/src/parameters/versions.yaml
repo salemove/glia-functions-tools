@@ -1,0 +1,39 @@
+version_id:
+  name: version_id
+  description: ID of the function version.
+  schema:
+    type: string
+  example: 'b91991b8-e89d-4988-9a43-8d926a6dbbbe'
+base_version_id:
+  name: version_id
+  description: >
+    ID of the function version to use as a base for the new function version.
+  schema:
+    type: string
+  example: 'b91991b8-e89d-4988-9a43-8d926a6dbbbe'
+per_page:
+  name: per_page
+  description: >
+    Specifies the number of function versions per page. Must be in the range of 1 to 100. The default value is `50`.
+  schema:
+    type: integer
+    minimum: 1
+    maximum: 100
+  example: 100
+order:
+  name: order
+  description: >
+    Specifies whether the results should be sorted in ascending (`asc`) or descending (`desc`) order. By default, functions are sorted by their creation time in descending order.
+  schema:
+    type: string
+    enum:
+      - 'asc'
+      - 'desc'
+order_by:
+  name: order_by
+  description: >
+    Specifies the field by which the function versions are ordered. The only possible value is currently `created_at`, which is also the default value.
+  schema:
+    type: string
+    enum:
+      - 'created_at'

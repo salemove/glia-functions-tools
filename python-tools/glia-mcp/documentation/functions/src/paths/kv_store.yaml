@@ -1,0 +1,96 @@
+---
+bulk_operations:
+  summary: Bulk key-value operations
+  tags:
+    - Functions KV Store
+  # yamllint disable rule:line-length
+  description: |
+    Performs data manipulation operations on key-value pairs in a Functions KV Store namespace.
+
+    Allows performing multiple operations (`set`, `get`, `delete`, `testAndSet`) on key-value pair items within a specified namespace in a single batch request.
+
+    ### Notes
+
+    * All items stored in the KV store have a Time-To-Live (TTL) of 72 hours since their creation or update. The system automatically deletes items once their TTL expires.
+    * The endpoint does not guarantee atomicity. Each operation within the batch is processed iteratively.
+    * The `set` operation creates or updates a key-value pair item. If the key already exists, it updates the value.
+    * The `get` operation retrieves the value of a key-value pair item.
+    * The `delete` operation removes a key-value pair item.
+    * The `testAndSet` operation is a conditional operation that creates, updates, or deletes the key-value pair item only if the current value matches the provided value. If the current value does not match, the operation fails.
+
+    ### Authorization and Permissions
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+      * Access permissions: `functions_kv:update`
+    * [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens), requires:
+      * Scope: `functions_kv:update`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/kv_store.yaml#/namespace'
+      required: true
+      in: path
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../schemas/kv_store.yaml#/bulk_operations_request'
+  responses:
+    '200':
+      description: Operations on key-value pairs were performed.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/kv_store.yaml#/bulk_operations_response'
+    '400':
+      $ref: '../../../common_components/responses/errors.yaml#/400_bad_request'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+
+list:
+  summary: List key-value pairs
+  tags:
+    - Functions KV Store
+  # yamllint disable rule:line-length
+  description: |
+    Fetches all key-value pairs from a specified Functions KV Store namespace.
+
+    ### Authorization and Permissions
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+      * Access permissions: `functions_kv:update`
+    * [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens), requires:
+      * Scope: `functions_kv:update`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+
+    ### Interpreting the Output
+
+    #### Pagination
+
+    * If the results are more than one page, the `next` will not be `null` and can be used to fetch the next batch.
+    * **Never** try to use any information that the `next` could contain. The format of the `next` is subject to change at any point in time.
+    * To fetch the next page of results, use the `next` from the previous request's response.
+    * See also [Pagination](ref:pagination).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/kv_store.yaml#/namespace'
+      required: true
+      in: path
+    - $ref: '../../src/parameters/kv_store.yaml#/maxpagesize'
+      in: query
+    - $ref: '../../src/parameters/kv_store.yaml#/p'
+      in: query
+  responses:
+    '200':
+      description: Key-value pairs were fetched.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/kv_store.yaml#/list_response'
+    '400':
+      $ref: '../../../common_components/responses/errors.yaml#/400_bad_request'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'

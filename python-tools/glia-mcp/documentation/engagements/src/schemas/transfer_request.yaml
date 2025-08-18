@@ -1,0 +1,9 @@
+---
+properties:
+  id:
+    $ref: '../../src/properties/transfer_request.yaml#/properties/id'
+  outcome:
+    $ref: '../../src/properties/transfer_request.yaml#/properties/outcome'
+required:
+  - id
+  - outcome

@@ -1,0 +1,48 @@
+---
+DefaultPolicy:
+  id: dafcae2c-56cb-4cc7-8162-f2d37a96b030
+  site_id: def34343-e888-43ae-99e0-07a676e9a111
+  name: Default Policy
+  description: 08-18 with a lunch-break
+  timezone: America/New_York
+  business_hours:
+    - opens_at: '08:00:00'
+      closes_at: '12:00:00'
+      days_of_week:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri
+    - opens_at: '13:00:00'
+      closes_at: '18:00:00'
+      days_of_week:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri
+  created_at: '2017-02-20T00:00:00Z'
+  updated_at: '2017-02-20T00:00:00Z'
+  created_by: ec317122-e888-4b43-996d-34a2ed3b76d8
+  updated_by: ec317122-e888-4b43-996d-34a2ed3b76d8
+WeekendPolicy:
+  id: 38d8980f-8248-456a-bc4f-17258874539c
+  site_id: def34343-e888-43ae-99e0-07a676e9a111
+  name: Weekend Policy
+  description: 'From 10:00 to 14:00 without lunch'
+  timezone: America/New_York
+  business_hours:
+    - opens_at: '10:00:00'
+      closes_at: '14:00:00'
+      days_of_week:
+        - sat
+        - sun
+  created_at: '2017-02-20T00:00:00Z'
+  updated_at: '2017-02-20T00:00:00Z'
+  created_by: ec317122-e888-4b43-996d-34a2ed3b76d8
+  updated_by: ec317122-e888-4b43-996d-34a2ed3b76d8
+PoliciesList:
+  scheduling_policies:
+    - $ref: '#/DefaultPolicy'
+    - $ref: '#/WeekendPolicy'

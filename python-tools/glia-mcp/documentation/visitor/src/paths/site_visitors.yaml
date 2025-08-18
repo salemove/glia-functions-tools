@@ -1,0 +1,131 @@
+---
+create:
+  summary: Create visitor
+  # yamllint disable rule:line-length
+  tags:
+    - Visitor
+  description: |
+    Creates a visitor with the provided values. Intended to be used in integrations.
+
+    Integrators may need to engage operators with visitors outside of the web browser or without using the Glia JavaScript API. In this case, the integrator can create a visitor entity using the REST API. The response will contain a bearer access token which can be used for all of the following requests related to the visitor.
+
+    ### Notes
+
+    * The bearer access token should be renewed every 24 hours, see <a href="https://docs.glia.com/glia-dev/reference/post_visitors-visitor-id-token">Renew token</a>.
+    * For unauthenticated visitors, the `secret` from the response should be stored on the client. The `secret` is required when renewing visitor tokens using the <a href="https://docs.glia.com/glia-dev/reference/post_visitors-visitor-id-token">Renew token</a> endpoint.
+
+    ### Authorization and Permissions
+
+    [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens), requires:
+
+    * Scope: `visitors:create`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../schemas/site_visitors.yaml#/schemas/CreateVisitorToken'
+  responses:
+    $ref: '../responses/site_visitors.yaml#/bearer_token'
+
+search:
+  summary: Search visitors
+  tags:
+    - Visitor
+  # yamllint disable rule:line-length
+  description: |
+    Fetches visitors authenticated with Direct ID.
+
+    You can search by visitor’s name, email, or external ID. The `search_string` is matched with visitor properties as follows:
+
+    * name - Case-insensitive prefix match.
+    * email - Case-insensitive exact match.
+    * lookup_id - Case-insensitive exact match.
+
+    The endpoint returns a maximum of 30 results and pagination is not available. To reduce the number of results, please refine the search.
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or site's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens) - Returns the visitors authenticated with Direct ID on the user’s assigned sites.
+    Requires:
+      * Base of the user's role, one of:
+        * `operator`
+        * `manager`
+        * `super_manager`
+    * [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens) - Returns the visitors authenticated with Direct ID on the site of the site API key.
+    Requires:
+      * Scope: `visitors:read`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  requestBody:
+    $ref: '../requests/site_visitors.yaml#/search_visitors'
+  responses:
+    $ref: '../responses/site_visitors.yaml#/search_visitors'
+
+update_token:
+  summary: Renew token
+  tags:
+    - Visitor
+  # yamllint disable rule:line-length
+  description: |
+    Renews bearer access token for a visitor created using the [Create visitor](https://docs.glia.com/glia-dev/reference/post_visitors) endpoint.
+
+    Visitors created using the [Create visitor](https://docs.glia.com/glia-dev/reference/post_visitors) endpoint have bearer access tokens that have a short lifetime for security reasons. These tokens should be renewed once every 24 hours.
+
+    ### Authorization and Permissions
+
+    * To renew visitor access tokens, the corresponding `secret` or `id_token` for the given `visitor_id` must be provided.
+    * Does not require the `Authorization` header.
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/site_visitors.yaml#/parameters/visitor_id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../schemas/site_visitors.yaml#/schemas/UpdateVisitorToken'
+  responses:
+    $ref: '../responses/site_visitors.yaml#/bearer_token_renew'
+
+fetch:
+  summary: Fetch visitor
+  tags:
+    - Visitor
+  # yamllint disable rule:line-length
+  description: |
+    Fetches the information of a visitor by their ID.
+
+    If the visitor is authenticated, the response will include the attributes and tokens fetched from the authentication provider.
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../../common_components/parameters.yaml#/path/site_id'
+    - $ref: '../parameters/site_visitors.yaml#/parameters/visitor_id'
+  responses:
+    $ref: '../responses/site_visitors.yaml#/get_visitor'
+
+update:
+  summary: Update visitor
+  tags:
+    - Visitor
+  # yamllint disable rule:line-length
+  description: |
+    Updates the information for a specific visitor.
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../../common_components/parameters.yaml#/path/site_id'
+    - $ref: '../parameters/site_visitors.yaml#/parameters/visitor_id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../schemas/site_visitors.yaml#/schemas/PatchVisitor'
+  responses:
+    $ref: '../responses/site_visitors.yaml#/patch_visitor'

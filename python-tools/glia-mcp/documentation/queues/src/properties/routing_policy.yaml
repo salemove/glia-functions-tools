@@ -1,0 +1,52 @@
+---
+type: object
+description: >
+  A collection of properties which determine whether visitor should be put into this queue when enqueued and whether
+  operator can serve visitors from this queue.
+
+
+  Note, that one visitor may be put into multiple queues at once, based on queue routing policy and visitor's
+  attributes.
+
+
+  When an empty object is given, all enqueueing visitors will be put into created queue.
+properties:
+  media:
+    description: >
+      Set of allowed engagement media types.
+
+
+      When this routing policy is applied to a queue, visitors who request engagement with insufficient media level,
+      won't be placed into the queue.
+
+
+      Example 1: A queue has `routing_policy.media = ["text"]`, visitor requests engagement with media type `audio`.
+      Because queue doesn't have audio in the list of allowed media types, such visitor can't be put into the queue.
+
+
+      Example 2: A queue has `routing_policy.media = ["text", "phone", "audio"]`, visitor requests engagement with media
+      type `audio`. In this case visitor can be put into the queue, because the queue allowed media types includes
+      audio.
+    type: array
+    items:
+      type: string
+      enum:
+        - text
+        - phone
+        - audio
+        - video
+        - messaging
+  team_ids:
+    description: >
+      The allowed team IDs.
+
+
+      Must be a set of strings, where each element is a team ID (in UUID v4 format).
+
+
+      This routing policy allows visitors to be put into the queue only if they are assigned to at least one team from
+      the specified list. Similarly, only operators who belong to at least one team from the specified list can serve
+      visitors from the queue.
+    type: array
+    items:
+      type: string

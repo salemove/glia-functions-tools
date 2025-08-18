@@ -1,0 +1,54 @@
+---
+engagement_files_attachment: &base_files_attachment
+  title: 'Files'
+  type: object
+  properties: &base_files_properties
+    type: &base_type_property
+      type: string
+      description: >
+        Type of an attachment.
+
+
+        To send files, the type must be `files`.
+
+
+        To send a file it must be uploaded first.
+        For uploading files, see [Upload file](https://docs.glia.com/glia-dev/reference/post_engagements-engagement-id-files).
+      enum:
+        - files
+      # Example defined so that single dropdown value is selected by default.
+      example: files
+
+    files:
+      type: array
+      description: |
+        List of files to send, such as images or PDFs.
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+            description: The file's ID.
+        required:
+          - id
+
+  required:
+    - type
+    - files
+
+# Same spec as engagement files attachment but with a different description for the link to attachment file upload.
+messaging_files_attachment:
+  <<: *base_files_attachment
+  properties:
+    <<: *base_files_properties
+    type:
+      <<: *base_type_property
+      description: >
+        Type of an attachment.
+
+
+        To send files, the type must be `files`.
+
+
+        To send a file it must be uploaded first.
+        For uploading files, see [Upload file](https://docs.glia.com/glia-dev/reference/post_messaging-files).

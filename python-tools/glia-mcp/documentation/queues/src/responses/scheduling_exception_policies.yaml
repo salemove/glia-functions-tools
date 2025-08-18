@@ -1,0 +1,19 @@
+---
+list_response:
+  type: object
+  properties:
+    scheduling_exception_policies:
+      type: array
+      description: List of queue scheduling exception policies.
+      items:
+        type: object
+        properties:
+          $ref: './scheduling_exception_policy.yaml#/properties'
+
+limited_list_response:
+  properties:
+    scheduling_exception_policies:
+      type: array
+      description: List of scheduling exception policies with limited information.
+      items:
+        $ref: '../../../common_components/properties.yaml#/list_limited_response'

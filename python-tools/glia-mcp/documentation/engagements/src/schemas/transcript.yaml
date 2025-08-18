@@ -1,0 +1,169 @@
+---
+schema:
+  type: array
+  description: List of messages sent in the engagement.
+  items:
+    type: object
+    properties:
+      message:
+        $ref: '../properties/chat.yaml#/properties/message'
+      created_at:
+        $ref: '../properties/chat.yaml#/properties/created_at'
+      delivered_at:
+        $ref: '../properties/chat.yaml#/properties/delivered_at'
+      type:
+        $ref: '../properties/chat.yaml#/properties/type_in_transcript'
+      attachment:
+        $ref: '../properties/chat.yaml#/properties/transcript_attachment'
+      metadata:
+        $ref: '../properties/chat.yaml#/properties/metadata'
+      sender:
+        oneOf:
+          - $ref: '../properties/senders.yaml#/properties/operator'
+          - $ref: '../properties/senders.yaml#/properties/visitor'
+          - $ref: '../properties/senders.yaml#/properties/omniguide'
+          - $ref: '../properties/senders.yaml#/properties/system'
+          - $ref: '../properties/senders.yaml#/properties/monitor'
+      speech_to_text:
+        $ref: '../properties/chat.yaml#/properties/speech_to_text'
+      speech_to_text_details:
+        $ref: '../properties/chat.yaml#/properties/speech_to_text_details'
+      text_to_speech:
+        $ref: '../properties/chat.yaml#/properties/text_to_speech'
+      target:
+        $ref: '../properties/chat.yaml#/properties/target'
+      leg_id:
+        $ref: '../properties/chat.yaml#/properties/leg_id'
+    required:
+      - message
+      - created_at
+      - delivered_at
+      - type
+      - sender
+      - target
+      - leg_id
+
+examples:
+  chat_message:
+    summary: Messages only
+    value:
+      - &base_transcript_operator
+        message: Hi, may I help you with the application?
+        created_at: 2020-05-31T09:46:28Z
+        type: user
+        sender:
+          id: ec317122-o888-4b43-996d-34a2ed3b76d8
+          type: operator
+          name: Jordan Green
+          href: https://api.glia.com/operators/ec317122-o888-4b43-996d-34a2ed3b76d8
+          picture:
+            url: https://example.com/user_assets/jordan_green-c8b52f0b-ad05-4c71-8c98-5056f07c4d1a.jpg
+        speech_to_text: false
+        speech_to_text_details: null
+        text_to_speech: false
+        target: visitor
+        leg_id: 0ebe74fa-fdac-4970-b9af-ae2b547842ed
+      - &base_transcript_visitor
+        message: Hi, yes, I have some questions.
+        created_at: 2020-05-31T09:46:53Z
+        type: user
+        sender:
+          # yamllint disable rule:line-length
+          href: https://api.salemove.com/sites/def34343-e888-43ae-99e0-07a676e9a111/visitors/c2c9106e-e777-47b2-8db3-089fb49dc9a5
+          # yamllint enable rule:line-length
+          type: visitor
+          name: Mary Hawkins
+        speech_to_text: true
+        speech_to_text_details:
+          visible_to_visitor: true
+          transcribed_in_tts_stt_conference: true
+          transcribed_while_multiple_operators: false
+        text_to_speech: false
+        target: operator
+        leg_id: 0ebe74fa-fdac-4970-b9af-ae2b547842ed
+
+  file_attachment:
+    summary: With file attachment
+    value:
+      - <<: *base_transcript_operator
+        message: ''
+        attachment:
+          type: files
+          files:
+            - id: 53b236ee-f888-45ec-8e0f-5bf4d5e16a2e
+              name: original_file_name.png
+              content_type: image/png
+              # yamllint disable rule:line-length
+              url: https://api.glia.com/engagements/abc12121-e888-43ae-99e0-07a676e9a111/files/53b236ee-f888-45ec-8e0f-5bf4d5e16a2e
+              # yamllint enable rule:line-length
+              size: 124500
+              deleted: false
+
+  deleted_file_attachment:
+    summary: With deleted file attachment
+    value:
+      - <<: *base_transcript_operator
+        message: ''
+        attachment:
+          type: files
+          files:
+            - id: 53b236ee-f888-45ec-8e0f-5bf4d5e16a2e
+              name: original_file_name.png
+              content_type: image/png
+              url: null
+              size: 124500
+              deleted: true
+
+  single_choice_attachment:
+    summary: With single choice attachment
+    value:
+      - <<: *base_transcript_operator
+        message: Which of these is correct?
+        attachment:
+          type: single_choice
+          options:
+            - text: Choice 1
+              value: choice_1
+            - text: Choice 2
+              value: choice_2
+          image_url: https://example.com/files/image.png
+
+  single_choice_response_attachment:
+    summary: With single choice response attachment
+    value:
+      - <<: *base_transcript_operator
+        message: Choice 2
+        attachment:
+          type: single_choice_response
+          selected_option: choice_2
+        sender:
+          type: visitor
+          name: John Smith
+          # yamllint disable rule:line-length
+          href: https://api.glia.com/sites/def34343-e888-43ae-99e0-07a676e9a111/visitors/c2c9106e-e888-47b2-8db3-089fb49dc9a5
+          # yamllint enable rule:line-length
+        target: operator
+        leg_id: 0ebe74fa-fdac-4970-b9af-ae2b547842ed
+
+  ssml_choice_attachment:
+    summary: With SSML attachment
+    value:
+      - <<: *base_transcript_operator
+        message: ''
+        speech_to_text: true
+        attachment:
+          type: ssml
+          content: <speak><prosody pitch="+5%">Hello<break>How may I help you with the application?</prosody></speak>
+
+  transfer_ai_suggestion_usage_attachment:
+    summary: With transfer AI suggestion usage attachment
+    value:
+      - <<: *base_transcript_operator
+        message: 'Transfer Notes: note generated by Transfer Summary feature'
+        target: operator
+        sender:
+          type: system
+          name: system
+        attachment:
+          type: transfer_ai_suggestion_usage
+          value: as-is

@@ -1,0 +1,291 @@
+---
+search:
+  summary: Search engagement requests
+  tags:
+    - Engagement request
+  # yamllint disable rule:line-length
+  description: |
+    Fetches engagement requests that match the filters you apply.
+
+    The results are paginated and sorted by request time in descending order.
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or site's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens)
+      * To search for engagement requests that the user either received or initiated, requires:
+        * Base of the user's role: `operator`
+      * To search for engagement requests that took place on one of the user's sites, requires:
+        * Base of the user's role, one of:
+          * `manager`
+          * `super_manager`
+    * [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens) - Returns the engagement requests that took place on the site of the API key. Requires:
+      * Scope: `engagement_requests:read`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+
+    ### Interpreting the Output
+
+    #### Pagination
+
+    * If there is more than one page of results, the `next_page_token` will not be `null` and can be used to fetch the next batch.
+    * **Never** try to use any information that the `next_page_token` could contain. The format of the `next_page_token` is subject to change at any point in time.
+    * To fetch the next page of results, use the `next_page_token` from the previous request's response to pass as a `page_token` body parameter for the **Paginated Request** call.
+    * See also [Pagination](ref:pagination).
+  # yamllint enable rule:line-length
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          oneOf:
+            - $ref: '../schemas/engagement_request.yaml#/search_request_initial'
+            - $ref: '../schemas/engagement_request.yaml#/search_request_paginated'
+
+  responses:
+    '200':
+      description: Engagement requests were fetched.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/engagement_request.yaml#/search_response'
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+
+create_engagement_request:
+  summary: Create engagement request
+  tags:
+    - Engagement request
+  # yamllint disable rule:line-length
+  description: |
+    Creates an engagement request and notifies the target operator or visitor.
+
+    > ℹ️
+    > The request body needs different properties based on the requester.
+
+    Engagement requests can be created by
+
+      * operators using the Glia platform;
+      * visitors with a Glia session (e.g present on a Glia enabled site using a web browser);
+      * visitors from external systems - Glia integrators.
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or visitor's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens) - To send an engagement request from the Glia user to a visitor. Requires:
+      * Base of the user's role, one of:
+        * `operator`
+        * `manager`
+        * `super_manager`
+    * [Visitor's bearer access token](https://docs.glia.com/glia-dev/reference/post_visitors)
+      * To send an engagement request from the visitor, the visitor has to be connected to the site where Glia is enabled.
+      * To send an engagement request as an integrator on behalf of the visitor, the integrator must first create the visitor via Glia REST API and then use that visitor's bearer access token to request an engagement.
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+
+    ### Example Payloads Depending on the Requester
+
+    #### Glia Users
+
+    When creating engagement request, the `Authorization` header must contain the user's bearer access token. For how to obtain the bearer access token by using the user's API key, see [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens)
+
+    ```bash
+      curl --request POST \
+        --header "Authorization: Bearer $access_token" \
+        --header "Accept: application/vnd.salemove.v1+json" \
+        --header "Content-Type: application/json" \
+        --data-binary '{
+          "visitor_id": "c2c9106e-v888-47b2-8db3-089fb49dc9a5",
+          "site_id": "def34343-s888-43ae-99e0-07a676e9a111",
+          "media": "text"
+        }' \
+      "https://api.glia.com/engagement_requests"
+    ```
+
+    ### Visitors with a Glia Session
+
+    Visitors connected to a Glia enabled site using a web browser are provided session IDs to uniquely identify the visitor and the site.
+
+    Currently, there is no way to register visitor sessions as an integrator using the REST API, instead use the visitors from the [external system](#visitors-from-external-systems) method.
+
+    When creating an engagement request,
+
+    * the `Authorization` header must contain the visitor's session ID and
+    * the `X-Salemove-Visit-Session-Id` headers must contain the visitor's visit session ID.
+
+    These headers are set automatically when creating engagement requests using the <a href="https://docs.glia.com/glia-dev/docs/visitor-js-sdk" target="visitor-js-sdk">Visitor JS SDK</a>.
+
+    ```bash
+      curl --request POST \
+        --header "Authorization: Bearer $visitor_access_token" \
+        --header "Accept: application/vnd.salemove.v1+json" \
+        --header "Content-Type: application/json" \
+        --data-binary '{
+          "operator_id": "ec317122-o888-4b43-996d-34a2ed3b76d8",
+          "media": "text",
+          "site_id": "def34343-s888-43ae-99e0-07a676e9a111",
+          "source": "sdk"
+        }' \
+      "https://api.glia.com/engagement_requests"
+    ```
+
+    ### Visitors from External Systems
+
+    Integrators of the Glia system might want to engage operators with visitors outside of the context of a web browser or without using the <a href="https://docs.glia.com/glia-dev/docs/visitor-js-sdk" target="visitor-js-sdk">Visitor JS SDK</a>.
+    In this case the integrator can create a visitor using <a href="https://docs.glia.com/glia-dev/reference/post_visitors" target="post_visitors">REST API</a>.
+
+    Creating an engagement request on behalf of the visitor requires:
+
+      * `visitor_integrator` as a source value,
+      * bearer token gotten from the response when creating the visitor (<a href="https://docs.glia.com/glia-dev/reference/post_visitors" target="post_visitors">`POST https://api.glia.com/visitors/{visitor_id}/token`</a>, `access_token` keyword).
+
+    ```bash
+      curl --request POST \
+        --header "Authorization: Bearer $visitor_access_token" \
+        --header "Accept: application/vnd.salemove.v1+json" \
+        --header "Content-Type: application/json" \
+        --data-binary '{
+          "operator_id": "c62b4a91-a0d7-4137-80e3-c281393b71c2",
+          "media": "text",
+          "site_id": "51138845-3c46-4c21-8bd8-1cf45957f62e",
+          "source": "visitor_integrator"
+        }' \
+      "https://api.glia.com/engagement_requests"
+    ```
+  # yamllint enable rule:line-length
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          oneOf:
+            - $ref: '../schemas/engagement_request.yaml#/operator'
+            - $ref: '../schemas/engagement_request.yaml#/visitor'
+        examples:
+          operator:
+            summary: Operator creates the engagement request
+            value:
+              $ref: '../examples/engagement_request.yaml#/Operator'
+          visitor:
+            summary: Visitor creates the engagement request
+            value:
+              $ref: '../examples/engagement_request.yaml#/Visitor'
+
+  responses:
+    '200':
+      # yamllint disable rule:line-length
+      description: |
+        The engagement request was successfully created.
+
+        Note the `timeout` field that shows in how many seconds (counting from the moment that Glia servers received the request) the engagement request will automatically time out unless the engagement request is accepted, acknowledged, canceled, or declined.
+      # yamllint enable rule:line-length
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/engagement_request_response.yaml'
+          example:
+            id: 'defb7236-r888-4fe8-b26c-fc462e286907'
+            timeout: 30
+            site_id: 'def34343-s888-43ae-99e0-07a676e9a111'
+            platform: omnicore
+
+engage_or_not:
+  summary: Answer engagement request
+  tags:
+    - Engagement request
+  # yamllint disable rule:line-length
+  description: |
+    Accepts, declines, or cancels a pending engagement request. If accepted, also starts an engagement.
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or visitor's bearer access token is needed in the `Authorization` request header. Which one, depends on who is the initiator and who is the receiver of the engagement request, and if the desired action is accepting, declining, or canceling the request.
+
+    * Accept or decline
+      * Only the recipient of the engagement request can accept and decline it.
+        Meaning, if an engagement request was sent by operator O to visitor V, then only visitor V is authorized to accept or decline the engagement request.
+    * Cancel
+      * Only the originator of the engagement request can cancel it.
+        Meaning, if an engagement request was sent by visitor V to operator O, then only visitor V is allowed to cancel the engagement request.
+        Note that if an engagement is already started, canceling the engagement request will end the engagement instead. This functionality is provided due to possible data races between accepting and canceling an engagement request.
+
+    Guidelines for obtaining the bearer access tokens:
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens)
+    * [Visitor's bearer access token](https://docs.glia.com/glia-dev/reference/post_visitors)
+
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/engagement_requests.yaml#/parameters/engagement_request_id'
+
+  requestBody:
+    content:
+      application/json:
+        schema:
+          oneOf:
+            - $ref: '#/actions/accept'
+            - $ref: '#/actions/decline'
+            - $ref: '#/actions/cancel'
+
+  responses:
+    '200':
+      description: |
+        Engagement request was successfully accepted, declined or canceled.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            oneOf:
+              - $ref: '../schemas/request_responses.yaml#/Accept'
+              - $ref: '../schemas/request_responses.yaml#/Decline'
+              - $ref: '../schemas/request_responses.yaml#/Cancel'
+          examples:
+            accept:
+              summary: The engagement request was accepted
+              value:
+                id: 'defb7236-r888-4fe8-b26c-fc462e286907'
+                engagement_id: 'abc12121-e888-43ae-99e0-07a676e9a111'
+                sub_engagement:id: 'def34343-c995-43ae-99e0-07a676e9a111'
+            decline:
+              summary: The engagement request was declined
+              value:
+                id: 'defb7236-r888-4fe8-b26c-fc462e286907'
+            cancel:
+              summary: The engagement request was canceled
+              value:
+                id: 'defb7236-r888-4fe8-b26c-fc462e286907'
+
+actions:
+  accept:
+    title: Accept the engagement request
+    properties:
+      action:
+        type: string
+        description: Always 'accept'
+        enum:
+          - accept
+      visitor_context_asset_id:
+        $ref: '../../../common_components/properties.yaml#/visitor_context_asset_id'
+      media:
+        $ref: '../../src/properties/engagement.yaml#/properties/accepted_media_type'
+  decline:
+    title: Decline the engagement request
+    properties:
+      action:
+        type: string
+        description: Always 'decline'
+        enum:
+          - decline
+  cancel:
+    title: Cancel the engagement request
+    properties:
+      action:
+        type: string
+        description: Always 'cancel'
+        enum:
+          - cancel

@@ -1,0 +1,170 @@
+---
+join_engagement:
+  summary: Join engagement
+  tags:
+    - Engagement participant
+  # yamllint disable rule:line-length
+  description: |
+    Join an engagement proactively as a guest.
+
+    When trying to add a participant that is already in the engagement:
+
+    * With the same type and guest status - no error occurs and the ongoing engagement continues with its existing participants.
+    * With a different type - succeeds only when the participant's original type is `monitor` and it is attempted to be changed to `operator`, making the observing participant into a guest operator.
+
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * The user has access to the site where the ongoing engagement leg belongs to.
+    * Base of the user's role, one of:
+      * `manager`
+      * `super_manager`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/engagements.yaml#/engagement_id'
+      description: The engagement to be joined
+  requestBody:
+    description: Parameters for joining the engagement
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - participant_id
+            - participant_type
+          properties:
+            participant_id:
+              $ref: '../../src/properties/participants.yaml#/properties/participant_id'
+              # yamllint disable rule:line-length
+              description: |
+                ID of the user who joins the engagement as a guest or ID of the manager who joins as monitor.
+
+                As users can only join themselves, this should always be set to ID of the user that is making the request.
+              # yamllint enable rule:line-length
+            participant_type:
+              type: string
+              enum:
+                - operator
+                - monitor
+              # yamllint disable rule:line-length
+              description: |
+                Participant types:
+
+                 * `operator` - The user is added to the engagement as a guest operator. If the engagement has audio, the user is initially muted. The join notification sound is not played when this user joins.
+                 * `monitor` - The user is added to the engagement as a monitor. If the engagement has audio, the user is muted and they cannot unmute themselves. The other participants receive no indication that this user has joined.
+              # yamllint enable rule:line-length
+              example: operator
+  responses:
+    '204':
+      description: User has joined the engagement
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '409':
+      $ref: '../../../common_components/responses/errors.yaml#/409_conflict'
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+    '500':
+      $ref: '../../../common_components/responses/errors.yaml#/500_internal_server_error'
+    '503':
+      $ref: '../../../common_components/responses/errors.yaml#/503_service_unavailable'
+
+update_by_id:
+  summary: Update participant
+  tags:
+    - Engagement participant
+  # yamllint disable rule:line-length
+  description: |
+    Updates the engagement participant with the provided action. See the schema below for the list of available actions.
+
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * The user is the host operator of the engagement.
+    * Base of the user's role, one of:
+      * `operator`
+      * `manager`
+      * `super_manager`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/engagements.yaml#/engagement_id'
+    - $ref: '../../src/parameters/engagements.yaml#/participant_id'
+  requestBody:
+    description: Action to be performed on the engagement participant.
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            action:
+              $ref: '../../src/properties/participants.yaml#/properties/action'
+          required:
+            - action
+  responses:
+    '200':
+      description: OK
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '409':
+      $ref: '../../../common_components/responses/errors.yaml#/409_conflict'
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+    '500':
+      $ref: '../../../common_components/responses/errors.yaml#/500_internal_server_error'
+    '503':
+      $ref: '../../../common_components/responses/errors.yaml#/503_service_unavailable'
+
+remove_by_id:
+  summary: Remove participant
+  tags:
+    - Engagement participant
+  # yamllint disable rule:line-length
+  description: |
+    Removes a participant from the engagement.
+
+    This endpoint can only be used for removing engagement guests. It is not possible to remove the host operator or visitor from the engagement.
+
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens) - Requires one of the following:
+
+    * The user is the host operator of the engagement and base of the user's role is one of:
+      * `operator`
+      * `manager`
+      * `super_manager`
+    * The user is the guest who is about to leave the engagement and base of the user's role is one of:
+      * `operator`
+      * `manager`
+      * `super_manager`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/engagements.yaml#/engagement_id'
+    - $ref: '../../src/parameters/engagements.yaml#/participant_id'
+      description: ID of the participant to be removed.
+  responses:
+    '204':
+      description: Participant has been removed from the engagement.
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+    '500':
+      $ref: '../../../common_components/responses/errors.yaml#/500_internal_server_error'
+    '503':
+      $ref: '../../../common_components/responses/errors.yaml#/503_service_unavailable'

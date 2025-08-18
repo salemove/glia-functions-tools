@@ -1,0 +1,10 @@
+---
+parameters:
+  join_request_id:
+    name: join_request_id
+    in: path
+    description: Join request ID.
+    required: true
+    schema:
+      type: string
+    example: defb7236-r888-4fe8-b26c-fc462e286907

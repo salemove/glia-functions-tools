@@ -1,0 +1,11 @@
+---
+properties:
+  site_id:
+    description: The ID of the site to which authentication request will be created.
+    type: string
+    example: def34343-e888-43ae-99e0-07a676e9a111
+
+  visitor_id:
+    description: The ID of the visitor to whom authentication request will be created.
+    type: string
+    example: c2c9106e-e888-47b2-8db3-089fb49dc9a5

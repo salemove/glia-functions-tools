@@ -1,0 +1,25 @@
+---
+site_id:
+  name: site_id
+  in: query
+  description: >
+    The ID of the site. Required, unless the endpoint is called using the `next_page` or `prev_page` links from
+    the response.
+  schema:
+    type: string
+  example: def34343-e888-43ae-99e0-07a676e9a111
+engagement_id:
+  name: engagement_id
+  in: query
+  description: >
+    The ID of an engagement.
+
+
+    * If it is present, then the response contains the messages starting from the first message of this engagement
+    up to a page size of messages.
+
+    * If it is **not** present, then the response returns the recently sent messages from/to the visitor up to a
+    page size of messages.
+  schema:
+    type: string
+  example: abc12121-e888-43ae-99e0-07a676e9a111

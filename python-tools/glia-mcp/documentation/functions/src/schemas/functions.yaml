@@ -1,0 +1,93 @@
+---
+create_request:
+  properties:
+    description:
+      $ref: '../properties/functions.yaml#/description'
+    name:
+      $ref: '../properties/functions.yaml#/name'
+    site_id:
+      $ref: '../properties/functions.yaml#/site_id'
+  required:
+    - site_id
+    - name
+
+update_request:
+  properties:
+    description:
+      $ref: '../properties/functions.yaml#/description'
+    name:
+      $ref: '../properties/functions.yaml#/name'
+  required:
+    - name
+
+fetch_stats:
+  properties:
+    function_ids:
+      $ref: '../properties/functions.yaml#/function_ids'
+
+fetch_stats_response:
+  properties:
+    invocations:
+      type: array
+      description: List of invocation statistics of Glia functions.
+      items:
+        type: object
+        description: Statistics data.
+        properties:
+          function_id:
+            $ref: '../properties/functions.yaml#/id'
+          statistics:
+            type: object
+            properties:
+              date:
+                $ref: '../properties/functions.yaml#/date'
+              count:
+                $ref: '../properties/functions.yaml#/invocation_count'
+
+function_response:
+  $ref: '../../src/properties/functions.yaml#/function'
+
+list_response:
+  properties:
+    functions:
+      type: array
+      description: List of functions.
+      items:
+        $ref: '../properties/functions.yaml#/function_list'
+
+logs_response:
+  properties:
+    logs:
+      type: array
+      description: List of log messages and timestamps.
+      items:
+        $ref: '../properties/functions.yaml#/log'
+    next_page:
+      $ref: '../properties/functions.yaml#/next_page'
+
+task_processing_response:
+  properties:
+    status:
+      $ref: '../properties/functions.yaml#/task_status'
+      example: 'processing'
+    self:
+      $ref: '../properties/functions.yaml#/task_self'
+task_completed_response:
+  properties:
+    status:
+      $ref: '../properties/functions.yaml#/task_status'
+      example: 'completed'
+    self:
+      $ref: '../properties/functions.yaml#/task_self'
+    entity:
+      $ref: '../properties/functions.yaml#/version_entity'
+
+deployments_request:
+  properties:
+    version_id:
+      $ref: '../properties/functions.yaml#/deployments_version_id'
+
+deployments_response:
+  properties:
+    invocation_uri:
+      $ref: '../properties/functions.yaml#/invocation_uri'

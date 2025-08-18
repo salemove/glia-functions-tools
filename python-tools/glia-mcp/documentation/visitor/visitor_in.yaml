@@ -1,0 +1,90 @@
+---
+openapi: '3.0.0'
+info:
+  title: Visitor
+  version: '1.0'
+
+# Base URLs
+servers:
+  - url: 'https://api.glia.com'
+    description: For users worldwide, except Europe
+  - url: 'https://api.glia.eu'
+    description: For users in Europe
+
+# User bearer access token by default
+security:
+  - userBearer: []
+
+paths:
+  # tag: Visitor
+  /visitors:
+    post:
+      # Different token
+      security:
+        - siteBearer: []
+      $ref: './src/paths/site_visitors.yaml#/create'
+  /visitors/search:
+    post:
+      # Additional token
+      security:
+        - userBearer: []
+        - siteBearer: []
+      $ref: './src/paths/site_visitors.yaml#/search'
+  /visitors/{visitor_id}/token:
+    post:
+      # Authorization header is used instead of 'security'
+      security: []
+      $ref: './src/paths/site_visitors.yaml#/update_token'
+  /sites/{site_id}/visitors/{visitor_id}:
+    get:
+      $ref: './src/paths/site_visitors.yaml#/fetch'
+    patch:
+      $ref: './src/paths/site_visitors.yaml#/update'
+
+  # tag: Authentication providers
+  /sites/{site_id}/visitor_authentication_providers:
+    post:
+      $ref: './src/paths/providers.yaml#/create'
+    get:
+      $ref: './src/paths/providers.yaml#/retrieve'
+  /sites/{site_id}/visitor_authentication_providers/{provider_id}:
+    patch:
+      $ref: './src/paths/providers.yaml#/update'
+
+  # tag: Authentication requests
+  /visitor_authentication_requests:
+    post:
+      $ref: './src/paths/authentication.yaml#/create'
+  /visitor_authentication_requests/{authentication_request_id}:
+    delete:
+      $ref: './src/paths/authentication.yaml#/delete'
+
+  # tag: Last operator
+  /sites/{site_id}/visitors/{visitor_id}/last_operator:
+    get:
+      # Different token
+      security:
+        - siteBearer: []
+      $ref: 'src/paths/last_operator.yaml#/fetch'
+
+  # tag: Transcript
+  /visitors/{visitor_id}/chat_transcript:
+    get:
+      $ref: 'src/paths/transcript.yaml#/fetch'
+
+  # tag: Direct ID token
+  /sites/{site_id}/force_fetch_direct_id_verification_keys:
+    patch:
+      $ref: './src/paths/direct_id_validation_public_key.yaml#/update'
+  /direct_id_authentication_encryption_keys:
+    get:
+      # Unique client ID is used as a query parameter instead of 'security'
+      security: []
+      $ref: 'src/paths/direct_id_keys.yaml#/fetch'
+
+components:
+  securitySchemes:
+    userBearer:
+      $ref: '../common_components/security.yaml#/userBearerAuth'
+    siteBearer:
+      $ref: '../common_components/security.yaml#/siteBearerAuth'

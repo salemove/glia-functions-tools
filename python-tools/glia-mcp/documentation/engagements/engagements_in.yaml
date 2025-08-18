@@ -1,0 +1,259 @@
+---
+openapi: 3.0.0
+info:
+  title: Engagements
+  version: '1.0'
+
+# Base URLs
+servers:
+  - url: 'https://api.glia.com'
+    description: For users worldwide, except Europe
+  - url: 'https://api.glia.eu'
+    description: For users in Europe
+
+# User bearer access token by default
+security:
+  - userBearer: []
+
+paths:
+  # tag: Engagement
+  /engagements/search:
+    post:
+      # Additional token
+      security:
+        - userBearer: []
+        - siteBearer: []
+      $ref: './src/paths/engagement.yaml#/search'
+  /engagements:
+    get:
+      # Additional token
+      security:
+        - userBearer: []
+        - siteBearer: []
+      $ref: './src/paths/engagement.yaml#/list'
+      deprecated: true
+  /engagements/{engagement_id}:
+    get:
+      # Additional token
+      security:
+        - userBearer: []
+        - siteBearer: []
+      $ref: './src/paths/engagement.yaml#/fetch'
+    patch:
+      # Additional token
+      security:
+        - userBearer: []
+        - siteBearer: []
+      $ref: './src/paths/engagement.yaml#/update'
+  /engagements/{engagement_id}/export:
+    post:
+      $ref: './src/paths/engagement.yaml#/export'
+
+  # tag: Engagement request
+  /engagement_requests/search:
+    post:
+      # Additional token
+      security:
+        - userBearer: []
+        - siteBearer: []
+      $ref: './src/paths/engagement_requests.yaml#/search'
+  /engagement_requests:
+    post:
+      # Additional token
+      security:
+        - userBearer: []
+        - visitorBearer: []
+      $ref: './src/paths/engagement_requests.yaml#/create_engagement_request'
+  /engagement_requests/{engagement_request_id}:
+    patch:
+      # Additional token
+      security:
+        - userBearer: []
+        - visitorBearer: []
+      $ref: './src/paths/engagement_requests.yaml#/engage_or_not'
+
+  # tag: Transfer
+  /engagements/{engagement_id}/transfer_requests:
+    post:
+      $ref: './src/paths/transfer_requests.yaml#/create'
+  /engagements/{engagement_id}/transfer_requests/{transfer_request_id}:
+    get:
+      # Additional token
+      security:
+        - userBearer: []
+        - siteBearer: []
+      $ref: './src/paths/transfer_requests.yaml#/fetch_by_id'
+    patch:
+      $ref: './src/paths/transfer_requests.yaml#/update_by_id'
+  /transfer_tickets:
+    post:
+      $ref: './src/paths/transfer_tickets.yaml#/create'
+  /sub_engagements/{sub_engagement_id}/summary:
+    get:
+      $ref: './src/paths/transfer_summary.yaml#/fetch_transfer_summary'
+
+  # tag: Join engagement
+  /engagements/{engagement_id}/join_requests:
+    post:
+      $ref: './src/paths/join_requests.yaml#/create'
+  /engagements/{engagement_id}/join_requests/{join_request_id}:
+    get:
+      $ref: './src/paths/join_requests.yaml#/fetch_by_id'
+    patch:
+      $ref: './src/paths/join_requests.yaml#/update_by_id'
+
+  # tag: Engagement participant
+  /engagements/{engagement_id}/participants:
+    post:
+      $ref: './src/paths/participants.yaml#/join_engagement'
+  /engagements/{engagement_id}/participants/{participant_id}:
+    patch:
+      $ref: './src/paths/participants.yaml#/update_by_id'
+    delete:
+      $ref: './src/paths/participants.yaml#/remove_by_id'
+
+  # tag: Chat
+  /engagements/{engagement_id}/chat_messages/{message_id}:
+    put:
+      # Additional token
+      security:
+        - userBearer: []
+        - visitorBearer: []
+      $ref: './src/paths/chat.yaml#/chat_message'
+  /engagements/{engagement_id}/custom_commands/{command_id}:
+    put:
+      $ref: './src/paths/chat.yaml#/custom_command'
+  /engagements/{engagement_id}/files:
+    post:
+      # Additional token
+      security:
+        - userBearer: []
+        - visitorBearer: []
+      $ref: './src/paths/chat.yaml#/upload_file'
+  /engagements/{engagement_id}/files/{file_id}:
+    get:
+      # Additional tokens
+      security:
+        - userBearer: []
+        - visitorBearer: []
+        - siteBearer: []
+      $ref: './src/paths/chat.yaml#/download_file'
+  /engagements/{engagement_id}/typing_indicator:
+    put:
+      # Additional token
+      security:
+        - userBearer: []
+        - visitorBearer: []
+      $ref: './src/paths/chat.yaml#/typing_indicator'
+  /engagements/{engagement_id}/chat_transcript:
+    get:
+      # Additional token
+      security:
+        - userBearer: []
+        - visitorBearer: []
+      $ref: './src/paths/chat.yaml#/get_transcript'
+
+  # tag: Media upgrade
+  /engagements/{engagement_id}/media_upgrade_requests:
+    post:
+      # Additional token
+      security:
+        - userBearer: []
+        - visitorBearer: []
+      $ref: './src/paths/media_upgrade.yaml#/upgrade_request'
+  /engagements/{engagement_id}/media_upgrade_requests/{media_upgrade_request_id}:
+    patch:
+      # Additional token
+      security:
+        - userBearer: []
+        - visitorBearer: []
+      $ref: './src/paths/media_upgrade.yaml#/upgrade_or_not'
+
+  # tag: Events
+  /engagements/{engagement_id}/events:
+    post:
+      # Different token
+      security:
+        - visitorBearer: []
+      $ref: './src/paths/events.yaml#/create_event'
+
+  # tag: Video
+  /engagements/{engagement_id}/visitor_video_screenshots:
+    post:
+      $ref: './src/paths/video.yaml#/upload_screenshot'
+
+  # tag: Queue wait time
+  /engagements/queue/wait_duration:
+    get:
+      # Different token
+      security:
+        - visitorBearer: []
+      $ref: './src/paths/queue_wait_time.yaml#/get_wait_duration'
+
+  # tag: Recording
+  /engagements/{engagement_id}/recordings:
+    patch:
+      # Additional token
+      security:
+        - userBearer: []
+        - siteBearer: []
+      $ref: './src/paths/recording.yaml#/update'
+
+  # tag: Secure conversations
+  /messaging/chat_messages/{message_id}:
+    put:
+      # Different token
+      security:
+        - visitorBearer: []
+      $ref: './src/paths/messaging.yaml#/send_message'
+  /messaging/chat_transcript:
+    get:
+      # Different token
+      security:
+        - visitorBearer: []
+      $ref: './src/paths/messaging.yaml#/fetch_transcript'
+  /messaging/mark_chat_messages_read:
+    post:
+      # Different token
+      security:
+        - visitorBearer: []
+      $ref: './src/paths/messaging.yaml#/mark_messages_read'
+  /messaging/files:
+    post:
+      # Additional token
+      security:
+        - userBearer: []
+        - visitorBearer: []
+      $ref: './src/paths/messaging.yaml#/upload_file'
+  /messaging/files/{file_id}:
+    get:
+      # Different token
+      security:
+        - visitorBearer: []
+      $ref: './src/paths/messaging.yaml#/download_file'
+
+components:
+  # All the security schemes
+  securitySchemes:
+    userBearer:
+      $ref: '../common_components/security.yaml#/userBearerAuth'
+    siteBearer:
+      $ref: '../common_components/security.yaml#/siteBearerAuth'
+    visitorBearer:
+      $ref: '../common_components/security.yaml#/visitorBearerAuth'
+
+  responses:
+    # In numbered order.
+    # '200' is defined separately for each endpoint.
+    '401NotAuthorized':
+      description: |
+        Your bearer token has expired or you are not authorized to perform this request.
+    '403NotPartOfEngagement':
+      description: Sorry, you are not part of this engagement.
+    '422InvalidInput':
+      description: Invalid input. Check if the request is correct.
+    '500InternalError':
+      description: Internal error has appeared. Please try again a little bit later.
+    '503ServiceUnavailable':
+      description: |
+        The service is temporarily unavailable. Please try again a little bit  later.

@@ -1,0 +1,10 @@
+---
+site_id:
+  name: site_id
+  in: path
+  required: true
+  description: >
+    The ID of the site.
+  schema:
+    type: string
+  example: def34343-e888-43ae-99e0-07a676e9a111

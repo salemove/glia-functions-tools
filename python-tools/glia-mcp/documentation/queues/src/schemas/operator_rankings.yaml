@@ -1,0 +1,8 @@
+---
+type: object
+properties:
+  operators:
+    type: array
+    description: List of operators and their positions in a queue.
+    items:
+      $ref: '../properties/queue_operator_ranking.yaml'

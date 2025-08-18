@@ -1,0 +1,39 @@
+---
+type: object
+properties:
+  type:
+    type: string
+    description: |
+      Chat message sender type.
+
+      * `operator` - sender is either human operator or a virtual assistant.
+      * `visitor` - sender is a visitor.
+      * `omniguide`- sender is an operator assistant, for example sending prompts or suggestions to the operator. These internal messages are visible to the host operator, guest operators, and monitors (the latter cannot accept the operator assistant's suggestions).
+      * `system` - sender is Glia system, for example in case there is a notification regarding media upgrade or CoBrowsing.
+      * `monitor` - sender is a manager who is monitoring the engagement, for example sending prompts to the operator. These internal messages are visible to the host operator, guest operators, and monitors.
+    enum:
+      - operator
+      - visitor
+      - omniguide
+      - system
+    example: 'operator'
+
+  name:
+    type: string
+    description: |
+      The sender's name.
+
+      The sender's name unless the sender type is `system` or `omniguide`.
+      * If sender type is `system`, name is also `system`.
+      * If sender type is `omniguide`, name is also `omniguide`.
+    example: 'Elsie Blake'
+
+  href:
+    type: string
+    description: |
+      The URL for sender's information if the sender is a visitor or a human operator.
+    example: 'https://api.glia.com/operators/ec317122-o888-4b43-996d-34a2ed3b76d8'
+
+required:
+  - type
+  - name

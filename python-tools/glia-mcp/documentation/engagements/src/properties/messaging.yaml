@@ -1,0 +1,91 @@
+---
+properties:
+  content:
+    type: string
+    maxLength: 10000
+    description: >
+      The content the sender wishes to send to the recipient. This can be empty if the message contains a file
+      attachment.
+    example: Hi, I would like some suggestions regarding insurance.
+
+  visitor_attachment:
+    type: object
+    description: >
+      Attachments let you add more context to a message, enhancing user experience and making it more interactive. A
+      message attachment must have `type` property that defines the behavior of the attachment.
+    oneOf:
+      - $ref: '../schemas/attachment_files.yaml#/messaging_files_attachment'
+      - $ref: '../schemas/attachment_single_choice_response.yaml'
+
+  attachment:
+    type: object
+    description: >
+      Attachments let you add more context to a message, enhancing user experience and making it more interactive. A
+      message attachment must have `type` property that defines the behavior of the attachment.
+    oneOf:
+      - $ref: '../schemas/attachment_files.yaml#/messaging_files_attachment'
+      - $ref: '../schemas/attachment_single_choice.yaml'
+      - $ref: '../schemas/attachment_single_choice_response.yaml'
+
+  webhooks:
+    type: array
+    description: >
+      See [Webhooks](ref:webhooks) section for more information.
+    items:
+      type: object
+      oneOf:
+        - $ref: '../schemas/webhooks.yaml#/http'
+        - $ref: '../schemas/webhooks.yaml#/apns'
+        - $ref: '../schemas/webhooks.yaml#/fcm'
+    maxItems: 10
+
+  metadata:
+    type: object
+    description: >
+      Message metadata allows an integrator to add end to end data inside a JSON object. This information is only
+      relevant to the integrator and will be handled transparently inside Glia.
+
+
+      * When sender is an operator assistant (sender type `omniguide`), the message's metadata contains:
+
+      ```
+      provider: {name: provider_name}
+      ```
+
+      * One of the common metadata use cases is sending a custom response card, see a JSON payload example for it
+      in [Suggestions with Custom Response Card](doc:suggestion#response-cards).
+    example:
+      key: value
+
+  queue_ids:
+    type: array
+    description: List of IDs of the queues to send the message to.
+    items:
+      type: string
+    example: ['f58d4671-e888-4e87-96dc-1d41027bebc5']
+
+  source:
+    type: string
+    description: >
+      Source of the message.
+
+      * `tab` - The message was sent from the browser tab (via the bubble).
+
+      * `visitor_integrator` - The message was sent via a custom integration.
+    enum:
+      - tab
+      - visitor_integrator
+
+  visitor_id:
+    type: string
+    description: >
+      The ID of the visitor the message is intended for.
+
+      Required in case the sender of the message is an operator.
+    example: 'c2c9106e-e888-47b2-8db3-089fb49dc9a5'
+
+  site_id:
+    type: string
+    description: >
+      ID of the site that the message is intended for.
+    example: 'def34343-e888-43ae-99e0-07a676e9a111'

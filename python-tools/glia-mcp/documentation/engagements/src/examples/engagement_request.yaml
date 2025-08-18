@@ -1,0 +1,10 @@
+---
+Visitor:
+  operator_id: 'ec317122-o888-4b43-996d-34a2ed3b76d8'
+  site_id: 'def34343-s888-43ae-99e0-07a676e9a111'
+  media: 'text'
+
+Operator:
+  visitor_id: 'c2c9106e-v888-47b2-8db3-089fb49dc9a5'
+  site_id: 'def34343-s888-43ae-99e0-07a676e9a111'
+  media: 'audio'

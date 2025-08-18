@@ -1,0 +1,44 @@
+---
+upload_engagement_file:
+  schema:
+    type: object
+    properties:
+      content:
+        type: string
+        format: binary
+        description: >
+          File to be uploaded.
+
+
+          Maximum file size is 25 MB by default and 5 MB for SMS/WhatsApp visitors. Only files with MIME types set in
+          site settings can be uploaded. For more information, see `allowed_file_content_types` setting in [Update site](ref:put_sites-site-id).
+        example: '@image.png'
+    required:
+      - content
+
+upload_messaging_file:
+  schema:
+    type: object
+    properties:
+      content:
+        type: string
+        format: binary
+        description: >
+          File to be uploaded.
+
+
+          Maximum file size is 25 MB. Only files with MIME types set in site settings can be uploaded.
+          For more, see `allowed_file_content_types` setting in [Update site](ref:put_sites-site-id).
+        example: '@image.png'
+      site_id:
+        type: string
+        description: >
+          The ID of the site the visitor belongs to.
+        example: 'def34343-s888-43ae-99e0-07a676e9a111'
+      visitor_id:
+        type: string
+        description: ID of the visitor the file is intended for. Needed if uploading as an operator.
+        example: 'c2c9106e-e888-47b2-8db3-089fb49dc9a5'
+    required:
+      - content
+      - site_id

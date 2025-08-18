@@ -1,0 +1,74 @@
+---
+create:
+  summary: Add provider
+  tags:
+    - Authentication providers
+  # yamllint disable rule:line-length
+  description: |
+    Adds an authentication provider to the specified site. One site can have multiple authentication providers.
+
+    The Glia platform currently integrates with the following authentication protocols:
+    * OpenID Connect
+    * OAuth2
+
+    Additionally, it's possible to add a custom Direct ID Token provider which enables seamless authentication of users without explicit user consent.
+    See: <a href="https://docs.glia.com/glia-how-to/docs/implementing-direct-id-token-authentication" target="implementing-direct-id-token-authentication">Implementing Direct ID Authentication</a>
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * Base of the user's role: `super_manager`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../../common_components/parameters.yaml#/path/site_id'
+  requestBody:
+    $ref: '../requests/providers.yaml#/body'
+    description: Parameters for adding auth provider.
+  responses:
+    $ref: '../responses/providers.yaml#/success'
+
+retrieve:
+  summary: List providers
+  tags:
+    - Authentication providers
+  # yamllint disble rule:line-length
+  description: |
+    Fetches authentication providers by their site ID.
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * Base of the user's role: `super_manager`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../../common_components/parameters.yaml#/path/site_id'
+  responses:
+    $ref: '../responses/providers.yaml#/success_array'
+
+update:
+  summary: Update provider
+  tags:
+    - Authentication providers
+  # yamllint disable rule:line-length
+  description: |
+    Updates a specified authentication provider.
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * Base of the user's role: `super_manager`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../../common_components/parameters.yaml#/path/site_id'
+    - $ref: '../parameters/providers.yaml#/parameters/provider_id'
+  requestBody:
+    $ref: '../requests/providers.yaml#/body'
+    description: Parameters for updating auth provider.
+  responses:
+    $ref: '../responses/providers.yaml#/success'
