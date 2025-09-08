@@ -1,0 +1,77 @@
+{
+  "name": "basic-html",
+  "displayName": "Basic HTML Applet",
+  "description": "Simple HTML applet with Tailwind CSS, frontend UI, and backend function",
+  "type": "applet",
+  "projectType": true,
+  "variables": {
+    "appletName": {
+      "description": "Name of the applet",
+      "required": true,
+      "default": "My Applet"
+    },
+    "description": {
+      "description": "Short description of the applet",
+      "required": false,
+      "default": "A simple applet created with Glia Functions Tools"
+    },
+    "authorName": {
+      "description": "Author's name",
+      "required": false,
+      "default": ""
+    }
+  },
+  "files": [
+    {
+      "source": "applet.html",
+      "destination": "applet.html",
+      "template": true
+    },
+    {
+      "source": "function.js",
+      "destination": "function.js",
+      "template": true
+    },
+    {
+      "source": "README.md",
+      "destination": "README.md",
+      "template": true
+    }
+  ],
+  "environmentVariables": {
+    "API_KEY": "your-api-key-here",
+    "API_URL": "https://api.example.com"
+  },
+  "projectManifest": {
+    "name": "{{projectName}}",
+    "version": "1.0.0",
+    "description": "{{description}}",
+    "author": "{{authorName}}",
+    "components": {
+      "functions": [
+        {
+          "name": "function",
+          "description": "Backend function for the {{projectName}} applet",
+          "path": "function.js"
+        }
+      ],
+      "applets": [
+        {
+          "name": "applet",
+          "description": "{{projectName}} applet",
+          "path": "applet.html",
+          "scope": "engagement"
+        }
+      ]
+    },
+    "linkages": [
+      {
+        "from": "functions.function",
+        "to": "applets.applet",
+        "placeholders": {
+          "API_URL": "invocation_uri"
+        }
+      }
+    ]
+  }
+}

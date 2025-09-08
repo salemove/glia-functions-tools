@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://glia.com/schemas/export-events/engagement-transfer-schema.json",
+  "title": "Glia Engagement Transfer Event",
+  "description": "Schema for Glia engagement transfer export events",
+  "type": "object",
+  "allOf": [
+    { "$ref": "base-schema.json" }
+  ],
+  "required": [
+    "engagement_id", 
+    "operator", 
+    "visitor", 
+    "source"
+  ],
+  "properties": {
+    "version": {
+      "enum": ["v1"],
+      "description": "Version of the export event schema"
+    },
+    "export_type": {
+      "const": "engagement_transfer",
+      "description": "Type of export event"
+    },
+    "engagement_id": {
+      "type": "string",
+      "description": "Unique identifier for the engagement",
+      "format": "uuid"
+    },
+    "operator": {
+      "type": "object",
+      "required": ["id"],
+      "description": "Information about the operator handling the transfer",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the operator",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the operator"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email of the operator"
+        }
+      }
+    },
+    "source": {
+      "type": "string",
+      "description": "Source of the engagement",
+      "examples": ["button_embed", "chat_embed", "api", "voice_callback"]
+    },
+    "visitor": {
+      "type": "object",
+      "required": ["id"],
+      "description": "Information about the visitor",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the visitor",
+          "format": "uuid"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email of the visitor (PII)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the visitor (PII)"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Phone number of the visitor (PII)"
+        }
+      }
+    }
+  }
+}

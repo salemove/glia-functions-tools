@@ -1,0 +1,20 @@
+{
+  "name": "${projectName}",
+  "version": "${version}",
+  "description": "${description}",
+  "author": "${author}",
+  "components": {
+    "functions": [
+      {
+        "name": "${functionName}",
+        "description": "${description}",
+        "path": "function.js"
+      }
+    ],
+    "applets": []
+  },
+  "kvStore": {
+    "namespaces": []
+  },
+  "linkages": []
+}

@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://glia.com/schemas/export-events/engagement-start-schema.json",
+  "title": "Glia Engagement Start Event",
+  "description": "Schema for Glia engagement start export events",
+  "type": "object",
+  "allOf": [
+    { "$ref": "base-schema.json" }
+  ],
+  "required": ["engagement_id", "operator", "visitor", "queues", "source", "queue_wait_time", "platform"],
+  "properties": {
+    "version": {
+      "enum": ["v1"],
+      "description": "Version of the export event schema"
+    },
+    "export_type": {
+      "const": "engagement_start",
+      "description": "Type of export event"
+    },
+    "engagement_id": {
+      "type": "string",
+      "description": "Unique identifier for the engagement",
+      "format": "uuid"
+    },
+    "operator": {
+      "type": "object",
+      "description": "Information about the operator handling the engagement",
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the operator",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the operator"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email of the operator"
+        }
+      }
+    },
+    "platform": {
+      "type": "string",
+      "description": "The Glia platform variant handling this engagement",
+      "examples": ["omnicore"]
+    },
+    "queue_wait_time": {
+      "type": "number",
+      "description": "Time in seconds the visitor waited in queue",
+      "minimum": 0
+    },
+    "queues": {
+      "type": "array",
+      "description": "Queues the engagement was routed through",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the queue",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the queue"
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "string",
+      "description": "Source of the engagement",
+      "examples": ["button_embed", "chat_embed", "api", "voice_callback"]
+    },
+    "visitor": {
+      "type": "object",
+      "description": "Information about the visitor",
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the visitor",
+          "format": "uuid"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email of the visitor (PII)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the visitor (PII)"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Phone number of the visitor (PII)"
+        }
+      }
+    },
+    "custom_fields": {
+      "type": "array",
+      "description": "Custom fields defined for this engagement",
+      "items": {
+        "type": "object",
+        "required": ["key", "value"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key of the custom field"
+          },
+          "value": {
+            "type": ["string", "number", "boolean", "null"],
+            "description": "Value of the custom field"
+          }
+        }
+      }
+    }
+  }
+}

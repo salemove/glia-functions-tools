@@ -133,46 +133,111 @@ export function listProfiles() {
 
 /**
  * Loads the configuration from environment variables and .env files
- * Uses layered configuration resolution:
- * 1. CLI args (already in process.env)
- * 2. Local .env file 
- * 3. Active profile config
- * 4. Global config file
- * 5. Default values
+ * 
+ * This implementation uses a complete override approach to ensure proper precedence:
+ * - Critical settings like GLIA_SITE_ID are explicitly handled to ensure profile settings take precedence
+ * - Other settings follow standard precedence rules
  * 
  * @returns {Object} The loaded configuration
  */
 export async function loadConfig() {
-  // Start with process.env defaults
-  const originalEnvVars = { ...process.env };
+  // Start by capturing any CLI-provided arguments (these have highest precedence)
+  const cliArgs = {};
+  const CLI_VARS = ['GLIA_PROFILE', 'GLIA_SITE_ID', 'GLIA_KEY_ID', 'GLIA_KEY_SECRET', 
+                   'GLIA_API_URL', 'GLIA_BEARER_TOKEN', 'GLIA_TOKEN_EXPIRES_AT'];
   
-  // Get active profile name
-  const profileName = getCurrentProfileName();
+  // Extract current CLI arguments before we modify process.env
+  CLI_VARS.forEach(key => {
+    if (process.env[key]) {
+      cliArgs[key] = process.env[key];
+    }
+  });
   
-  // Load profile config if it exists (medium precedence)
+  // Reset all Glia-related environment variables to prevent stale values affecting the loading
+  CLI_VARS.forEach(key => {
+    delete process.env[key];
+  });
+  
+  // Get active profile name (from cliArgs first, then environment, then default)
+  const profileName = cliArgs.GLIA_PROFILE || getCurrentProfileName();
+  
+  // Define our loading order (lowest to highest precedence)
+  const CONFIG_SOURCES = [
+    { name: 'default', values: DEFAULT_CONFIG },
+    { name: 'global', values: {} },
+    { name: 'profile', values: {} },
+    { name: 'local', values: {} },
+    { name: 'cli-args', values: cliArgs }
+  ];
+  
+  // Load global config file
+  CONFIG_SOURCES[1].values = loadEnvFile(GLOBAL_CONFIG_FILE);
+  
+  // Load profile config
   const profilePath = getProfilePath(profileName);
-  const profileEnv = loadEnvFile(profilePath);
+  CONFIG_SOURCES[2].values = loadEnvFile(profilePath);
   
-  // Load global config (lower precedence)
-  const globalEnv = loadEnvFile(GLOBAL_CONFIG_FILE);
+  // Load local config
+  CONFIG_SOURCES[3].values = loadEnvFile(LOCAL_CONFIG_FILE);
   
-  // Load local config (highest precedence)
-  const localEnv = loadEnvFile(LOCAL_CONFIG_FILE);
+  // Process site ID information from each source
   
-  // Merge environment variables in order of precedence:
-  // 1. Default values (lowest precedence)
-  // 2. Global config file
-  // 3. Active profile config
-  // 4. Local .env file
-  // 5. Process environment variables (highest precedence - CLI arguments)
-  // Fix: Changed order to correctly apply precedence (process.env needs to be LAST parameter)
-  const combinedEnv = { ...globalEnv, ...profileEnv, ...localEnv, ...process.env };
+  // -------------------------------------------------------------------------
+  // SPECIAL HANDLING FOR SITE ID - THIS IS THE KEY PART OF THE SOLUTION
+  // -------------------------------------------------------------------------
   
-  // Assign back to process.env
-  // Skip assigning empty values to prevent overriding valid credentials
-  Object.keys(combinedEnv).forEach(key => {
-    if (combinedEnv[key] !== '' && combinedEnv[key] !== null && combinedEnv[key] !== undefined) {
-      process.env[key] = combinedEnv[key];
+  // Determine the site ID based on explicit precedence rules
+  // 1. CLI arguments (highest precedence)
+  // 2. Profile configuration (next highest for site ID specifically)
+  // 3. Local .env file
+  // 4. Global configuration
+  // 5. Default value (none)
+  let siteId = null;
+  
+  // First check CLI arguments
+  if (cliArgs.GLIA_SITE_ID) {
+    siteId = cliArgs.GLIA_SITE_ID;
+  }
+  // Then check profile (this is the critical part to fix persistence)
+  else if (CONFIG_SOURCES[2].values.GLIA_SITE_ID) {
+    siteId = CONFIG_SOURCES[2].values.GLIA_SITE_ID;
+  }
+  // Then check local .env file
+  else if (CONFIG_SOURCES[3].values.GLIA_SITE_ID) {
+    siteId = CONFIG_SOURCES[3].values.GLIA_SITE_ID;
+  }
+  // Finally check global config
+  else if (CONFIG_SOURCES[1].values.GLIA_SITE_ID) {
+    siteId = CONFIG_SOURCES[1].values.GLIA_SITE_ID;
+  }
+  
+  // -------------------------------------------------------------------------
+  // END SPECIAL HANDLING FOR SITE ID
+  // -------------------------------------------------------------------------
+  
+  // For all other settings, apply standard precedence
+  // Create merged environment with standard precedence
+  const mergedEnv = {};
+  
+  // Apply each source in order of increasing precedence
+  CONFIG_SOURCES.forEach(source => {
+    Object.entries(source.values).forEach(([key, value]) => {
+      // Skip the site ID as we handle it separately
+      if (key !== 'GLIA_SITE_ID' && value !== '' && value !== null && value !== undefined) {
+        mergedEnv[key] = value;
+      }
+    });
+  });
+  
+  // Now add the site ID we determined using our special precedence rules
+  if (siteId) {
+    mergedEnv.GLIA_SITE_ID = siteId;
+  }
+  
+  // Apply the merged environment to process.env
+  Object.entries(mergedEnv).forEach(([key, value]) => {
+    if (value !== '' && value !== null && value !== undefined) {
+      process.env[key] = value;
     }
   });
   
@@ -180,13 +245,14 @@ export async function loadConfig() {
   const config = {
     keyId: process.env.GLIA_KEY_ID,
     keySecret: process.env.GLIA_KEY_SECRET,
-    siteId: process.env.GLIA_SITE_ID,
+    siteId: process.env.GLIA_SITE_ID, // This should now be our carefully selected site ID
     apiUrl: process.env.GLIA_API_URL || DEFAULT_CONFIG.apiUrl,
     bearerToken: process.env.GLIA_BEARER_TOKEN,
     tokenExpiresAt: process.env.GLIA_TOKEN_EXPIRES_AT ? 
       parseInt(process.env.GLIA_TOKEN_EXPIRES_AT, 10) : null,
     profile: profileName
   };
+  
   
   return config;
 }
@@ -524,6 +590,8 @@ export async function switchProfile(profileName) {
     throw new ConfigurationError('Profile name is required');
   }
   
+  console.log(`[DEBUG:config] Switching to profile: ${profileName}`);
+  
   const profilePath = getProfilePath(profileName);
   
   // Check if profile exists
@@ -537,23 +605,49 @@ export async function switchProfile(profileName) {
     }
   }
   
+  // Read the profile's contents before updating global config
+  // This is important to capture the site ID before we reset environment
+  const profileEnv = loadEnvFile(profilePath);
+  console.log(`[DEBUG:config] Profile site ID before switch: ${profileEnv.GLIA_SITE_ID || 'none'}`);
+  
   // Update global config to use this profile
   await updateGlobalConfig({
     'GLIA_PROFILE': profileName
   });
   
-  // Update process.env for immediate effect
+  // Record the current process environment before changing anything
+  const originalSiteId = process.env.GLIA_SITE_ID;
+  console.log(`[DEBUG:config] Current process.env site ID: ${originalSiteId || 'none'}`);
+  
+  // Completely clear all Glia-related environment variables
+  const GLIA_ENV_VARS = [
+    'GLIA_BEARER_TOKEN', 'GLIA_TOKEN_EXPIRES_AT', 'GLIA_SITE_ID', 
+    'GLIA_KEY_ID', 'GLIA_KEY_SECRET', 'GLIA_API_URL', 'GLIA_PROFILE'
+  ];
+  
+  GLIA_ENV_VARS.forEach(key => {
+    if (process.env[key]) {
+      console.log(`[DEBUG:config] Clearing ${key} from process.env`);
+      delete process.env[key];
+    }
+  });
+  
+  // Set only the profile name
   process.env.GLIA_PROFILE = profileName;
   
-  // Clear token-related environment variables to ensure they're reloaded from the new profile
-  delete process.env.GLIA_BEARER_TOKEN;
-  delete process.env.GLIA_TOKEN_EXPIRES_AT;
-  
   // Reload config from the new profile
-  await loadConfig();
+  const newConfig = await loadConfig();
   
   // Force token refresh on next API call
   await refreshBearerTokenIfNeeded();
+  
+  // Verify the site ID was properly loaded
+  console.log(`[DEBUG:config] Profile switch complete. New site ID: ${newConfig.siteId || 'none'}`);
+  
+  // If the site ID changed, show a notification
+  if (originalSiteId !== newConfig.siteId) {
+    console.log(`[DEBUG:config] Site ID changed during profile switch: ${originalSiteId || 'none'} -> ${newConfig.siteId || 'none'}`);
+  }
   
   return profileName;
 }

@@ -1,0 +1,39 @@
+{
+  "name": "{{projectName}}",
+  "version": "0.1.0",
+  "description": "{{description}}",
+  "type": "module",
+  "main": "{{mainFile}}",
+  "scripts": {
+    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest",
+    "build": "npx esbuild ./{{mainFile}} --bundle --outfile=./function-out.js --format=esm --platform=browser --define:global=globalThis --target=es2020",
+    "build:watch": "npx esbuild ./{{mainFile}} --bundle --outfile=./function-out.js --format=esm --platform=browser --define:global=globalThis --target=es2020 --watch",
+    "dev": "glia-functions dev --path ./{{mainFile}} --watch",
+    "deploy": "npm run build && glia-functions create-version --function-id $FUNCTION_ID --path ./function-out.js --deploy",
+    "invoke": "glia-functions invoke-function --function-id $FUNCTION_ID --payload '{}'",
+    "logs": "glia-functions fetch-logs --function-id $FUNCTION_ID",
+    "kv:list": "glia-functions kv:list --namespace $KV_NAMESPACE",
+    "kv:get": "glia-functions kv:get --namespace $KV_NAMESPACE --key",
+    "kv:set": "glia-functions kv:set --namespace $KV_NAMESPACE --key --value"
+  },
+  "keywords": [
+    "glia",
+    "functions",
+    "kv-store",
+    "serverless"
+  ],
+  "author": "{{author}}",
+  "license": "MIT",
+  "devDependencies": {
+    "@glia/functions-tools": "latest",
+    "jest": "^29.5.0",
+    "esbuild": "^0.20.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {},
+    "testMatch": [
+      "**/test/**/*.test.js"
+    ]
+  }
+}

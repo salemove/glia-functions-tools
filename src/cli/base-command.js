@@ -160,6 +160,15 @@ export class BaseCommand {
   error(message) {
     console.error(chalk.red(`✗ ${message}`));
   }
+  
+  /**
+   * Print plain message (no prefix)
+   * 
+   * @param {string} message - Message to print
+   */
+  print(message) {
+    console.log(message);
+  }
 
   /**
    * Define the action to execute when the command is run

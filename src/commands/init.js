@@ -6,13 +6,14 @@
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+// Use the unified template manager
 import { 
   listProjectTemplates, 
   getProjectTemplate, 
   createProjectFromTemplate,
   validateTemplateVariables,
   getTemplateDefaultVars
-} from '../utils/project-template-manager.js';
+} from '../utils/unified-template-manager.js';
 import BaseCommand from '../cli/base-command.js';
 
 /**

@@ -1,0 +1,40 @@
+{
+  "version": "v1",
+  "export_type": "engagement_start",
+  "custom_fields": [
+    {
+      "key": "VIP",
+      "value": "false"
+    },
+    {
+      "key": "account_type",
+      "value": "premium"
+    },
+    {
+      "key": "loyalty_tier",
+      "value": "gold"
+    }
+  ],
+  "engagement_id": "abc12121-e888-43ae-99e0-07a676e9a111",
+  "operator": {
+    "email": "jordan.green@example.com",
+    "id": "ec317122-e888-4b43-996d-34a2ed3b76d8",
+    "name": "Jordan Green"
+  },
+  "platform": "omnicore",
+  "queue_wait_time": 0,
+  "queues": [
+    {
+      "id": "f58d4671-e888-4e87-96dc-1d41027bebc5",
+      "name": "Example queue"
+    }
+  ],
+  "site_id": "def34343-e888-43ae-99e0-07a676e9a111",
+  "source": "button_embed",
+  "visitor": {
+    "email": "john.smith@example.com",
+    "id": "c2c9106e-v888-47b2-8db3-089fb49dc9a5",
+    "name": "John Smith",
+    "phone": "+15555555555"
+  }
+}

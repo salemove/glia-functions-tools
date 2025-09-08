@@ -1,0 +1,33 @@
+{
+  "name": "${projectName}",
+  "version": "${version}",
+  "description": "${description}",
+  "author": "${author}",
+  "components": {
+    "functions": [
+      {
+        "name": "kv-store-function",
+        "description": "Function with KV store integration",
+        "path": "function.js",
+        "environment": {
+          "KV_NAMESPACE": "kv-demo",
+          "DEBUG_MODE": "false"
+        },
+        "kvStore": {
+          "namespaces": ["kv-demo"]
+        }
+      }
+    ],
+    "applets": []
+  },
+  "kvStore": {
+    "namespaces": [
+      {
+        "name": "kv-demo",
+        "description": "Demo KV namespace",
+        "ttl": 86400
+      }
+    ]
+  },
+  "linkages": []
+}

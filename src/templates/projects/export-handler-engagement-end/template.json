@@ -1,0 +1,90 @@
+{
+  "name": "export-handler-engagement-end",
+  "displayName": "Engagement End Handler",
+  "description": "Handler for Glia engagement end export events",
+  "version": "1.0.0",
+  "type": "project",
+  "tags": ["export", "webhook", "engagement"],
+  "extends": "export-handler-base",
+  "variables": {
+    "projectName": {
+      "description": "Project name (used in package.json and README)",
+      "default": "engagement-end-handler",
+      "required": true
+    },
+    "description": {
+      "description": "Project description",
+      "default": "Handler for Glia engagement end export events",
+      "required": true
+    },
+    "includeForwarding": {
+      "description": "Include code for forwarding events to external services",
+      "default": "true",
+      "required": false
+    },
+    "forwardingUrl": {
+      "description": "URL to forward events to",
+      "default": "https://example.com/webhook",
+      "required": false
+    },
+    "authType": {
+      "description": "Authentication type for forwarding",
+      "default": "none",
+      "enum": ["none", "api-key", "bearer", "basic"],
+      "required": false
+    },
+    "includeFiltering": {
+      "description": "Include code for filtering PII data",
+      "default": "true",
+      "required": false
+    },
+    "includeTypescript": {
+      "description": "Include TypeScript definitions",
+      "default": "true",
+      "required": false
+    },
+    "eventType": {
+      "description": "Export event type",
+      "default": "engagement-end",
+      "required": true
+    }
+  },
+  "files": [
+    "function.js",
+    "README.md",
+    "package.json",
+    ".env.example",
+    "lib/validation.js",
+    "lib/retry.js",
+    "lib/logging.js",
+    "test/function.test.js",
+    "schemas/engagement-end-schema.json",
+    "schemas/engagement-end-sample.json"
+  ],
+  "conditionalFiles": {
+    "includeTypescript": [
+      "types/index.d.ts",
+      "types/engagement-end.d.ts"
+    ],
+    "includeFiltering": [
+      "lib/filtering.js"
+    ]
+  },
+  "postInit": [
+    "Copy .env.example to .env",
+    "Install dependencies: npm install"
+  ],
+  "dependencies": [
+    "ajv"
+  ],
+  "devDependencies": [
+    "jest"
+  ],
+  "envVars": {
+    "DEBUG": "false",
+    "LOG_LEVEL": "info",
+    "FORWARDING_URL": "https://example.com/webhook",
+    "API_KEY": "",
+    "FILTER_PII": "true"
+  }
+}

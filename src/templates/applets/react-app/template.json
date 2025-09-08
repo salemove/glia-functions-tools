@@ -1,0 +1,99 @@
+{
+  "name": "react-app",
+  "displayName": "React Applet",
+  "description": "Modern React applet with Tailwind CSS, component architecture, and backend function",
+  "type": "applet",
+  "variables": {
+    "appletName": {
+      "description": "Name of the applet",
+      "required": true,
+      "default": "My React Applet"
+    },
+    "description": {
+      "description": "Short description of the applet",
+      "required": false,
+      "default": "A React-based applet created with Glia Functions Tools"
+    },
+    "authorName": {
+      "description": "Author's name",
+      "required": false,
+      "default": ""
+    }
+  },
+  "files": [
+    {
+      "source": "package.json",
+      "destination": "package.json",
+      "template": true
+    },
+    {
+      "source": "function.js",
+      "destination": "function.js",
+      "template": true
+    },
+    {
+      "source": "README.md",
+      "destination": "README.md",
+      "template": true
+    },
+    {
+      "source": ".gitignore",
+      "destination": ".gitignore",
+      "template": false
+    },
+    {
+      "source": "public/index.html",
+      "destination": "public/index.html",
+      "template": true
+    },
+    {
+      "source": "src/index.js",
+      "destination": "src/index.js",
+      "template": true
+    },
+    {
+      "source": "src/App.js",
+      "destination": "src/App.js",
+      "template": true
+    },
+    {
+      "source": "src/components/Header.js",
+      "destination": "src/components/Header.js",
+      "template": true
+    },
+    {
+      "source": "src/components/InputForm.js",
+      "destination": "src/components/InputForm.js",
+      "template": true
+    },
+    {
+      "source": "src/components/ResultDisplay.js",
+      "destination": "src/components/ResultDisplay.js",
+      "template": true
+    },
+    {
+      "source": "src/components/HistoryList.js",
+      "destination": "src/components/HistoryList.js",
+      "template": true
+    },
+    {
+      "source": "src/hooks/useGliaFunction.js",
+      "destination": "src/hooks/useGliaFunction.js",
+      "template": true
+    },
+    {
+      "source": "src/utils/api.js",
+      "destination": "src/utils/api.js",
+      "template": true
+    },
+    {
+      "source": "build-script.js",
+      "destination": "build-script.js",
+      "template": true
+    }
+  ],
+  "environmentVariables": {
+    "API_KEY": "your-api-key-here",
+    "API_URL": "https://api.example.com"
+  }
+}

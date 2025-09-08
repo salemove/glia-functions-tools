@@ -1,0 +1,77 @@
+{
+  "name": "export-handler-base",
+  "displayName": "Export Handler Base",
+  "description": "Base template for Glia export event handlers",
+  "version": "1.0.0",
+  "type": "project",
+  "tags": ["export", "webhook"],
+  "variables": {
+    "projectName": {
+      "description": "Project name (used in package.json and README)",
+      "default": "export-handler",
+      "required": true
+    },
+    "description": {
+      "description": "Project description",
+      "default": "Glia export event handler",
+      "required": true
+    },
+    "includeForwarding": {
+      "description": "Include code for forwarding events to external services",
+      "default": "true",
+      "required": false
+    },
+    "forwardingUrl": {
+      "description": "URL to forward events to",
+      "default": "https://example.com/webhook",
+      "required": false
+    },
+    "authType": {
+      "description": "Authentication type for forwarding",
+      "default": "none",
+      "enum": ["none", "api-key", "bearer", "basic"],
+      "required": false
+    },
+    "includeFiltering": {
+      "description": "Include code for filtering PII data",
+      "default": "true",
+      "required": false
+    },
+    "includeTypescript": {
+      "description": "Include TypeScript definitions",
+      "default": "true",
+      "required": false
+    }
+  },
+  "files": [
+    "function.js",
+    "README.md",
+    "package.json",
+    ".env.example",
+    "lib/validation.js",
+    "lib/retry.js",
+    "lib/logging.js"
+  ],
+  "conditionalFiles": {
+    "includeTypescript": [
+      "types/index.d.ts"
+    ],
+    "includeFiltering": [
+      "lib/filtering.js"
+    ]
+  },
+  "postInit": [
+    "Copy .env.example to .env",
+    "Install dependencies: npm install"
+  ],
+  "dependencies": [
+    "ajv"
+  ],
+  "devDependencies": [
+    "jest"
+  ],
+  "envVars": {
+    "DEBUG": "false",
+    "LOG_LEVEL": "info"
+  }
+}

@@ -3,7 +3,7 @@
  *
  * This command lists all available function templates with their descriptions
  */
-import { listTemplates } from '../utils/template-manager.js';
+import { listTemplates } from '../utils/unified-template-manager.js';
 import BaseCommand from '../cli/base-command.js';
 
 /**
@@ -15,7 +15,7 @@ import BaseCommand from '../cli/base-command.js';
 export async function listTemplatesCommand(options) {
   try {
     console.log('Fetching available templates...');
-    const templates = await listTemplates();
+    const templates = await listTemplates({ type: 'function' });
     
     // Display templates to console
     if (templates.length === 0) {

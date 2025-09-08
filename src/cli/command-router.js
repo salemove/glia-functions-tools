@@ -72,8 +72,70 @@ export async function routeCommand(commandName, options = {}, handleErrors = tru
       case 'list-templates':
         result = await commands.listTemplates(options);
         break;
+      case 'templates':
+        result = await commands.templates(options);
+        break;
       case 'dev':
         result = await commands.dev(options);
+        break;
+      
+      // Applet management commands
+      case 'create-applet':
+        result = await commands.createApplet(options);
+        break;
+      case 'deploy-applet':
+        result = await commands.deployApplet(options);
+        break;
+      case 'list-applets':
+        result = await commands.listApplets(options);
+        break;
+      case 'list-applet-templates':
+        result = await commands.listAppletTemplates(options);
+        break;
+      case 'update-applet':
+        result = await commands.updateApplet(options);
+        break;
+      case 'select-applet':
+        result = await commands.selectApplet(options);
+        break;
+
+      // KV Store commands
+      case 'kv:get':
+        result = await commands.getKvValue(options);
+        break;
+      case 'kv:set':
+        result = await commands.setKvValue(options);
+        break;
+      case 'kv:delete':
+        result = await commands.deleteKvValue(options);
+        break;
+      case 'kv:list':
+        result = await commands.listKvPairs(options);
+        break;
+      case 'kv:test-and-set':
+        result = await commands.testAndSetKvValue(options);
+        break;
+        
+      // Export handler commands
+      case 'setup-export-handler':
+        result = await commands.setupExportHandler(options);
+        break;
+      
+      // Project management commands
+      case 'deploy-project':
+        // Check if a callback function is provided in options
+        if (typeof options.cb === 'function') {
+          // Use the provided callback function
+          try {
+            result = await commands.deployProject(options);
+            return options.cb(null, result);
+          } catch (error) {
+            return options.cb(error);
+          }
+        } else {
+          // Use standard approach without callback
+          result = await commands.deployProject(options);
+        }
         break;
         
       default:

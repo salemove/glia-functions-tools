@@ -1,0 +1,37 @@
+{
+  "name": "{{projectName}}",
+  "version": "0.1.0",
+  "description": "{{description}}",
+  "type": "module",
+  "main": "{{mainFile}}",
+  "scripts": {
+    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest",
+    "build": "npx esbuild ./{{mainFile}} --bundle --outfile=./function-out.js --format=esm --platform=browser --define:global=globalThis --target=es2020",
+    "build:watch": "npx esbuild ./{{mainFile}} --bundle --outfile=./function-out.js --format=esm --platform=browser --define:global=globalThis --target=es2020 --watch",
+    "dev": "glia-functions dev --path ./{{mainFile}} --watch --env '{\"API_KEY\":\"$API_KEY\", \"API_URL\":\"$API_URL\"}'",
+    "deploy": "npm run build && glia-functions create-version --function-id $FUNCTION_ID --path ./function-out.js --env '{\"API_KEY\":\"$API_KEY\", \"API_URL\":\"$API_URL\"}' --deploy",
+    "invoke": "glia-functions invoke-function --function-id $FUNCTION_ID --payload '{}'",
+    "logs": "glia-functions fetch-logs --function-id $FUNCTION_ID"
+  },
+  "keywords": [
+    "glia",
+    "functions",
+    "api",
+    "serverless"
+  ],
+  "author": "{{author}}",
+  "license": "MIT",
+  "devDependencies": {
+    "@glia/functions-tools": "latest",
+    "jest": "^29.5.0",
+    "nock": "^13.3.1",
+    "esbuild": "^0.20.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {},
+    "testMatch": [
+      "**/test/**/*.test.js"
+    ]
+  }
+}

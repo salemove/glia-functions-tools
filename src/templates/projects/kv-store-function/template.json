@@ -1,0 +1,80 @@
+{
+  "name": "kv-store-function",
+  "displayName": "KV Store Function",
+  "description": "A Glia Function project template with KV Store integration for persistent data storage",
+  "version": "1.0.0",
+  "variables": {
+    "projectName": {
+      "description": "Project name (used in package.json and README)",
+      "default": "kv-store-function",
+      "required": true
+    },
+    "description": {
+      "description": "Project description",
+      "default": "A Glia Function with KV Store integration for persistent data storage",
+      "required": true
+    },
+    "namespace": {
+      "description": "KV Store namespace to use",
+      "default": "my_app_data",
+      "required": true
+    },
+    "version": {
+      "description": "Project version",
+      "default": "0.1.0",
+      "required": false
+    },
+    "author": {
+      "description": "Project author",
+      "default": "",
+      "required": false
+    },
+    "environment": {
+      "description": "Target environment",
+      "default": "production",
+      "required": false,
+      "enum": ["production", "beta"]
+    },
+    "profile": {
+      "description": "Glia CLI profile to use",
+      "default": "default",
+      "required": false
+    },
+    "functionId": {
+      "description": "Function ID (can be set later)",
+      "default": "",
+      "required": false
+    }
+  },
+  "files": [
+    "README.md",
+    "function.js",
+    "test/function.test.js",
+    "test/kvstore-mock.js",
+    "lib/kv-operations.js",
+    ".env.example",
+    "glia-project.json.template:glia-project.json"
+  ],
+  "packageJson": {
+    "inherits": "base-kv-store",
+    "components": [
+      "scripts/basic",
+      "scripts/watch",
+      "scripts/deploy",
+      "scripts/invoke",
+      "scripts/kv"
+    ],
+    "customizations": {
+      "keywords": ["kv-store", "data-persistence"],
+      "scripts": {
+        "kv:create": "glia-functions kv-create-namespace --name {{namespace}}"
+      },
+      "devDependencies": {
+        "supertest": "^6.3.3"
+      }
+    }
+  },
+  "postInit": [
+    "Copy .env.example to .env"
+  ]
+}

@@ -114,6 +114,18 @@ export class GliaError extends Error {
       return new GliaError(`Resource not found: ${requestInfo.endpoint || ''}`, code, data, options);
     } else if (statusCode === 400) {
       return new ValidationError(message, { ...data, statusCode }, options);
+    } else if (statusCode >= 300 && statusCode < 400) {
+      // For redirect errors, include the location header if available
+      const location = response.headers?.get('Location') || response.headers?.get('location');
+      const redirectDetails = { ...data, statusCode, location };
+      
+      // Debug log all headers to help identify issues
+      console.log('[ERROR DEBUG] Redirect headers:');
+      response.headers?.forEach((value, key) => {
+        console.log(`[ERROR DEBUG] ${key}: ${value}`);
+      });
+      
+      return new GliaError(`Redirect not followed: ${statusCode} to ${location || 'unknown location'}`, 'REDIRECT_NOT_FOLLOWED', redirectDetails, options);
     } else if (statusCode >= 500) {
       return new NetworkError(`Server error (${statusCode}): ${message}`, { ...data, statusCode }, options);
     }

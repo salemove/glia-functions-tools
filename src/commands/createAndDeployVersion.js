@@ -46,8 +46,8 @@ export async function createAndDeployVersion(options) {
     // Wait for version to be ready by polling the task
     console.log('Waiting for version creation to complete...');
     
-    // Poll until version is ready (up to 2 minutes)
-    const maxAttempts = 24; // 24 attempts * 5 seconds = 2 minutes
+    // Poll until version is ready (up to 3 minutes)
+    const maxAttempts = 36; // 36 attempts * 5 seconds = 3 minutes
     let attempts = 0;
     let versionId;
     
@@ -70,7 +70,7 @@ export async function createAndDeployVersion(options) {
     }
     
     if (!versionId) {
-      throw new Error('Version creation timed out after 2 minutes');
+      throw new Error('Version creation timed out after 3 minutes');
     }
     
     // Deploy version

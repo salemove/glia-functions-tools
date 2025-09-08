@@ -1,0 +1,41 @@
+{
+  "name": "${projectName}",
+  "version": "${version}",
+  "description": "${description}",
+  "author": "${author}",
+  "environment": "${environment}",
+  "components": {
+    "functions": [
+      {
+        "name": "api-handler",
+        "description": "API handler function",
+        "path": "function.js",
+        "environment": {
+          "API_KEY": "${apiKey}",
+          "API_URL": "${apiUrl}",
+          "API_TIMEOUT": "${apiTimeout}"
+        },
+        "kvStore": {
+          "namespaces": ["api_cache", "session_data"]
+        },
+        "timeout": 30000
+      }
+    ],
+    "applets": []
+  },
+  "kvStore": {
+    "namespaces": [
+      {
+        "name": "api_cache",
+        "description": "Cache for API responses",
+        "ttl": 3600
+      },
+      {
+        "name": "session_data",
+        "description": "User session data",
+        "ttl": 86400
+      }
+    ]
+  },
+  "linkages": []
+}
