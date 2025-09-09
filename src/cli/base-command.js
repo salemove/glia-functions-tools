@@ -15,7 +15,7 @@ import { Command } from 'commander';
 import { getApiConfig } from '../lib/config.js';
 import GliaApiClient from '../lib/api.js';
 import { handleError } from './error-handler.js';
-import chalk from 'chalk';
+import colorizer from '../utils/colorizer.js';
 
 export class BaseCommand {
   /**
@@ -131,7 +131,7 @@ export class BaseCommand {
    * @param {string} message - Success message
    */
   success(message) {
-    console.log(chalk.green(`✓ ${message}`));
+    console.log(colorizer.green(`✓ ${message}`));
   }
 
   /**
@@ -140,7 +140,7 @@ export class BaseCommand {
    * @param {string} message - Info message
    */
   info(message) {
-    console.log(chalk.blue(`ℹ ${message}`));
+    console.log(colorizer.blue(`ℹ ${message}`));
   }
 
   /**
@@ -149,7 +149,7 @@ export class BaseCommand {
    * @param {string} message - Warning message
    */
   warning(message) {
-    console.log(chalk.yellow(`⚠ ${message}`));
+    console.log(colorizer.yellow(`⚠ ${message}`));
   }
 
   /**
@@ -158,7 +158,7 @@ export class BaseCommand {
    * @param {string} message - Error message
    */
   error(message) {
-    console.error(chalk.red(`✗ ${message}`));
+    console.error(colorizer.red(`✗ ${message}`));
   }
   
   /**

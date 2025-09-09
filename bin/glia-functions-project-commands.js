@@ -5,7 +5,7 @@
  * It's imported directly in the main CLI entry point to ensure proper command registration.
  */
 
-import chalk from 'chalk';
+import colorizer from '../src/utils/colorizer.js';
 import { routeCommand } from '../src/cli/command-router.js';
 import fs from 'fs/promises';
 import path from 'path';
@@ -35,8 +35,8 @@ export default function addProjectCommands(program) {
         await fs.access(manifestPath);
       } catch (error) {
         if (error.code === 'ENOENT') {
-          console.error(chalk.red(`Project manifest file not found: ${manifestPath}`));
-          console.error(chalk.yellow(`Create a ${chalk.bold('glia-project.json')} file in your project directory.`));
+          console.error(colorizer.red(`Project manifest file not found: ${manifestPath}`));
+          console.error(colorizer.yellow(`Create a ${colorizer.bold('glia-project.json')} file in your project directory.`));
           process.exit(1);
         }
         throw error;
@@ -60,11 +60,11 @@ export default function addProjectCommands(program) {
       if (options.json) {
         console.log(JSON.stringify(result, null, 2));
       } else if (!result.success) {
-        console.error(chalk.red(`Project deployment failed: ${result.error}`));
+        console.error(colorizer.red(`Project deployment failed: ${result.error}`));
         process.exit(1);
       }
     } catch (error) {
-      console.error(chalk.red(`Error: ${error.message}`));
+      console.error(colorizer.red(`Error: ${error.message}`));
       process.exit(1);
     }
   });

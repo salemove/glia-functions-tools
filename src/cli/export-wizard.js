@@ -7,7 +7,7 @@
  */
 
 import { select, input, confirm } from '@inquirer/prompts';
-import chalk from 'chalk';
+import colorizer from '../utils/colorizer.js';
 import { getExportEventTypes } from '../utils/export-events-registry.js';
 
 /**
@@ -18,7 +18,7 @@ import { getExportEventTypes } from '../utils/export-events-registry.js';
  */
 export async function runExportWizard(options = {}) {
   try {
-    console.log(chalk.blue('Export Handler Setup Wizard'));
+    console.log(colorizer.blue('Export Handler Setup Wizard'));
     console.log('This wizard will guide you through setting up a handler for Glia export events.\n');
     
     // Step 1: Select export event type
@@ -110,7 +110,7 @@ export async function runExportWizard(options = {}) {
     };
     
     // Summary
-    console.log('\n' + chalk.green('Export Handler Configuration:'));
+    console.log('\n' + colorizer.green('Export Handler Configuration:'));
     console.log(`Event type: ${eventTypes[eventType].displayName}`);
     console.log(`Project name: ${projectName}`);
     if (needsForwarding) {

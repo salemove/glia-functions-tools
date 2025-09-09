@@ -13,7 +13,7 @@ Helper functions, tools, and examples for building and managing Glia Functions -
 - **Interactive and command-driven interfaces** for both guided and automated workflows
 - **Create and manage** serverless JavaScript functions
 - **Function templates** for common use cases and patterns
-- **Project scaffolding** with complete project templates
+- **Project scaffolding** with complete project templates and template inheritance
 - **Deploy function versions** with custom environment variables
 - **Invoke functions** with custom payloads
 - **Local development server** for testing functions without deployment
@@ -198,6 +198,8 @@ glia-functions init --template api-integration --output ./my-api-project
 glia-functions init --template api-integration --variables "projectName=My API,apiKey=my-key"
 ```
 
+Projects can also be created from templates that use inheritance, which allows specialized templates to extend base templates while customizing behavior. For details, see [Template Inheritance](./docs/template-inheritance.md).
+
 #### Deploy a Function Version
 ```bash
 glia-functions deploy --function-id <id> --version-id <id>
@@ -353,7 +355,7 @@ glia-functions-tools/
 │   ├── lib/                  # Core libraries
 │   ├── cli/                  # CLI implementation
 │   └── templates/            # Function templates
-├── examples/                 # Example functions
+├── examples/                 # Example functions and applets
 ├── backup/                   # Backup of removed legacy code
 ├── index.js                  # Legacy CLI entry point (deprecated)
 ├── config/                   # Configuration files

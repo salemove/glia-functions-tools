@@ -398,10 +398,15 @@ export class NetworkError extends GliaError {
     
     // Extract network-specific information
     if (options && typeof options === 'object') {
-      this.retryable = 
-        options.statusCode === undefined || 
-        options.statusCode >= 500 || 
-        options.statusCode === 429;
+      // Allow explicit setting of retryable flag, otherwise use default logic
+      if (options.retryable !== undefined) {
+        this.retryable = options.retryable;
+      } else {
+        this.retryable = 
+          options.statusCode === undefined || 
+          options.statusCode >= 500 || 
+          options.statusCode === 429;
+      }
     }
     
     if (details && typeof details === 'object' && details.originalError) {

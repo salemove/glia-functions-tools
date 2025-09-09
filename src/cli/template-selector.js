@@ -5,7 +5,7 @@
  * and management in the CLI, using the unified template manager.
  */
 import { select, input, confirm } from '@inquirer/prompts';
-import chalk from 'chalk';
+import colorizer from '../utils/colorizer.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -146,7 +146,7 @@ export async function collectTemplateVariables(template, initialVars = {}, optio
     return variables;
   }
   
-  console.log(chalk.blue('\nTemplate variables:'));
+  console.log(colorizer.blue('\nTemplate variables:'));
   
   // Collect variables
   for (const [key, config] of Object.entries(template.variables)) {
@@ -220,7 +220,7 @@ export async function createFromSelectedTemplate(options = {}) {
   }
   
   // Create from template
-  console.log(chalk.blue(`Creating from template "${template.displayName}"...`));
+  console.log(colorizer.blue(`Creating from template "${template.displayName}"...`));
   
   const result = await createFromTemplate(template.name, outputDir, {
     variables,
@@ -229,8 +229,8 @@ export async function createFromSelectedTemplate(options = {}) {
   
   // Display info about generated manifest
   if (result.manifest) {
-    console.log(chalk.green(`\nProject manifest created: ${path.basename(result.manifest.path)}`));
-    console.log(chalk.blue('Component summary:'));
+    console.log(colorizer.green(`\nProject manifest created: ${path.basename(result.manifest.path)}`));
+    console.log(colorizer.blue('Component summary:'));
     const componentCounts = {
       functions: result.manifest.content.components?.functions?.length || 0,
       applets: result.manifest.content.components?.applets?.length || 0,
@@ -239,18 +239,18 @@ export async function createFromSelectedTemplate(options = {}) {
     };
     
     Object.entries(componentCounts).forEach(([type, count]) => {
-      console.log(`  ${chalk.yellow(type.padEnd(12))}: ${count}`);
+      console.log(`  ${colorizer.yellow(type.padEnd(12))}: ${count}`);
     });
     
     // If we have linkages, show them
     if (componentCounts.linkages > 0) {
-      console.log(chalk.blue('\nLinkages:'));
+      console.log(colorizer.blue('\nLinkages:'));
       result.manifest.content.linkages.forEach((linkage, index) => {
-        console.log(`  ${chalk.yellow((index + 1) + '.')} ${linkage.from} → ${linkage.to}`);
+        console.log(`  ${colorizer.yellow((index + 1) + '.')} ${linkage.from} → ${linkage.to}`);
       });
     }
     
-    console.log(chalk.blue('\nNext steps:'));
+    console.log(colorizer.blue('\nNext steps:'));
     console.log(`  1. cd ${outputDir}`);
     console.log('  2. Review the generated project manifest (glia-project.json)');
     console.log('  3. Deploy your project with: glia-functions deploy-project');

@@ -31,7 +31,7 @@ import {
   deleteProfile 
 } from '../src/lib/config.js';
 import GliaApiClient from '../src/lib/api.js';
-import chalk from 'chalk';
+import colorizer from '../src/utils/colorizer.js';
 import * as fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -63,7 +63,7 @@ program
 try {
   projectCommands(program);
 } catch (error) {
-  console.error(chalk.red(`Error loading project commands: ${error.message}`));
+  console.error(colorizer.red(`Error loading project commands: ${error.message}`));
 }
 
 // List functions command
@@ -80,24 +80,24 @@ program
       const api = new GliaApiClient(apiConfig);
       
       // Show we're working
-      console.log(chalk.blue('ℹ️  Loading functions...'));
+      console.log(colorizer.blue('ℹ️  Loading functions...'));
       
       // List functions
       const result = await api.listFunctions();
       
       // Format and display the results
       if (!result.functions || result.functions.length === 0) {
-        console.log(chalk.blue('ℹ️  Info:'), 'No functions found.');
+        console.log(colorizer.blue('ℹ️  Info:'), 'No functions found.');
       } else {
         if (options.detailed) {
-          console.log(chalk.blue('ℹ️  Info:'), 'Functions (detailed):');
+          console.log(colorizer.blue('ℹ️  Info:'), 'Functions (detailed):');
           console.log(JSON.stringify(result, null, 2));
         } else {
-          console.log(chalk.blue('ℹ️  Info:'), `Found ${result.functions.length} functions:`);
+          console.log(colorizer.blue('ℹ️  Info:'), `Found ${result.functions.length} functions:`);
           
           // Create table format manually
-          console.log(chalk.bold('\nID                                     Name                  Description'));
-          console.log(chalk.dim('─────────────────────────────────────── ───────────────────── ───────────────────'));
+          console.log(colorizer.bold('\nID                                     Name                  Description'));
+          console.log(colorizer.dim('─────────────────────────────────────── ───────────────────── ───────────────────'));
           
           result.functions.forEach(fn => {
             // Pad and truncate fields for table formatting
@@ -117,7 +117,7 @@ program
       }, 100); // Small delay to ensure output is flushed
       
     } catch (error) {
-      console.error(chalk.red(`Error listing functions: ${error.message}`));
+      console.error(colorizer.red(`Error listing functions: ${error.message}`));
       
       // Delay the exit to ensure error is flushed
       setTimeout(() => {
@@ -143,13 +143,13 @@ program
         const { listTemplates } = await import('../src/utils/template-manager.js');
         const templates = await listTemplates();
         
-        console.log(chalk.blue('ℹ️  Available function templates:'));
+        console.log(colorizer.blue('ℹ️  Available function templates:'));
         
         if (templates.length === 0) {
           console.log('No templates available');
         } else {
           templates.forEach(template => {
-            console.log(`- ${chalk.bold(template.name)}: ${template.description}`);
+            console.log(`- ${colorizer.bold(template.name)}: ${template.description}`);
           });
         }
         
@@ -168,7 +168,7 @@ program
         // Determine output path
         const outputPath = options.output || path.resolve(process.cwd(), `${options.name.replace(/\s+/g, '-')}.js`);
         
-        console.log(chalk.blue('ℹ️  Info:'), `Creating function file from template "${options.template}"...`);
+        console.log(colorizer.blue('ℹ️  Info:'), `Creating function file from template "${options.template}"...`);
         
         try {
           // Create function file from template
@@ -185,17 +185,17 @@ program
           if (Object.keys(envVars).length > 0) {
             templateResult.envVars = envVars;
             
-            console.log(chalk.blue('ℹ️  Recommended environment variables for this template:'));
+            console.log(colorizer.blue('ℹ️  Recommended environment variables for this template:'));
             for (const [key, value] of Object.entries(envVars)) {
               console.log(`- ${key}: ${value}`);
             }
           }
           
-          console.log(chalk.green('✅ Success:'), `Function file created at: ${outputPath}`);
+          console.log(colorizer.green('✅ Success:'), `Function file created at: ${outputPath}`);
         } catch (error) {
-          console.error(chalk.red(`Error creating function file: ${error.message}`));
+          console.error(colorizer.red(`Error creating function file: ${error.message}`));
           if (!options.skipApi) {
-            console.log(chalk.yellow('⚠️  Warning:'), 'Continuing with API function creation...');
+            console.log(colorizer.yellow('⚠️  Warning:'), 'Continuing with API function creation...');
           } else {
             // Delay exit to ensure output is flushed
             setTimeout(() => {
@@ -214,7 +214,7 @@ program
             process.exit(0);
           }, 100);
         } else {
-          console.error(chalk.red('Error: No template specified with --skip-api. Nothing to do.'));
+          console.error(colorizer.red('Error: No template specified with --skip-api. Nothing to do.'));
           // Delay exit to ensure output is flushed
           setTimeout(() => {
             process.exit(1);
@@ -230,19 +230,19 @@ program
       // Create API client
       const api = new GliaApiClient(apiConfig);
       
-      console.log(chalk.blue('ℹ️  Info:'), `Creating function "${options.name}"...`);
+      console.log(colorizer.blue('ℹ️  Info:'), `Creating function "${options.name}"...`);
       
       // Create the function
       const result = await api.createFunction(options.name, options.description);
       
       // Display the results
-      console.log(chalk.green('✅ Success:'), 'Function created successfully!');
+      console.log(colorizer.green('✅ Success:'), 'Function created successfully!');
       console.log('\nFunction details:');
       console.log(JSON.stringify(result, null, 2));
       
       // Mention template if used
       if (templateResult) {
-        console.log(chalk.blue('ℹ️  Info:'), `Function file created at: ${templateResult.filePath}`);
+        console.log(colorizer.blue('ℹ️  Info:'), `Function file created at: ${templateResult.filePath}`);
       }
       
       // Delay exit to ensure output is flushed
@@ -251,7 +251,7 @@ program
       }, 100);
       
     } catch (error) {
-      console.error(chalk.red(`Error creating function: ${error.message}`));
+      console.error(colorizer.red(`Error creating function: ${error.message}`));
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -272,26 +272,26 @@ program
     try {
       // Validate that at least one update field is provided
       if (options.name === undefined && options.description === undefined) {
-        console.error(chalk.red('Error:'), 'Please provide at least one field to update (--name or --description)');
+        console.error(colorizer.red('Error:'), 'Please provide at least one field to update (--name or --description)');
         process.exit(1);
       }
       
       // Show progress
-      console.log(chalk.blue('ℹ️  Info:'), `Updating function "${options.id}"...`);
+      console.log(colorizer.blue('ℹ️  Info:'), `Updating function "${options.id}"...`);
       
       // Let routeCommand handle errors consistently
       const result = await routeCommand('update-function', options);
       
       // Display success message
-      console.log(chalk.green('✅ Success:'), `Function "${result.id}" updated successfully`);
+      console.log(colorizer.green('✅ Success:'), `Function "${result.id}" updated successfully`);
       
       // Show the updated values
       if (options.name !== undefined) {
-        console.log(chalk.blue('ℹ️  Name:'), result.name);
+        console.log(colorizer.blue('ℹ️  Name:'), result.name);
       }
       
       if (options.description !== undefined) {
-        console.log(chalk.blue('ℹ️  Description:'), result.description);
+        console.log(colorizer.blue('ℹ️  Description:'), result.description);
       }
       
       // Delay exit to ensure output is flushed
@@ -325,13 +325,13 @@ program
       // Create API client
       const api = new GliaApiClient(apiConfig);
       
-      console.log(chalk.blue('ℹ️  Info:'), 'Deploying function version...');
+      console.log(colorizer.blue('ℹ️  Info:'), 'Deploying function version...');
       
       // Deploy the version
       const result = await api.deployVersion(options.functionId, options.versionId);
       
       // Display success
-      console.log(chalk.green('✅ Success:'), 'Function version deployed successfully!');
+      console.log(colorizer.green('✅ Success:'), 'Function version deployed successfully!');
       console.log('\nDeployment details:');
       console.log(JSON.stringify(result, null, 2));
       
@@ -341,7 +341,7 @@ program
       }, 100);
       
     } catch (error) {
-      console.error(chalk.red(`Error deploying function version: ${error.message}`));
+      console.error(colorizer.red(`Error deploying function version: ${error.message}`));
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -365,7 +365,7 @@ program
           payload = JSON.parse(payload);
         }
       } catch (error) {
-        console.error(chalk.red('Invalid JSON payload:', error.message));
+        console.error(colorizer.red('Invalid JSON payload:', error.message));
         process.exit(1);
       }
       
@@ -376,21 +376,21 @@ program
       const api = new GliaApiClient(apiConfig);
       
       // Get the function details to obtain invocation URI
-      console.log(chalk.blue('ℹ️  Info:'), 'Getting function details...');
+      console.log(colorizer.blue('ℹ️  Info:'), 'Getting function details...');
       const functionDetails = await api.getFunction(options.functionId);
       
       if (!functionDetails || !functionDetails.invocation_uri) {
-        console.error(chalk.red('Error: Function has no invocation URI. Is it deployed?'));
+        console.error(colorizer.red('Error: Function has no invocation URI. Is it deployed?'));
         process.exit(1);
       }
       
-      console.log(chalk.blue('ℹ️  Info:'), 'Invoking function...');
+      console.log(colorizer.blue('ℹ️  Info:'), 'Invoking function...');
       
       // Invoke the function
       const result = await api.invokeFunction(functionDetails.invocation_uri, payload);
       
       // Display the result
-      console.log(chalk.green('✅ Success:'), 'Function invoked successfully!');
+      console.log(colorizer.green('✅ Success:'), 'Function invoked successfully!');
       console.log('\nFunction response:');
       
       // Pretty print if it's JSON, otherwise print as-is
@@ -406,7 +406,7 @@ program
       }, 100);
       
     } catch (error) {
-      console.error(chalk.red(`Error invoking function: ${error.message}`));
+      console.error(colorizer.red(`Error invoking function: ${error.message}`));
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -428,16 +428,16 @@ program
       // Create API client
       const api = new GliaApiClient(apiConfig);
       
-      console.log(chalk.blue('ℹ️  Info:'), 'Fetching logs...');
+      console.log(colorizer.blue('ℹ️  Info:'), 'Fetching logs...');
       
       // Fetch logs
       const result = await api.getFunctionLogs(options.functionId);
       
       // Display results
       if (!result || !result.logs || result.logs.length === 0) {
-        console.log(chalk.blue('ℹ️  Info:'), 'No logs found.');
+        console.log(colorizer.blue('ℹ️  Info:'), 'No logs found.');
       } else {
-        console.log(chalk.blue('ℹ️  Info:'), `Found ${result.logs.length} log entries:`);
+        console.log(colorizer.blue('ℹ️  Info:'), `Found ${result.logs.length} log entries:`);
         console.log(JSON.stringify(result, null, 2));
       }
       
@@ -447,7 +447,7 @@ program
       }, 100);
       
     } catch (error) {
-      console.error(chalk.red(`Error fetching logs: ${error.message}`));
+      console.error(colorizer.red(`Error fetching logs: ${error.message}`));
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -470,7 +470,7 @@ profilesCommand
       const profiles = listProfiles();
       const currentProfile = process.env.GLIA_PROFILE || 'default';
       
-      console.log(chalk.blue('ℹ️  Available profiles:'));
+      console.log(colorizer.blue('ℹ️  Available profiles:'));
       
       if (profiles.length === 0 && currentProfile === 'default') {
         console.log('No custom profiles found. Using default profile.');
@@ -480,7 +480,7 @@ profilesCommand
         
         allProfiles.forEach(profile => {
           if (profile === currentProfile) {
-            console.log(`  ${chalk.green('*')} ${profile} ${chalk.dim('(current)')}`);
+            console.log(`  ${colorizer.green('*')} ${profile} ${colorizer.dim('(current)')}`);
           } else {
             console.log(`    ${profile}`);
           }
@@ -493,7 +493,7 @@ profilesCommand
       }, 100);
       
     } catch (error) {
-      console.error(chalk.red(`Error listing profiles: ${error.message}`));
+      console.error(colorizer.red(`Error listing profiles: ${error.message}`));
       
       setTimeout(() => {
         process.exit(1);
@@ -509,7 +509,7 @@ profilesCommand
   .action(async (options) => {
     try {
       await createProfile(options.name);
-      console.log(chalk.green('✅ Success:'), `Profile '${options.name}' created successfully`);
+      console.log(colorizer.green('✅ Success:'), `Profile '${options.name}' created successfully`);
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -517,7 +517,7 @@ profilesCommand
       }, 100);
       
     } catch (error) {
-      console.error(chalk.red(`Error creating profile: ${error.message}`));
+      console.error(colorizer.red(`Error creating profile: ${error.message}`));
       
       setTimeout(() => {
         process.exit(1);
@@ -533,7 +533,7 @@ profilesCommand
   .action(async (options) => {
     try {
       await switchProfile(options.name);
-      console.log(chalk.green('✅ Success:'), `Switched to profile '${options.name}'`);
+      console.log(colorizer.green('✅ Success:'), `Switched to profile '${options.name}'`);
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -541,7 +541,7 @@ profilesCommand
       }, 100);
       
     } catch (error) {
-      console.error(chalk.red(`Error switching profile: ${error.message}`));
+      console.error(colorizer.red(`Error switching profile: ${error.message}`));
       
       setTimeout(() => {
         process.exit(1);
@@ -564,14 +564,14 @@ profilesCommand
         });
         
         if (!shouldDelete) {
-          console.log(chalk.blue('ℹ️  Info:'), 'Profile deletion cancelled.');
+          console.log(colorizer.blue('ℹ️  Info:'), 'Profile deletion cancelled.');
           process.exit(0);
           return;
         }
       }
       
       await deleteProfile(options.name);
-      console.log(chalk.green('✅ Success:'), `Profile '${options.name}' deleted successfully`);
+      console.log(colorizer.green('✅ Success:'), `Profile '${options.name}' deleted successfully`);
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -579,7 +579,7 @@ profilesCommand
       }, 100);
       
     } catch (error) {
-      console.error(chalk.red(`Error deleting profile: ${error.message}`));
+      console.error(colorizer.red(`Error deleting profile: ${error.message}`));
       
       setTimeout(() => {
         process.exit(1);
@@ -606,7 +606,7 @@ program
           env = JSON.parse(env);
         }
       } catch (error) {
-        console.error(chalk.red('Invalid JSON for environment variables:', error.message));
+        console.error(colorizer.red('Invalid JSON for environment variables:', error.message));
         process.exit(1);
       }
       
@@ -615,13 +615,13 @@ program
       const api = new GliaApiClient(apiConfig);
       
       // Read and bundle the function code
-      console.log(chalk.blue('ℹ️  Info:'), `Bundling code from ${options.path}...`);
+      console.log(colorizer.blue('ℹ️  Info:'), `Bundling code from ${options.path}...`);
       const { execSync } = require('child_process');
       
       try {
         execSync(`npm run build ${options.path}`, { stdio: 'inherit' });
       } catch (error) {
-        console.error(chalk.red('Error bundling code:'), error.message);
+        console.error(colorizer.red('Error bundling code:'), error.message);
         process.exit(1);
       }
       
@@ -631,7 +631,7 @@ program
       try {
         code = fs.readFileSync('./function-out.js', 'utf8');
       } catch (error) {
-        console.error(chalk.red('Error reading bundled code:'), error.message);
+        console.error(colorizer.red('Error reading bundled code:'), error.message);
         process.exit(1);
       }
       
@@ -642,17 +642,17 @@ program
       };
       
       // Create the version
-      console.log(chalk.blue('ℹ️  Info:'), 'Creating function version...');
+      console.log(colorizer.blue('ℹ️  Info:'), 'Creating function version...');
       const createResult = await api.createVersion(options.functionId, code, versionOptions);
       
-      console.log(chalk.green('✅ Success:'), 'Function version created!');
+      console.log(colorizer.green('✅ Success:'), 'Function version created!');
       console.log('\nVersion creation task details:');
       console.log(JSON.stringify(createResult, null, 2));
       
       // If deploy flag is set, deploy the version
       if (options.deploy) {
         // Wait for version to be ready by polling the task
-        console.log(chalk.blue('ℹ️  Info:'), 'Waiting for version to be ready...');
+        console.log(colorizer.blue('ℹ️  Info:'), 'Waiting for version to be ready...');
         
         let versionId = null;
         let taskCompleted = false;
@@ -665,7 +665,7 @@ program
             taskCompleted = true;
             break;
           } else if (taskResult.status === 'failed') {
-            console.error(chalk.red('Version creation failed:'), taskResult.result?.error || 'Unknown error');
+            console.error(colorizer.red('Version creation failed:'), taskResult.result?.error || 'Unknown error');
             
             // Delay exit to ensure error message is flushed
             setTimeout(() => {
@@ -679,7 +679,7 @@ program
         }
         
         if (!taskCompleted) {
-          console.error(chalk.yellow('⚠️  Warning:'), 'Version creation is taking longer than expected.');
+          console.error(colorizer.yellow('⚠️  Warning:'), 'Version creation is taking longer than expected.');
           console.log('You can deploy it manually once it completes using:');
           console.log(`glia-functions deploy --function-id ${options.functionId} --version-id <version-id>`);
           
@@ -691,10 +691,10 @@ program
         }
         
         // Deploy the version
-        console.log(chalk.blue('ℹ️  Info:'), 'Deploying new version...');
+        console.log(colorizer.blue('ℹ️  Info:'), 'Deploying new version...');
         const deployResult = await api.deployVersion(options.functionId, versionId);
         
-        console.log(chalk.green('✅ Success:'), 'Version deployed successfully!');
+        console.log(colorizer.green('✅ Success:'), 'Version deployed successfully!');
         console.log('\nDeployment details:');
         console.log(JSON.stringify(deployResult, null, 2));
       }
@@ -705,7 +705,7 @@ program
       }, 100);
       
     } catch (error) {
-      console.error(chalk.red(`Error creating/deploying version: ${error.message}`));
+      console.error(colorizer.red(`Error creating/deploying version: ${error.message}`));
       
       // Delay exit to ensure error message is flushed
       setTimeout(() => {
@@ -728,13 +728,13 @@ program
       if (options.format === 'json') {
         console.log(JSON.stringify(templates, null, 2));
       } else {
-        console.log(chalk.blue('ℹ️  Available function templates:'));
+        console.log(colorizer.blue('ℹ️  Available function templates:'));
         
         if (templates.length === 0) {
           console.log('No templates available');
         } else {
           templates.forEach(template => {
-            console.log(`- ${chalk.bold(template.name)}: ${template.description}`);
+            console.log(`- ${colorizer.bold(template.name)}: ${template.description}`);
           });
           console.log('\nUse create-function command with --template option to create a function from a template');
         }
@@ -745,7 +745,7 @@ program
         process.exit(0);
       }, 100);
     } catch (error) {
-      console.error(chalk.red(`Error listing templates: ${error.message}`));
+      console.error(colorizer.red(`Error listing templates: ${error.message}`));
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -768,13 +768,13 @@ program
       if (options.format === 'json') {
         console.log(JSON.stringify(templates, null, 2));
       } else {
-        console.log(chalk.blue('ℹ️  Available applet templates:'));
+        console.log(colorizer.blue('ℹ️  Available applet templates:'));
         
         if (templates.length === 0) {
           console.log('No applet templates available');
         } else {
           templates.forEach(template => {
-            console.log(`- ${chalk.bold(template.displayName)}: ${template.description}`);
+            console.log(`- ${colorizer.bold(template.displayName)}: ${template.description}`);
           });
         }
       }
@@ -784,7 +784,7 @@ program
         process.exit(0);
       }, 100);
     } catch (error) {
-      console.error(chalk.red(`Error listing applet templates: ${error.message}`));
+      console.error(colorizer.red(`Error listing applet templates: ${error.message}`));
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -815,7 +815,7 @@ program
         process.exit(0);
       }, 100);
     } catch (error) {
-      console.error(chalk.red(`Error creating applet: ${error.message}`));
+      console.error(colorizer.red(`Error creating applet: ${error.message}`));
       
       // Delay exit to ensure error message is flushed
       setTimeout(() => {
@@ -842,7 +842,7 @@ program
         process.exit(0);
       }, 100);
     } catch (error) {
-      console.error(chalk.red(`Error deploying applet: ${error.message}`));
+      console.error(colorizer.red(`Error deploying applet: ${error.message}`));
       
       // Delay exit to ensure error message is flushed
       setTimeout(() => {
@@ -867,7 +867,7 @@ program
         process.exit(0);
       }, 100);
     } catch (error) {
-      console.error(chalk.red(`Error listing applets: ${error.message}`));
+      console.error(colorizer.red(`Error listing applets: ${error.message}`));
       
       // Delay exit to ensure error message is flushed
       setTimeout(() => {
@@ -894,7 +894,7 @@ program
         process.exit(0);
       }, 100);
     } catch (error) {
-      console.error(chalk.red(`Error updating applet: ${error.message}`));
+      console.error(colorizer.red(`Error updating applet: ${error.message}`));
       
       // Delay exit to ensure error message is flushed
       setTimeout(() => {
@@ -921,7 +921,7 @@ program
         process.exit(0);
       }, 100);
     } catch (error) {
-      console.error(chalk.red(`Error listing KV pairs: ${error.message}`));
+      console.error(colorizer.red(`Error listing KV pairs: ${error.message}`));
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -946,7 +946,7 @@ program
         process.exit(0);
       }, 100);
     } catch (error) {
-      console.error(chalk.red(`Error getting KV value: ${error.message}`));
+      console.error(colorizer.red(`Error getting KV value: ${error.message}`));
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -972,7 +972,7 @@ program
         process.exit(0);
       }, 100);
     } catch (error) {
-      console.error(chalk.red(`Error setting KV value: ${error.message}`));
+      console.error(colorizer.red(`Error setting KV value: ${error.message}`));
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -997,7 +997,7 @@ program
         process.exit(0);
       }, 100);
     } catch (error) {
-      console.error(chalk.red(`Error deleting KV value: ${error.message}`));
+      console.error(colorizer.red(`Error deleting KV value: ${error.message}`));
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -1031,7 +1031,7 @@ program
         process.exit(0);
       }, 100);
     } catch (error) {
-      console.error(chalk.red(`Error in test-and-set operation: ${error.message}`));
+      console.error(colorizer.red(`Error in test-and-set operation: ${error.message}`));
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -1057,13 +1057,13 @@ program
         try {
           env = JSON.parse(options.env);
         } catch (error) {
-          console.error(chalk.red(`Invalid environment variables JSON: ${error.message}`));
+          console.error(colorizer.red(`Invalid environment variables JSON: ${error.message}`));
           process.exit(1);
         }
       }
       
       // Import and run dev command
-      console.log(chalk.blue('ℹ️  Starting local development server...'));
+      console.log(colorizer.blue('ℹ️  Starting local development server...'));
       const { dev } = await import('../src/commands/dev.js');
       
       const result = await dev({
@@ -1078,7 +1078,7 @@ program
       process.stdin.resume();
       
     } catch (error) {
-      console.error(chalk.red(`Development server error: ${error.message}`));
+      console.error(colorizer.red(`Development server error: ${error.message}`));
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -1127,9 +1127,9 @@ program
       const result = await setupExportHandlerModule.default(processedOptions, command);
       
       if (result) {
-        console.log(chalk.green('✅ Export handler setup completed successfully'));
+        console.log(colorizer.green('✅ Export handler setup completed successfully'));
       } else {
-        console.log(chalk.yellow('⚠️ Export handler setup cancelled or failed'));
+        console.log(colorizer.yellow('⚠️ Export handler setup cancelled or failed'));
       }
       
       // Delay exit to ensure output is flushed
@@ -1137,7 +1137,7 @@ program
         process.exit(result ? 0 : 1);
       }, 100);
     } catch (error) {
-      console.error(chalk.red(`❌ Error setting up export handler: ${error.message}`));
+      console.error(colorizer.red(`❌ Error setting up export handler: ${error.message}`));
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -1155,13 +1155,13 @@ program.commands.find(cmd => cmd.name() === 'init').action(async (options) => {
           const { listProjectTemplates } = await import('../src/utils/project-template-manager.js');
           const templates = await listProjectTemplates();
           
-          console.log(chalk.blue('ℹ️  Available project templates:'));
+          console.log(colorizer.blue('ℹ️  Available project templates:'));
           
           if (templates.length === 0) {
             console.log('No project templates available');
           } else {
             templates.forEach(template => {
-              console.log(`- ${chalk.bold(template.displayName)}: ${template.description}`);
+              console.log(`- ${colorizer.bold(template.displayName)}: ${template.description}`);
             });
           }
           
@@ -1171,7 +1171,7 @@ program.commands.find(cmd => cmd.name() === 'init').action(async (options) => {
           }, 100);
           return;
         } catch (error) {
-          console.error(chalk.red(`Error listing project templates: ${error.message}`));
+          console.error(colorizer.red(`Error listing project templates: ${error.message}`));
           
           // Delay exit to ensure output is flushed
           setTimeout(() => {
@@ -1207,7 +1207,7 @@ program.commands.find(cmd => cmd.name() === 'init').action(async (options) => {
         process.exit(0);
       }, 100);
     } catch (error) {
-      console.error(chalk.red(`Error initializing project: ${error.message}`));
+      console.error(colorizer.red(`Error initializing project: ${error.message}`));
       
       // Delay exit to ensure output is flushed
       setTimeout(() => {
@@ -1246,7 +1246,7 @@ if (process.argv.length <= 2) {
       if (!process.exitCode) process.exit(0);
     })
     .catch(error => {
-      console.error(chalk.red(`Unexpected error: ${error.message}`));
+      console.error(colorizer.red(`Unexpected error: ${error.message}`));
       console.error('Please report this issue on GitHub or contact support.');
       process.exit(1);
     });
@@ -1267,9 +1267,9 @@ if (process.argv.length <= 2) {
       
       // Check if site ID is missing but we have auth config
       if (!config.siteId) {
-        console.log(chalk.yellow('⚠️ No site ID found in configuration.'));
-        console.log(chalk.yellow('Some commands may fail without a site ID.'));
-        console.log(chalk.yellow('Consider running the CLI in interactive mode to set a site ID.'));
+        console.log(colorizer.yellow('⚠️ No site ID found in configuration.'));
+        console.log(colorizer.yellow('Some commands may fail without a site ID.'));
+        console.log(colorizer.yellow('Consider running the CLI in interactive mode to set a site ID.'));
         console.log('');
       }
       
@@ -1279,13 +1279,13 @@ if (process.argv.length <= 2) {
       const isProfileCommand = process.argv.includes('profiles');
       
       if (!hasToken && !isProfileCommand) {
-        console.log(chalk.yellow('⚠️ No valid bearer token found or token has expired.'));
+        console.log(colorizer.yellow('⚠️ No valid bearer token found or token has expired.'));
         
         // Check if we have auth config to auto-refresh the token
         try {
           const authConfig = await getAuthConfig();
           if (authConfig.keyId && authConfig.keySecret) {
-            console.log(chalk.blue('ℹ️  Automatically refreshing authentication token...'));
+            console.log(colorizer.blue('ℹ️  Automatically refreshing authentication token...'));
             
             // Generate new token
             const tokenInfo = await createBearerToken(
@@ -1300,8 +1300,8 @@ if (process.argv.length <= 2) {
             
             // Check if token has suggested site ID and we need to update
             if (!config.siteId && tokenInfo.suggestedSiteId) {
-              console.log(chalk.blue(`ℹ️  Found available site ID: ${tokenInfo.suggestedSiteId}`));
-              console.log(chalk.blue('ℹ️  Setting as default site ID for this session.'));
+              console.log(colorizer.blue(`ℹ️  Found available site ID: ${tokenInfo.suggestedSiteId}`));
+              console.log(colorizer.blue('ℹ️  Setting as default site ID for this session.'));
               
               // Update site ID in environment
               process.env.GLIA_SITE_ID = tokenInfo.suggestedSiteId;
@@ -1324,7 +1324,7 @@ if (process.argv.length <= 2) {
                 await updateFn(updates);
               }
               
-              console.log(chalk.green(`✅ Site ID ${tokenInfo.suggestedSiteId} set and saved to configuration.`));
+              console.log(colorizer.green(`✅ Site ID ${tokenInfo.suggestedSiteId} set and saved to configuration.`));
             } else {
               // Standard token update without site ID change
               const updates = {
@@ -1348,21 +1348,21 @@ if (process.argv.length <= 2) {
             process.env.GLIA_BEARER_TOKEN = tokenInfo.token;
             process.env.GLIA_TOKEN_EXPIRES_AT = tokenInfo.expiresAt.toString();
             
-            console.log(chalk.green('✅ Authentication token refreshed successfully.'));
+            console.log(colorizer.green('✅ Authentication token refreshed successfully.'));
           } else {
-            console.log(chalk.yellow('Some commands may fail without proper authentication.'));
-            console.log(chalk.yellow('Consider running the CLI in interactive mode first to set up your environment.'));
+            console.log(colorizer.yellow('Some commands may fail without proper authentication.'));
+            console.log(colorizer.yellow('Consider running the CLI in interactive mode first to set up your environment.'));
             console.log('');
           }
         } catch (error) {
-          console.log(chalk.yellow('Some commands may fail without proper authentication.'));
-          console.log(chalk.yellow('Consider running the CLI in interactive mode first to set up your environment.'));
+          console.log(colorizer.yellow('Some commands may fail without proper authentication.'));
+          console.log(colorizer.yellow('Consider running the CLI in interactive mode first to set up your environment.'));
           console.log('');
         }
       }
     } catch (error) {
-      console.log(chalk.yellow(`⚠️ Warning: Error loading configuration: ${error.message}`));
-      console.log(chalk.yellow('Some commands may fail. Consider running the CLI in interactive mode first.'));
+      console.log(colorizer.yellow(`⚠️ Warning: Error loading configuration: ${error.message}`));
+      console.log(colorizer.yellow('Some commands may fail. Consider running the CLI in interactive mode first.'));
     }
   };
   
@@ -1380,7 +1380,7 @@ if (process.argv.length <= 2) {
     // 
     // Do not exit - let commander handle the flow
   }).catch(error => {
-    console.error(chalk.red(`Error loading configuration: ${error.message}`));
+    console.error(colorizer.red(`Error loading configuration: ${error.message}`));
     // Continue anyway with command parsing
     program.parse();
     

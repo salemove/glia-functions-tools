@@ -5,7 +5,7 @@
  */
 
 import { select, input, confirm } from '@inquirer/prompts';
-import chalk from 'chalk';
+import colorizer from '../utils/colorizer.js';
 
 import { getApiConfig } from '../lib/config.js';
 import GliaApiClient from '../lib/api.js';
@@ -69,11 +69,11 @@ export async function selectApplet(options = {}) {
     } = options;
     
     // Fetch applets
-    console.log(chalk.blue('Fetching applets, please wait...'));
+    console.log(colorizer.blue('Fetching applets, please wait...'));
     const applets = await getApplets({ scope });
     
     if (!applets || applets.length === 0) {
-      console.log(chalk.yellow('No applets found. You may not have permission to view applets.'));
+      console.log(colorizer.yellow('No applets found. You may not have permission to view applets.'));
       return { canceled: true };
     }
     
@@ -96,7 +96,7 @@ export async function selectApplet(options = {}) {
     // Format for better readability in the CLI
   // Show site ID information to help with troubleshooting
   const apiConfig = await getApiConfig();
-  console.log(chalk.blue(`Using site ID: ${apiConfig.siteId || 'None - please set a site ID'}`));
+  console.log(colorizer.blue(`Using site ID: ${apiConfig.siteId || 'None - please set a site ID'}`));
   console.log(`\nFound ${choices.length - 1} applet${choices.length - 1 !== 1 ? 's' : ''}\n`);
   
   // Show the selector
@@ -127,7 +127,7 @@ export async function selectApplet(options = {}) {
 export async function selectAppletOperation(applet) {
   if (!applet) return null;
   
-  console.log(chalk.bold(`\nSelected applet: ${applet.name}`));
+  console.log(colorizer.bold(`\nSelected applet: ${applet.name}`));
   console.log(`ID: ${applet.id}`);
   console.log(`Type: ${applet.type || 'custom'}`);
   console.log(`Scope: ${applet.scope || 'engagement'}`);
@@ -177,7 +177,7 @@ export async function executeAppletOperation(operation, applet, routeCommand) {
   try {
     switch (operation) {
       case 'view':
-        console.log(chalk.bold('\nApplet Details:'));
+        console.log(colorizer.bold('\nApplet Details:'));
         console.log(JSON.stringify(applet, null, 2));
         return true;
         
@@ -199,7 +199,7 @@ export async function executeAppletOperation(operation, applet, routeCommand) {
         return false;
         
       default:
-        console.log(chalk.yellow(`Unknown operation: ${operation}`));
+        console.log(colorizer.yellow(`Unknown operation: ${operation}`));
         return false;
     }
   } catch (error) {

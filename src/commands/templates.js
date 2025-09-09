@@ -5,7 +5,7 @@
  * (functions, projects, applets), enabling operations like listing,
  * getting info, and creating from templates.
  */
-import chalk from 'chalk';
+import colorizer from '../utils/colorizer.js';
 import Table from 'cli-table3';
 import inquirer from 'inquirer';
 import path from 'path';
@@ -77,7 +77,7 @@ async function listTemplatesAction(options, command) {
     // Add templates to table
     templates.forEach(template => {
       table.push([
-        chalk.green(template.name),
+        colorizer.green(template.name),
         template.type,
         template.description || '',
         template.version || ''
@@ -89,7 +89,7 @@ async function listTemplatesAction(options, command) {
     
     // Show hint for more info
     command.info('For more information about a template, run:');
-    command.info(chalk.yellow('glia templates --info <template-name>'));
+    command.info(colorizer.yellow('glia templates --info <template-name>'));
     
   } catch (error) {
     command.error(`Error listing templates: ${error.message}`);
@@ -111,7 +111,7 @@ async function getTemplateInfoAction(options, command) {
     const template = await getTemplate(templateName);
     
     // Display template info
-    command.success(`Template: ${chalk.green(template.name)}`);
+    command.success(`Template: ${colorizer.green(template.name)}`);
     command.print(`Display name: ${template.displayName || template.name}`);
     command.print(`Type: ${template.type}`);
     command.print(`Description: ${template.description || 'No description'}`);
@@ -131,7 +131,7 @@ async function getTemplateInfoAction(options, command) {
         varTable.push([
           name,
           config.description || '',
-          config.required ? chalk.yellow('Yes') : 'No',
+          config.required ? colorizer.yellow('Yes') : 'No',
           'default' in config ? config.default : ''
         ]);
       });
@@ -149,7 +149,7 @@ async function getTemplateInfoAction(options, command) {
     
     // Display creation command
     command.info('\nTo create a project from this template, run:');
-    command.info(chalk.yellow(`glia templates --create ${template.name} <output-dir>`));
+    command.info(colorizer.yellow(`glia templates --create ${template.name} <output-dir>`));
     
   } catch (error) {
     command.error(`Error getting template info: ${error.message}`);
@@ -175,7 +175,7 @@ async function createFromTemplateAction(options, command) {
     const variables = await collectVariables(template, options, command);
     
     // Confirm creation
-    command.info(`Creating from template ${chalk.green(template.name)} in ${chalk.cyan(outputDir)}...`);
+    command.info(`Creating from template ${colorizer.green(template.name)} in ${colorizer.cyan(outputDir)}...`);
     
     // Create from template
     const result = await createFromTemplate(templateName, outputDir, {
@@ -184,7 +184,7 @@ async function createFromTemplateAction(options, command) {
     });
     
     // Display result
-    command.success(`Successfully created ${result.files.length} file(s) from template ${chalk.green(template.name)}.`);
+    command.success(`Successfully created ${result.files.length} file(s) from template ${colorizer.green(template.name)}.`);
     
     // Display post-init actions (if any)
     if (result.postInit && result.postInit.length > 0) {
@@ -192,14 +192,14 @@ async function createFromTemplateAction(options, command) {
       
       result.postInit.forEach(action => {
         if (action.success) {
-          command.info(`- ${chalk.green('✓')} ${action.action}`);
+          command.info(`- ${colorizer.green('✓')} ${action.action}`);
         } else {
-          command.info(`- ${chalk.red('✗')} ${action.action}: ${action.error}`);
+          command.info(`- ${colorizer.red('✗')} ${action.action}: ${action.error}`);
         }
       });
     }
     
-    command.success(`\nTemplate ${chalk.green(template.name)} successfully applied to ${chalk.cyan(outputDir)}.`);
+    command.success(`\nTemplate ${colorizer.green(template.name)} successfully applied to ${colorizer.cyan(outputDir)}.`);
     
   } catch (error) {
     command.error(`Error creating from template: ${error.message}`);

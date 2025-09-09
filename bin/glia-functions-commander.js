@@ -12,7 +12,7 @@ import { runCLI } from '../src/cli/index.js';
 import { routeCommand } from '../src/cli/command-router.js';
 import { getApiConfig, getCliVersion } from '../src/lib/config.js';
 import GliaApiClient from '../src/lib/api.js';
-import chalk from 'chalk';
+import colorizer from '../src/utils/colorizer.js';
 
 // Create program instance
 const program = new Command();
@@ -154,7 +154,7 @@ program
           }
           
           options.env = fs.readFileSync(options.envFile, 'utf8');
-          console.log(chalk.blue(`Loaded environment variables from ${options.envFile}`));
+          console.log(colorizer.blue(`Loaded environment variables from ${options.envFile}`));
         } catch (error) {
           console.error(`Failed to read environment variables file: ${error.message}`);
           process.exit(1);
@@ -171,7 +171,7 @@ program
         output: options.output
       });
     } catch (error) {
-      console.error(chalk.red(`Error managing environment variables: ${error.message}`));
+      console.error(colorizer.red(`Error managing environment variables: ${error.message}`));
       process.exit(1);
     }
   });
@@ -179,7 +179,7 @@ program
 // Handle interactive mode when no arguments provided
 if (process.argv.length <= 2) {
   runCLI().catch(error => {
-    console.error(chalk.red(`Unexpected error: ${error.message}`));
+    console.error(colorizer.red(`Unexpected error: ${error.message}`));
     console.error('Please report this issue on GitHub or contact support.');
     process.exit(1);
   });
