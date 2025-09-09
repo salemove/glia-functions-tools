@@ -31,7 +31,7 @@ export async function onInvoke(request, env, kvStoreFactory) {
             timestamp: new Date().toISOString(),
             receivedPayload: body.payload.message
         };
-        console.log('Respose prepared');
+        console.log('Response prepared');
         return new Response(JSON.stringify(response));
 
     } catch (error) {
