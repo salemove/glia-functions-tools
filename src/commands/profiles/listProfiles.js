@@ -6,7 +6,7 @@
 
 import { listProfiles } from '../../lib/config.js';
 import { showSuccess, showError, showWarning } from '../../cli/error-handler.js';
-import chalk from 'chalk';
+import colorizer from '../../utils/colorizer.js';
 
 /**
  * Lists all available profiles
@@ -43,7 +43,7 @@ export default async function listProfilesCommand(options) {
     profiles.forEach(profile => {
       const isCurrent = profile === currentProfile;
       if (isCurrent) {
-        console.log(`${chalk.green('*')} ${profile} ${chalk.green('(current)')}`);
+        console.log(`${colorizer.green('*')} ${profile} ${colorizer.green('(current)')}`);
       } else {
         console.log(`  ${profile}`);
       }

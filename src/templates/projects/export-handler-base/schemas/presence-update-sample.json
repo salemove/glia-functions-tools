@@ -1,0 +1,45 @@
+{
+  "sent_at": "2025-01-06T15:57:42.356Z",
+  "events": [
+    {
+      "valid_from": "2025-01-06T15:57:41.753017Z",
+      "user_id": "4ec317122-e888-4b43-996d-34a2ed3b76d8",
+      "user_email": "jordan.green@example.com",
+      "status": {
+        "value": "available",
+        "changed_at": "2025-01-06T15:34:25.567584Z"
+      },
+      "capacity": {
+        "unavailable_after_interactions": false,
+        "media_before_interactions": [
+          "chat",
+          "messaging",
+          "audio",
+          "video"
+        ],
+        "media": [],
+        "change_reason": null
+      },
+      "availability": "available",
+      "activity": {
+        "only_after_call_work": false,
+        "level": "interacting_at_capacity",
+        "interactions": [
+          {
+            "status_changed_at": "2025-01-06T15:57:41.252000Z",
+            "status": "connected",
+            "role": "host",
+            "media": [
+              "audio",
+              "chat"
+            ],
+            "initial_request_direction": "proactive",
+            "id": "d32bcf01-1a1b-433a-b7af-f9f70f071ca3"
+          }
+        ]
+      },
+      "account_id": "2a02eae7-4016-498e-ad29-4efc3672d0d2"
+    }
+  ],
+  "action": "user_presence_update"
+}

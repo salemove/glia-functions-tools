@@ -14,6 +14,17 @@
  * @module api
  */
 
+// Import Node.js specific packages
+import fs from 'fs/promises';
+import FormData from 'form-data';
+import nodeFetch from 'node-fetch';
+
+// Use node-fetch for consistent behavior in Node.js environment
+const fetch = nodeFetch;
+
+// Set up for debugging
+const DEBUG_API = true;
+
 import { 
   GliaError, 
   AuthenticationError, 
@@ -45,7 +56,9 @@ export const DEFAULT_API_CONFIG = {
     defaultTimeout: 30000,      // 30 seconds default timeout
     prefetchEnabled: false,     // Prefetching disabled by default
     idempotencyEnabled: true,   // Enable idempotency keys by default
-    idempotencyHeader: 'X-Idempotency-Key'
+    idempotencyHeader: 'X-Idempotency-Key',
+    followRedirect: true,       // Follow redirects by default
+    maxRedirects: 5            // Maximum number of redirects to follow
   },
   // Logging configuration
   logging: {
@@ -74,6 +87,9 @@ export default class GliaApiClient {
     this.baseUrl = config.apiUrl;
     this.siteId = config.siteId;
     this.bearerToken = config.bearerToken;
+    
+    // Store error classes for use in _createError method
+    this.errors = { GliaError, FunctionError };
     
     // Initialize cache if enabled
     const cacheConfig = { 
@@ -108,6 +124,11 @@ export default class GliaApiClient {
       ...DEFAULT_API_CONFIG.requests,
       ...(config.requests || {})
     };
+    
+    // Log redirect configuration if debug logging enabled
+    if (this.logRequests) {
+      console.log(`[API] Redirect handling: ${this.requestConfig.followRedirect ? 'enabled' : 'disabled'}, max redirects: ${this.requestConfig.maxRedirects}`);
+    }
     
     // Track active requests for cancellation support
     this.activeRequests = new Map();
@@ -309,9 +330,30 @@ export default class GliaApiClient {
  * @returns {Promise<Object>} - Response data
  * @throws {GliaError} - If the request fails
  */
+  /**
+   * Make a request to the Glia API with retry and caching capabilities
+   * 
+   * @param {string} endpoint - API endpoint
+   * @param {Object} options - Request options
+   * @param {Object} requestOptions - Additional request options
+   * @param {boolean} requestOptions.useCache - Whether to use cache for this request
+   * @param {boolean} requestOptions.forceRefresh - Force a cache refresh
+   * @param {number} requestOptions.cacheTtl - Custom TTL for this request
+   * @param {boolean} requestOptions.useRetry - Whether to use retry for this request
+   * @param {boolean} requestOptions.skipTokenRefresh - Skip the token refresh attempt on auth errors
+   * @param {boolean} requestOptions.followRedirect - Whether to follow redirects (default true)
+   * @param {number} requestOptions.maxRedirects - Maximum number of redirects to follow (default 5)
+   * @returns {Promise<Object>} - Response data
+   * @throws {GliaError} - If the request fails
+   */
   async makeRequest(endpoint, options = {}, requestOptions = {}) {
     // Auto token refresh flag - prevent recursive token refresh
-    const { skipTokenRefresh = false } = requestOptions;
+    const { 
+      skipTokenRefresh = false,
+      followRedirect = this.requestConfig?.followRedirect ?? true,
+      maxRedirects = this.requestConfig?.maxRedirects ?? 5,
+      _redirectCount = 0 // Internal tracking of redirect count
+    } = requestOptions;
     const url = endpoint.startsWith("http") ? endpoint : `${this.baseUrl}${endpoint}`;
     const method = options.method || 'GET';
     
@@ -485,11 +527,33 @@ export default class GliaApiClient {
       // Execute the request function (with retry if enabled)
       const executeRequest = async () => {
         try {
-          const headers = this._prepareHeaders(options.headers);
-          const requestOptions = {
-            ...options,
-            headers // Apply headers last to prevent them from being overridden
-          };
+          let requestOptions;
+          
+          // Special handling for FormData
+          if (options.body instanceof FormData) {
+            // Get content-type header with boundary from FormData
+            const formHeaders = options.body.getHeaders();
+            
+            // Combine FormData headers with authorization headers
+            const headers = {
+              ...formHeaders,
+              'Authorization': `Bearer ${this.bearerToken}`,
+              'Accept': 'application/vnd.salemove.v1+json'
+            };
+            
+            requestOptions = {
+              ...options,
+              headers // Use combined headers
+            };
+          } else {
+            // Normal JSON request
+            const headers = this._prepareHeaders(options.headers);
+            requestOptions = {
+              ...options,
+              headers // Apply headers last to prevent them from being overridden
+            };
+          }
+          
           const response = await fetch(url, requestOptions);
           
           // Extract and process response metadata
@@ -520,6 +584,96 @@ export default class GliaApiClient {
           return this.makeRequest(endpoint, options, { 
             ...requestOptions, 
             skipTokenRefresh: true  // Prevent infinite retry loop
+          });
+        }
+      }
+      
+      // Handle redirects
+      if (followRedirect && 
+          (response.status === 301 || response.status === 302 || response.status === 303 || response.status === 307 || response.status === 308)) {
+        
+        // Check redirect count to prevent infinite loops
+        if (_redirectCount >= maxRedirects) {
+          throw new Error(`Maximum redirect count (${maxRedirects}) exceeded`);
+        }
+        
+        // Debug logging for all response headers to troubleshoot
+        console.log(`[API DEBUG] Got ${response.status} redirect response`);
+        console.log('[API DEBUG] Response headers:');
+        response.headers.forEach((value, key) => {
+          console.log(`[API DEBUG] ${key}: ${value}`);
+        });
+        console.log('[API DEBUG] Response body:', JSON.stringify(data));
+        
+        // Try to get redirect URL from headers first
+        let redirectUrl = response.headers.get('Location') || response.headers.get('location');
+        
+        // If no Location header but we have a 303 with data
+        if (!redirectUrl && response.status === 303 && data) {
+          console.log('[API DEBUG] No Location header found, examining response body');
+          
+          // Special case: If the response has 'status' field, it might be a task result already
+          if (data.status && (data.status === 'completed' || data.status === 'failed')) {
+            console.log(`[API DEBUG] Found task status in response body: ${data.status}`);
+            // Return the data directly - it's a task result, not a redirect
+            return data;
+          }
+          
+          // Look for URLs in common fields - careful to avoid self-references
+          const currentPath = new URL(url, 'https://example.com').pathname;
+          
+          // Check if any potential redirect URL is different from the current URL
+          const extractUrl = (field, value) => {
+            if (!value) return null;
+            if (value === currentPath) {
+              console.log(`[API DEBUG] Ignoring self-redirect in '${field}' field: ${value}`);
+              return null;
+            }
+            console.log(`[API DEBUG] Found URL in '${field}' field: ${value}`);
+            return value;
+          };
+          
+          redirectUrl = extractUrl('entity.href', data.entity?.href) || 
+                       extractUrl('entity.url', data.entity?.url) || 
+                       extractUrl('url', data.url) || 
+                       extractUrl('href', data.href);
+          
+          // Last resort, try self but explicitly check for self-redirect
+          if (!redirectUrl && data.self && data.self !== currentPath) {
+            redirectUrl = data.self;
+            console.log(`[API DEBUG] Found URL in 'self' field: ${redirectUrl}`);
+          }
+          
+          // If we still have no redirect URL but have a full task response,
+          // return the data directly instead of trying to redirect
+          if (!redirectUrl && data.entity && data.status) {
+            console.log('[API DEBUG] No valid redirect URL found but response contains task data, using directly');
+            return data;
+          }
+        }
+        
+        if (redirectUrl) {
+          if (this.logRequests) {
+            console.log(`[API] Following ${response.status} redirect to: ${redirectUrl}`);
+          }
+          
+          // Determine the request method for the redirect
+          // For 303, always use GET
+          // For 301/302, traditionally browsers convert to GET (though specs have evolved)
+          // For 307/308, preserve the original method
+          let redirectMethod = method;
+          if (response.status === 303 || response.status === 301 || response.status === 302) {
+            redirectMethod = 'GET';
+          }
+          
+          return this.makeRequest(redirectUrl, {
+            ...options,
+            method: redirectMethod,
+            // Don't forward the body for GET requests
+            body: redirectMethod === 'GET' ? undefined : options.body
+          }, {
+            ...requestOptions,
+            _redirectCount: _redirectCount + 1
           });
         }
       }
@@ -691,9 +845,13 @@ export default class GliaApiClient {
    * @private
    */
   _prepareHeaders(customHeaders = {}) {
+    // If Content-Type is already set in customHeaders, don't override it
+    // This ensures FormData can set its own Content-Type with boundary
+    const contentType = customHeaders['Content-Type'] || 'application/json';
+    
     return {
       'Authorization': `Bearer ${this.bearerToken}`,
-      'Content-Type': 'application/json',
+      'Content-Type': contentType,
       'Accept': 'application/vnd.salemove.v1+json',
       'User-Agent': 'GliaFunctionsCLI/1.0',
       ...customHeaders
@@ -1687,6 +1845,505 @@ export default class GliaApiClient {
   }
   
   /**
+   * List applets
+   * 
+   * Note on API response formats:
+   * - The Glia API has two endpoints for listing applets with different permissions:
+   *   1. `/sites/{site_id}/axons` - Requires applets:read permission
+   *   2. `/axons?site_id={site_id}` - Requires list:applets permission
+   * 
+   * These endpoints can return responses in different formats:
+   * - `/sites/{site_id}/axons` returns { axons: [...] }
+   * - `/axons?site_id={site_id}` might return { items: [...] }
+   * 
+   * This method normalizes these responses to always return { axons: [...] }
+   * for consistency throughout the application.
+   * 
+   * @param {Object} options - Request options
+   * @param {string} options.siteId - Filter by site ID
+   * @param {string} options.scope - Filter by scope (engagement, global)
+   * @returns {Promise<Object>} - Applets list response in format { axons: [...] }
+   */
+  async listApplets(options = {}) {
+    try {
+      const queryParams = [];
+      
+      // Use current site ID if not specified
+      const siteId = options.siteId || this.siteId;
+      
+      // Debug site ID selection
+      console.log(`[DEBUG] listApplets using siteId: ${siteId}, from options: ${options.siteId}, class property: ${this.siteId}`);
+      
+      if (!siteId) {
+        console.log(`[DEBUG] No site ID available! This will likely cause a permissions error.`);
+        throw new Error('Missing site ID. Please set a site ID using the CLI or specify it in the request options.');
+      }
+      
+      // Try site-specific endpoint first (requires applets:read permission)
+      try {
+        console.log(`[DEBUG] Checking API docs structure - expected to return { axons: [] }`);
+        // Use site-specific endpoint to fetch applets
+        const endpoint = `/sites/${siteId}/axons`;
+        
+        // Add scope as query param if specified
+        if (options.scope) {
+          queryParams.push(`scope=${options.scope}`);
+        }
+        
+        const fullEndpoint = `${endpoint}${queryParams.length > 0 ? '?' + queryParams.join('&') : ''}`;
+        console.log(`[DEBUG] Trying primary endpoint: ${fullEndpoint}`);
+        const result = await this.makeRequest(fullEndpoint);
+        console.log(`[DEBUG] Primary endpoint response format: ${Object.prototype.toString.call(result)}`);
+        console.log(`[DEBUG] Primary endpoint response keys: ${result ? Object.keys(result).join(', ') : 'none'}`);
+        console.log(`[DEBUG] Primary endpoint response size: ${JSON.stringify(result).length}`);
+        console.log(`[DEBUG] Primary endpoint response sample: ${JSON.stringify(result).substring(0, 500)}...`);
+        
+        // Normalize response to expected format
+        if (result && !result.axons && Array.isArray(result.items)) {
+          console.log(`[DEBUG] Normalizing response structure from items[] to axons[]`);
+          return { axons: result.items };
+        }
+        
+        return result;
+      } catch (firstError) {
+        // Log error details
+        console.log(`[DEBUG] Error from primary endpoint: ${firstError.message}`);
+        console.log(`[DEBUG] Status code: ${firstError.statusCode || 'N/A'}`);
+        console.log(`[DEBUG] Error details: ${JSON.stringify(firstError)}`);
+        
+        // If we get a 403, try the alternative endpoint
+        if (firstError.statusCode === 403) {
+          // Try alternative endpoint (requires list:applets permission)
+          console.log(`[DEBUG] Falling back to alternative endpoint with list:applets permission`);
+          console.log(`[DEBUG] Alternative endpoint may return different structure`);
+          const altQueryParams = [];
+          
+          // Add site_id as query param
+          altQueryParams.push(`site_id=${siteId}`);
+          
+          // Add scope if specified
+          if (options.scope) {
+            altQueryParams.push(`scope=${options.scope}`);
+          }
+          
+          const altEndpoint = `/axons?${altQueryParams.join('&')}`;
+          console.log(`[DEBUG] Trying alternative endpoint: ${altEndpoint}`);
+          const result = await this.makeRequest(altEndpoint);
+          console.log(`[DEBUG] Alternative endpoint response format: ${Object.prototype.toString.call(result)}`);
+          console.log(`[DEBUG] Alternative endpoint response keys: ${result ? Object.keys(result).join(', ') : 'none'}`);
+          console.log(`[DEBUG] Alternative endpoint response size: ${JSON.stringify(result).length}`);
+          console.log(`[DEBUG] Alternative endpoint response sample: ${JSON.stringify(result).substring(0, 500)}...`);
+          
+          // Normalize response to expected format
+          if (result && !result.axons && Array.isArray(result.items)) {
+            console.log(`[DEBUG] Normalizing alternative response structure from items[] to axons[]`);
+            return { axons: result.items };
+          }
+          
+          return result;
+        } else {
+          throw firstError;
+        }
+      }
+    } catch (error) {
+      const errorContext = {
+        operation: 'listApplets',
+        siteId: this.siteId,
+        options
+      };
+      
+      throw this._createError('Failed to list applets', error, errorContext);
+    }
+  }
+  
+  /**
+   * Get applet details
+   * 
+   * @param {string} appletId - Applet ID
+   * @returns {Promise<Object>} - Applet details
+   */
+  async getApplet(appletId) {
+    try {
+      return await this.makeRequest(`/axons/${appletId}`);
+    } catch (error) {
+      const errorContext = {
+        operation: 'getApplet',
+        appletId
+      };
+      
+      throw this._createError('Failed to get applet', error, errorContext);
+    }
+  }
+  
+  /**
+   * Create an applet
+   * 
+   * @param {Object} options - Applet options
+   * @param {string} options.name - Applet name
+   * @param {string} options.description - Applet description
+   * @param {string} options.ownerSiteId - Owner site ID
+   * @param {string} options.source - HTML content for hosted applet
+   * @param {string} options.sourceUrl - URL for external applet
+   * @param {string} options.scope - Applet scope (engagement or global)
+   * @returns {Promise<Object>} - Created applet response
+   */
+  async createApplet(options) {
+    try {
+      if (!options.name) {
+        throw new Error('Applet name is required');
+      }
+      
+      if (!options.ownerSiteId) {
+        throw new Error('Owner site ID is required');
+      }
+      
+      if (!options.source && !options.sourceUrl) {
+        throw new Error('Either source or sourceUrl is required');
+      }
+      
+      // Prepare FormData for multipart request using form-data package (Node.js)
+      if (DEBUG_API) console.log('[API DEBUG] Creating FormData for applet request');
+      
+      const formData = new FormData();
+      
+      // Add required fields
+      formData.append('name', options.name);
+      formData.append('owner_site_id', options.ownerSiteId);
+      
+      // Add optional fields
+      if (options.description) {
+        formData.append('description', options.description);
+      }
+      
+      if (options.scope) {
+        formData.append('scope', options.scope);
+      }
+      
+      // Add source content or source URL
+      if (options.source) {
+        // For Node.js FormData, use a Buffer
+        const buffer = Buffer.from(options.source, 'utf8');
+        formData.append('source', buffer, {
+          filename: 'applet.html',
+          contentType: 'text/html'
+        });
+        
+        if (DEBUG_API) console.log(`[API DEBUG] Added source content as buffer (${buffer.length} bytes)`);
+      } else if (options.sourceUrl) {
+        formData.append('source_url', options.sourceUrl);
+        if (DEBUG_API) console.log(`[API DEBUG] Added source_url: ${options.sourceUrl}`);
+      }
+      
+      // Debug the form-data contents
+      if (DEBUG_API) {
+        console.log('[API DEBUG] FormData headers:');
+        const headers = formData.getHeaders();
+        Object.keys(headers).forEach(key => {
+          console.log(`[API DEBUG] ${key}: ${headers[key]}`);
+        });
+      }
+      
+      // REMOVED DUPLICATE FORMDATA CODE
+      
+      // Make the request with FormData
+      // We'll use native node-fetch capabilities to send this request
+      // to ensure compatibility with the API endpoint
+      
+      if (DEBUG_API) {
+        console.log('[API DEBUG] Setting up direct fetch with node-fetch + form-data');
+        // Some FormData implementations might have getBuffer() as async or requiring callback
+        // Avoid calling it directly to prevent callback errors
+        console.log('[API DEBUG] FormData created and ready to send');
+      }
+      
+      // Instead of using makeRequest, make a direct fetch call
+      const fullUrl = `${this.baseUrl}/axons`;
+      
+      if (DEBUG_API) {
+        console.log(`[API DEBUG] Making direct fetch to: ${fullUrl}`);
+      }
+      
+      // Get content-type with boundary from form-data but set auth headers manually
+      const formHeaders = formData.getHeaders();
+      
+      // Create headers object with the correct content-type from formData
+      // but also including auth and accept headers
+      const headers = {
+        ...formHeaders,
+        'Authorization': `Bearer ${this.bearerToken}`,
+        'Accept': 'application/vnd.salemove.v1+json' // Required by the API
+      };
+      
+      // Make the request with proper headers
+      const response = await fetch(fullUrl, {
+        method: 'POST',
+        body: formData,
+        headers: headers
+      });
+      
+      // Handle the response
+      if (DEBUG_API) {
+        console.log(`[API DEBUG] Response status: ${response.status}`);
+        console.log(`[API DEBUG] Response headers:`);
+        response.headers.forEach((value, name) => {
+          console.log(`[API DEBUG] ${name}: ${value}`);
+        });
+      }
+      
+      // Extract the response data
+      let responseData;
+      try {
+        // Try to parse response as JSON
+        responseData = await response.json();
+        if (DEBUG_API) {
+          console.log('[API DEBUG] Response body:', JSON.stringify(responseData));
+        }
+      } catch (error) {
+        // If response is not JSON
+        const text = await response.text();
+        if (DEBUG_API) {
+          console.log('[API DEBUG] Non-JSON response:', text);
+        }
+        
+        if (!response.ok) {
+          throw new Error(`Failed to create applet: ${text || response.statusText}`);
+        }
+        
+        // Try to extract ID from HTML or other response if needed
+        responseData = { message: 'Success', text };
+      }
+      
+      if (!response.ok) {
+        throw new Error(`Failed to create applet: ${JSON.stringify(responseData)}`);
+      }
+      
+      return responseData;
+    } catch (error) {
+      const errorContext = {
+        operation: 'createApplet',
+        siteId: this.siteId,
+        options: { 
+          ...options,
+          // Don't include the source content in the error to avoid polluting logs
+          source: options.source ? '[Content omitted]' : undefined
+        }
+      };
+      
+      throw this._createError('Failed to create applet', error, errorContext);
+    }
+  }
+  
+  /**
+   * Update an applet
+   * 
+   * @param {string} appletId - Applet ID
+   * @param {Object} options - Update options
+   * @param {string} options.name - New applet name
+   * @param {string} options.description - New applet description
+   * @param {string} options.source - New HTML content
+   * @param {string} options.sourceUrl - New external URL
+   * @param {string} options.scope - New applet scope
+   * @returns {Promise<Object>} - Updated applet response
+   */
+  async updateApplet(appletId, options) {
+    try {
+      if (!appletId) {
+        throw new Error('Applet ID is required');
+      }
+      
+      // Prepare FormData for multipart request
+      const formData = new FormData();
+      
+      // Add update fields
+      if (options.name) {
+        formData.append('name', options.name);
+      }
+      
+      if (options.description !== undefined) {
+        formData.append('description', options.description);
+      }
+      
+      if (options.scope) {
+        formData.append('scope', options.scope);
+      }
+      
+      // Add source (HTML content) or source_url (external URL)
+      if (options.source) {
+        // For Node.js FormData, use a Buffer instead of Blob
+        const buffer = Buffer.from(options.source, 'utf8');
+        formData.append('source', buffer, {
+          filename: 'applet.html',
+          contentType: 'text/html'
+        });
+      } else if (options.sourceUrl) {
+        formData.append('source_url', options.sourceUrl);
+      }
+      
+      // Make the request
+      // Get content-type with boundary from form-data but set auth headers manually
+      const formHeaders = formData.getHeaders();
+      
+      // Create headers object with the correct content-type from formData
+      // but also including auth and accept headers
+      const headers = {
+        ...formHeaders,
+        'Authorization': `Bearer ${this.bearerToken}`,
+        'Accept': 'application/vnd.salemove.v1+json' // Required by the API
+      };
+      
+      // Create request options with proper headers
+      const requestOptions = {
+        method: 'PATCH',
+        body: formData,
+        headers: headers
+      };
+      
+      return await this.makeRequest(`/axons/${appletId}`, requestOptions);
+    } catch (error) {
+      const errorContext = {
+        operation: 'updateApplet',
+        appletId,
+        options: { 
+          ...options,
+          // Don't include the source content in the error to avoid polluting logs
+          source: options.source ? '[Content omitted]' : undefined
+        }
+      };
+      
+      throw this._createError('Failed to update applet', error, errorContext);
+    }
+  }
+  
+  /**
+   * Delete an applet
+   * 
+   * @param {string} appletId - Applet ID
+   * @returns {Promise<void>}
+   */
+  async deleteApplet(appletId) {
+    try {
+      if (!appletId) {
+        throw new Error('Applet ID is required');
+      }
+      
+      return await this.makeRequest(`/axons/${appletId}`, {
+        method: 'DELETE'
+      });
+    } catch (error) {
+      const errorContext = {
+        operation: 'deleteApplet',
+        appletId
+      };
+      
+      throw this._createError('Failed to delete applet', error, errorContext);
+    }
+  }
+  
+  /**
+   * Add an applet to a site
+   * 
+   * @param {string} siteId - Site ID
+   * @param {string} appletId - Applet ID
+   * @returns {Promise<Object>} - Response
+   */
+  async addAppletToSite(siteId, appletId) {
+    try {
+      if (!siteId) {
+        throw new Error('Site ID is required');
+      }
+      
+      if (!appletId) {
+        throw new Error('Applet ID is required');
+      }
+      
+      return await this.makeRequest(`/sites/${siteId}/axons`, {
+        method: 'POST',
+        body: JSON.stringify({
+          axon_id: appletId
+        })
+      });
+    } catch (error) {
+      const errorContext = {
+        operation: 'addAppletToSite',
+        siteId,
+        appletId
+      };
+      
+      throw this._createError('Failed to add applet to site', error, errorContext);
+    }
+  }
+  
+  /**
+   * List applets for a site
+   * 
+   * @param {string} siteId - Site ID
+   * @param {Object} options - Request options
+   * @param {string} options.scope - Filter by scope (engagement, global)
+   * @returns {Promise<Object>} - Site applets response
+   */
+  async listSiteApplets(siteId, options = {}) {
+    try {
+      if (!siteId) {
+        throw new Error('Site ID is required');
+      }
+      
+      const queryParams = [];
+      
+      if (options.scope) {
+        queryParams.push(`scope=${options.scope}`);
+      }
+      
+      const endpoint = `/sites/${siteId}/axons${queryParams.length > 0 ? '?' + queryParams.join('&') : ''}`;
+      return await this.makeRequest(endpoint);
+    } catch (error) {
+      const errorContext = {
+        operation: 'listSiteApplets',
+        siteId,
+        options
+      };
+      
+      throw this._createError('Failed to list site applets', error, errorContext);
+    }
+  }
+  
+  /**
+   * Helper method to create consistent error objects
+   * 
+   * @private
+   * @param {string} message - Error message
+   * @param {Error} error - Original error
+   * @param {Object} context - Error context
+   * @returns {Error} - New error
+   */
+  _createError(message, error, context) {
+    // Use imported errors from class constructor instead of require
+    const { GliaError, FunctionError } = this.errors;
+    
+    const errorContext = {
+      ...context,
+      siteId: this.siteId
+    };
+    
+    if (error instanceof GliaError) {
+      return new FunctionError(
+        `${message}: ${error.message}`,
+        { ...errorContext, originalError: error },
+        {
+          cause: error,
+          endpoint: error.endpoint,
+          method: error.method,
+          statusCode: error.statusCode,
+          requestId: error.requestId,
+          requestPayload: error.requestPayload,
+          responseBody: error.responseBody
+        }
+      );
+    } else {
+      return new FunctionError(`${message}: ${error.message}`, errorContext);
+    }
+  }
+  
+  /**
    * Enable or disable offline mode
    * 
    * @param {boolean} enabled - Whether to enable offline mode
@@ -1748,6 +2405,440 @@ export default class GliaApiClient {
     
     const operations = await this.offlineManager.operationQueue.getPendingOperations();
     return operations.length;
+  }
+  
+  /**
+   * List all key-value pairs in a namespace
+   * 
+   * @param {string} namespace - The KV store namespace
+   * @param {Object} options - List options
+   * @param {number} options.limit - Maximum number of results to return (per page)
+   * @param {string} options.cursor - Pagination cursor for fetching next page
+   * @param {boolean} options.fetchAll - Whether to fetch all pages automatically
+   * @returns {Promise<Object>} - KV pairs list response
+   */
+  async listKvPairs(namespace, options = {}) {
+    try {
+      if (!namespace) {
+        throw new ValidationError('Namespace is required', { field: 'namespace' }, {});
+      }
+      
+      // Build query parameters
+      const queryParams = [`namespace=${encodeURIComponent(namespace)}`];
+      if (options.limit) {
+        queryParams.push(`per_page=${options.limit}`);
+      }
+      if (options.cursor) {
+        queryParams.push(`cursor=${encodeURIComponent(options.cursor)}`);
+      }
+      
+      const endpoint = `/functions/kv?${queryParams.join('&')}`;
+      const initialResponse = await this.makeRequest(endpoint, {}, {
+        useCache: options.useCache !== false,
+        forceRefresh: options.forceRefresh === true
+      });
+      
+      // If fetchAll is true, get all pages
+      if (options.fetchAll && initialResponse.next_page_cursor) {
+        return this._fetchAllKvPairs(namespace, initialResponse);
+      }
+      
+      return initialResponse;
+    } catch (error) {
+      const errorContext = {
+        operation: 'listKvPairs',
+        siteId: this.siteId,
+        namespace
+      };
+      
+      if (error instanceof GliaError) {
+        throw new FunctionError(
+          `Failed to list KV pairs: ${error.message}`, 
+          { ...errorContext, originalError: error },
+          {
+            cause: error,
+            endpoint: error.endpoint,
+            method: error.method,
+            statusCode: error.statusCode,
+            requestId: error.requestId,
+            requestPayload: error.requestPayload,
+            responseBody: error.responseBody
+          }
+        );
+      } else {
+        throw new FunctionError(`Failed to list KV pairs: ${error.message}`, errorContext);
+      }
+    }
+  }
+  
+  /**
+   * Helper function to fetch all pages of KV pairs
+   * 
+   * @private
+   * @param {string} namespace - The KV store namespace
+   * @param {Object} initialResponse - Initial API response
+   * @returns {Promise<Object>} - Combined results from all pages
+   */
+  async _fetchAllKvPairs(namespace, initialResponse) {
+    const allItems = [...(initialResponse.items || [])];
+    let nextCursor = initialResponse.next_page_cursor;
+    
+    // Fetch all subsequent pages
+    while (nextCursor) {
+      const queryParams = [
+        `namespace=${encodeURIComponent(namespace)}`,
+        `cursor=${encodeURIComponent(nextCursor)}`
+      ];
+      
+      const endpoint = `/functions/kv?${queryParams.join('&')}`;
+      const response = await this.makeRequest(endpoint);
+      
+      if (response.items && response.items.length > 0) {
+        allItems.push(...response.items);
+      }
+      
+      nextCursor = response.next_page_cursor;
+    }
+    
+    // Return combined result
+    return {
+      ...initialResponse,
+      items: allItems,
+      next_page_cursor: null,
+      total_count: allItems.length
+    };
+  }
+  
+  /**
+   * Perform batch operations on KV store
+   * 
+   * @param {string} namespace - The KV store namespace
+   * @param {Array} operations - Array of operations to perform
+   * @returns {Promise<Array>} - Array of operation results
+   */
+  async batchKvOperations(namespace, operations = []) {
+    try {
+      if (!namespace) {
+        throw new ValidationError('Namespace is required', { field: 'namespace' }, {});
+      }
+      
+      if (!Array.isArray(operations) || operations.length === 0) {
+        throw new ValidationError('Operations array is required and cannot be empty', 
+          { field: 'operations', provided: operations }, 
+          {});
+      }
+      
+      // Validate operations limit (10 per batch)
+      if (operations.length > 10) {
+        throw new ValidationError('Maximum of 10 operations per batch', 
+          { field: 'operations', count: operations.length }, 
+          {});
+      }
+      
+      // Validate all operations
+      for (const op of operations) {
+        if (!op.op) {
+          throw new ValidationError('Operation type required for each operation', 
+            { field: 'op', operation: op }, 
+            {});
+        }
+        
+        if (!op.key) {
+          throw new ValidationError('Key required for each operation', 
+            { field: 'key', operation: op }, 
+            {});
+        }
+      }
+      
+      // Format payload according to the API requirements
+      const payload = {
+        namespace,
+        operations
+      };
+      
+      const endpoint = `/functions/kv/batch`;
+      return await this.makeRequest(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+    } catch (error) {
+      const errorContext = {
+        operation: 'batchKvOperations',
+        siteId: this.siteId,
+        namespace,
+        operationsCount: operations ? operations.length : 0
+      };
+      
+      if (error instanceof GliaError) {
+        throw new FunctionError(
+          `Failed to perform KV batch operations: ${error.message}`, 
+          { ...errorContext, originalError: error },
+          {
+            cause: error,
+            endpoint: error.endpoint,
+            method: error.method,
+            statusCode: error.statusCode,
+            requestId: error.requestId,
+            requestPayload: error.requestPayload,
+            responseBody: error.responseBody
+          }
+        );
+      } else {
+        throw new FunctionError(`Failed to perform KV batch operations: ${error.message}`, errorContext);
+      }
+    }
+  }
+  
+  /**
+   * Get a value from the KV store
+   * 
+   * @param {string} namespace - The KV store namespace
+   * @param {string} key - The key to get
+   * @returns {Promise<Object>} - KV pair result
+   */
+  async getKvValue(namespace, key) {
+    try {
+      if (!namespace) {
+        throw new ValidationError('Namespace is required', { field: 'namespace' }, {});
+      }
+      
+      if (!key) {
+        throw new ValidationError('Key is required', { field: 'key' }, {});
+      }
+      
+      // Use batch operation with a single get
+      const operations = [{
+        op: 'get',
+        key
+      }];
+      
+      const result = await this.batchKvOperations(namespace, operations);
+      return result && result.length > 0 ? result[0] : null;
+    } catch (error) {
+      const errorContext = {
+        operation: 'getKvValue',
+        siteId: this.siteId,
+        namespace,
+        key
+      };
+      
+      if (error instanceof GliaError) {
+        throw new FunctionError(
+          `Failed to get KV value: ${error.message}`, 
+          { ...errorContext, originalError: error },
+          {
+            cause: error,
+            endpoint: error.endpoint,
+            method: error.method,
+            statusCode: error.statusCode,
+            requestId: error.requestId,
+            requestPayload: error.requestPayload,
+            responseBody: error.responseBody
+          }
+        );
+      } else {
+        throw new FunctionError(`Failed to get KV value: ${error.message}`, errorContext);
+      }
+    }
+  }
+  
+  /**
+   * Set a value in the KV store
+   * 
+   * @param {string} namespace - The KV store namespace
+   * @param {string} key - The key to set
+   * @param {string|boolean} value - The value to set
+   * @returns {Promise<Object>} - KV pair result
+   */
+  async setKvValue(namespace, key, value) {
+    try {
+      if (!namespace) {
+        throw new ValidationError('Namespace is required', { field: 'namespace' }, {});
+      }
+      
+      if (!key) {
+        throw new ValidationError('Key is required', { field: 'key' }, {});
+      }
+      
+      if (value === undefined) {
+        throw new ValidationError('Value is required', { field: 'value' }, {});
+      }
+      
+      // Validate key length (max 512 bytes)
+      if (Buffer.from(key).length > 512) {
+        throw new ValidationError('Key exceeds maximum length of 512 bytes', 
+          { field: 'key', length: Buffer.from(key).length }, 
+          {});
+      }
+      
+      // Validate value type (string or boolean)
+      if (typeof value !== 'string' && typeof value !== 'boolean' && value !== null) {
+        throw new ValidationError('Value must be a string, boolean, or null', 
+          { field: 'value', type: typeof value }, 
+          {});
+      }
+      
+      // Validate value size (max 16KB)
+      if (typeof value === 'string' && Buffer.from(value).length > 16000) {
+        throw new ValidationError('Value exceeds maximum size of 16,000 bytes', 
+          { field: 'value', size: Buffer.from(value).length }, 
+          {});
+      }
+      
+      // Use batch operation with a single set
+      const operations = [{
+        op: 'set',
+        key,
+        value
+      }];
+      
+      const result = await this.batchKvOperations(namespace, operations);
+      return result && result.length > 0 ? result[0] : null;
+    } catch (error) {
+      const errorContext = {
+        operation: 'setKvValue',
+        siteId: this.siteId,
+        namespace,
+        key,
+        valueType: typeof value
+      };
+      
+      if (error instanceof GliaError) {
+        throw new FunctionError(
+          `Failed to set KV value: ${error.message}`, 
+          { ...errorContext, originalError: error },
+          {
+            cause: error,
+            endpoint: error.endpoint,
+            method: error.method,
+            statusCode: error.statusCode,
+            requestId: error.requestId,
+            requestPayload: error.requestPayload,
+            responseBody: error.responseBody
+          }
+        );
+      } else {
+        throw new FunctionError(`Failed to set KV value: ${error.message}`, errorContext);
+      }
+    }
+  }
+  
+  /**
+   * Delete a value from the KV store
+   * 
+   * @param {string} namespace - The KV store namespace
+   * @param {string} key - The key to delete
+   * @returns {Promise<Object>} - KV pair result
+   */
+  async deleteKvValue(namespace, key) {
+    try {
+      if (!namespace) {
+        throw new ValidationError('Namespace is required', { field: 'namespace' }, {});
+      }
+      
+      if (!key) {
+        throw new ValidationError('Key is required', { field: 'key' }, {});
+      }
+      
+      // Use batch operation with a single delete
+      const operations = [{
+        op: 'delete',
+        key
+      }];
+      
+      const result = await this.batchKvOperations(namespace, operations);
+      return result && result.length > 0 ? result[0] : null;
+    } catch (error) {
+      const errorContext = {
+        operation: 'deleteKvValue',
+        siteId: this.siteId,
+        namespace,
+        key
+      };
+      
+      if (error instanceof GliaError) {
+        throw new FunctionError(
+          `Failed to delete KV value: ${error.message}`, 
+          { ...errorContext, originalError: error },
+          {
+            cause: error,
+            endpoint: error.endpoint,
+            method: error.method,
+            statusCode: error.statusCode,
+            requestId: error.requestId,
+            requestPayload: error.requestPayload,
+            responseBody: error.responseBody
+          }
+        );
+      } else {
+        throw new FunctionError(`Failed to delete KV value: ${error.message}`, errorContext);
+      }
+    }
+  }
+  
+  /**
+   * Test and set a value in the KV store (conditional update)
+   * 
+   * @param {string} namespace - The KV store namespace
+   * @param {string} key - The key to update
+   * @param {string|boolean} oldValue - The expected current value
+   * @param {string|boolean} newValue - The new value to set
+   * @returns {Promise<Object>} - KV pair result
+   */
+  async testAndSetKvValue(namespace, key, oldValue, newValue) {
+    try {
+      if (!namespace) {
+        throw new ValidationError('Namespace is required', { field: 'namespace' }, {});
+      }
+      
+      if (!key) {
+        throw new ValidationError('Key is required', { field: 'key' }, {});
+      }
+      
+      if (oldValue === undefined) {
+        throw new ValidationError('Old value is required', { field: 'oldValue' }, {});
+      }
+      
+      if (newValue === undefined) {
+        throw new ValidationError('New value is required', { field: 'newValue' }, {});
+      }
+      
+      // Use batch operation with a single testAndSet
+      const operations = [{
+        op: 'testAndSet',
+        key,
+        oldValue,
+        newValue
+      }];
+      
+      const result = await this.batchKvOperations(namespace, operations);
+      return result && result.length > 0 ? result[0] : null;
+    } catch (error) {
+      const errorContext = {
+        operation: 'testAndSetKvValue',
+        siteId: this.siteId,
+        namespace,
+        key
+      };
+      
+      if (error instanceof GliaError) {
+        throw new FunctionError(
+          `Failed to test and set KV value: ${error.message}`, 
+          { ...errorContext, originalError: error },
+          {
+            cause: error,
+            endpoint: error.endpoint,
+            method: error.method,
+            statusCode: error.statusCode,
+            requestId: error.requestId,
+            requestPayload: error.requestPayload,
+            responseBody: error.responseBody
+          }
+        );
+      } else {
+        throw new FunctionError(`Failed to test and set KV value: ${error.message}`, errorContext);
+      }
+    }
   }
   
   /**

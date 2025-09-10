@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://glia.com/schemas/export-events/base-schema.json",
+  "title": "Glia Export Event Base Schema",
+  "description": "Base schema that all Glia export events extend",
+  "type": "object",
+  "required": ["version", "export_type", "site_id"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Version of the export event schema",
+      "examples": ["v1"]
+    },
+    "export_type": {
+      "type": "string",
+      "description": "Type of export event",
+      "examples": ["engagement_start", "engagement_end", "engagement_transfer", "presence_update"]
+    },
+    "site_id": {
+      "type": "string",
+      "description": "Unique identifier for the site",
+      "format": "uuid"
+    },
+    "custom_fields": {
+      "type": "array",
+      "description": "Custom fields defined for this event",
+      "items": {
+        "type": "object",
+        "required": ["key", "value"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key of the custom field"
+          },
+          "value": {
+            "type": ["string", "number", "boolean", "null"],
+            "description": "Value of the custom field"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{appletName}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="text/javascript" src="//libs.glia.com/axon.js"></script>
+    <style>
+        /* Custom styles */
+        .loading {
+            display: none;
+        }
+        .loading.active {
+            display: flex;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-6">
+    <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow">
+        <h1 class="text-2xl font-bold mb-2">{{appletName}}</h1>
+        <p class="text-gray-600 mb-6">{{description}}</p>
+
+        <!-- User Input Form -->
+        <div class="mb-6 bg-gray-50 p-4 rounded border">
+            <h2 class="text-lg font-medium mb-3">Input</h2>
+            <div class="space-y-3">
+                <div>
+                    <label for="input-text" class="block text-sm font-medium text-gray-700">Text Input</label>
+                    <input type="text" id="input-text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Enter some text">
+                </div>
+
+                <div>
+                    <label for="input-number" class="block text-sm font-medium text-gray-700">Number Input</label>
+                    <input type="number" id="input-number" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" value="10">
+                </div>
+
+                <div>
+                    <label for="input-select" class="block text-sm font-medium text-gray-700">Select Option</label>
+                    <select id="input-select" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="option1">Option 1</option>
+                        <option value="option2">Option 2</option>
+                        <option value="option3">Option 3</option>
+                    </select>
+                </div>
+
+                <button id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Process Data
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="space-y-4">
+            <h2 class="text-lg font-medium">Results</h2>
+            
+            <!-- Loading Indicator -->
+            <div id="loading" class="loading justify-center items-center p-4">
+                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-700"></div>
+                <span class="ml-3">Processing...</span>
+            </div>
+
+            <!-- Results Display -->
+            <div id="results-container" class="bg-gray-50 border rounded p-4">
+                <pre id="results" class="whitespace-pre-wrap text-sm"></pre>
+            </div>
+
+            <!-- Error Display -->
+            <div id="error-container" class="hidden bg-red-50 border border-red-200 rounded p-4 text-red-800">
+                <h3 class="font-medium">Error</h3>
+                <pre id="error-message" class="whitespace-pre-wrap text-sm"></pre>
+            </div>
+        </div>
+
+        <!-- History Section -->
+        <div class="mt-6">
+            <h2 class="text-lg font-medium mb-2">History</h2>
+            <div class="overflow-auto max-h-60">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Input</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table" class="bg-white divide-y divide-gray-200">
+                        <!-- History items will be added here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Store history items
+        const historyItems = [];
+
+        // Function to show/hide the loading indicator
+        function toggleLoading(show) {
+            const loadingEl = document.getElementById('loading');
+            if (show) {
+                loadingEl.classList.add('active');
+            } else {
+                loadingEl.classList.remove('active');
+            }
+        }
+
+        // Function to show/hide the error message
+        function showError(message) {
+            const errorContainer = document.getElementById('error-container');
+            const errorMessage = document.getElementById('error-message');
+            
+            if (message) {
+                errorMessage.textContent = message;
+                errorContainer.classList.remove('hidden');
+            } else {
+                errorContainer.classList.add('hidden');
+            }
+        }
+
+        // Function to update the results
+        function updateResults(data) {
+            const resultsEl = document.getElementById('results');
+            resultsEl.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        }
+
+        // Function to add to history
+        function addToHistory(item) {
+            historyItems.unshift(item);
+            updateHistoryTable();
+        }
+
+        // Function to update the history table
+        function updateHistoryTable() {
+            const tableBody = document.getElementById('history-table');
+            tableBody.innerHTML = historyItems.map((item, index) => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(item.timestamp).toLocaleTimeString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.input}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${item.success ? 'Success' : 'Error'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button 
+                            onclick="showHistoryItem(${index})"
+                            class="text-indigo-600 hover:text-indigo-900">
+                            View
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Function to display a history item
+        function showHistoryItem(index) {
+            const item = historyItems[index];
+            if (!item) return;
+
+            if (item.error) {
+                showError(item.error);
+                updateResults('');
+            } else {
+                showError(null);
+                updateResults(item.results);
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('submit-btn').addEventListener('click', async function() {
+            // Hide any previous error
+            showError(null);
+            
+            // Show loading indicator
+            toggleLoading(true);
+
+            try {
+                // Get form values
+                const textInput = document.getElementById('input-text').value;
+                const numberInput = parseFloat(document.getElementById('input-number').value);
+                const selectInput = document.getElementById('input-select').value;
+
+                // Prepare the payload
+                const payload = {
+                    text: textInput,
+                    number: numberInput,
+                    option: selectInput,
+                    timestamp: new Date().toISOString()
+                };
+
+                // Get Glia API instance
+                const api = await window.getGliaApi({ version: 'v1' });
+                const headers = await api.getRequestHeaders();
+                headers['Content-Type'] = 'application/json';
+
+                // Find the function (you should update this with your function's invocation URI)
+                // This is a placeholder - the actual function ID will need to be provided
+                const functionInvocationUri = '/functions/FUNCTION_ID_PLACEHOLDER/invoke';
+                
+                // Send request to the function
+                const response = await fetch(`https://api.glia.com${functionInvocationUri}`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(payload)
+                });
+
+                // Parse response
+                const data = await response.json();
+
+                // Display results
+                updateResults(data);
+
+                // Add to history
+                addToHistory({
+                    timestamp: new Date(),
+                    input: `${textInput}, ${numberInput}, ${selectInput}`,
+                    success: true,
+                    results: data
+                });
+
+            } catch (error) {
+                console.error("Error:", error);
+                
+                // Show error message
+                showError(error.message);
+                
+                // Add to history
+                addToHistory({
+                    timestamp: new Date(),
+                    input: `${document.getElementById('input-text').value}, ${document.getElementById('input-number').value}, ${document.getElementById('input-select').value}`,
+                    success: false,
+                    error: error.message
+                });
+            } finally {
+                // Hide loading indicator
+                toggleLoading(false);
+            }
+        });
+
+        // Initialize the applet when the page loads
+        window.addEventListener('load', () => {
+            console.log('{{appletName}} initialized');
+        });
+    </script>
+</body>
+</html>

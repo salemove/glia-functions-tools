@@ -34,6 +34,22 @@ Integration with OpenAI's API for adding generative AI capabilities to your Glia
 - `TEMPERATURE`: Temperature setting for AI responses (default: 0.7)
 - `MAX_TOKENS`: Maximum tokens for completion (default: 500)
 
+## Project Templates
+
+The Glia Functions CLI also supports complete project templates that include:
+
+- Main function code
+- Recommended directory structure
+- Package.json with scripts and dependencies
+- Testing setup
+- Documentation
+
+Project templates are available for various use cases:
+
+- **Basic Function**: Simple function template with testing setup
+- **API Integration**: Complete API client with error handling and validation
+- **KV Store Function**: Functions with persistent data storage capabilities
+
 ## Using Templates
 
 ### Via CLI
@@ -46,6 +62,9 @@ glia-functions list-templates
 
 # Create a function from a template
 glia-functions create-function --name "My Function" --description "My function description" --template basic
+
+# Create a complete project
+glia-functions init --template kv-store-function --output ./my-kv-project
 ```
 
 ### Via Interactive Mode
@@ -61,11 +80,24 @@ glia-functions create-function --name "My Function" --description "My function d
 
 4. Follow the prompts and select "Yes" when asked if you want to use a template
 
-### Adding Custom Templates
+## Package.json Templates
 
-To add your own templates:
+The template system includes standardized package.json templates that ensure consistent structure and dependencies across projects. These templates support:
 
-1. Create a new JavaScript file in the `src/templates/` directory
+- Inheritance from base templates
+- Modular script collections
+- Centralized dependency management
+- Variable substitution
+
+For more information, see the [Package.json Templates documentation](../templates/base-packages/README.md).
+
+## Adding Custom Templates
+
+### Function Templates
+
+To add your own function templates:
+
+1. Create a new JavaScript file in the `src/templates/functions/` directory
 2. Follow the standard template format with `onInvoke` export
 3. Include a comment at the top describing the template functionality
 
@@ -78,6 +110,38 @@ To add your own templates:
  
 export async function onInvoke(request, env) {
     // Your code here
+}
+```
+
+### Project Templates
+
+To add your own project templates:
+
+1. Create a new directory in `src/templates/projects/your-template-name`
+2. Add a `template.json` file with template metadata and configuration
+3. Add your template files (function.js, README.md, etc.)
+
+```json
+{
+  "name": "your-template-name",
+  "displayName": "Your Template Name",
+  "description": "Your template description",
+  "version": "1.0.0",
+  "packageJson": {
+    "inherits": "base-function",
+    "components": ["scripts/basic"]
+  },
+  "variables": {
+    "projectName": {
+      "description": "Project name",
+      "default": "my-glia-function",
+      "required": true
+    }
+  },
+  "files": [
+    "README.md",
+    "function.js"
+  ]
 }
 ```
 

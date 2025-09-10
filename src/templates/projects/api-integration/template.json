@@ -59,18 +59,37 @@
   "files": [
     "README.md",
     "function.js",
-    "package.json",
     "lib/api-client.js",
     "lib/validator.js",
     "test/function.test.js",
     "test/test-api.js",
-    ".env.example"
+    ".env.example",
+    "glia-project.json.template:glia-project.json"
   ],
-  "devDependencies": [
-    "dotenv"
-  ],
+  "packageJson": {
+    "inherits": "base-api",
+    "components": [
+      "scripts/basic",
+      "scripts/watch",
+      "scripts/deploy",
+      "scripts/invoke",
+      "dependencies/api"
+    ],
+    "customizations": {
+      "keywords": ["api-integration", "external-api"],
+      "scripts": {
+        "dev:api": "glia-functions dev --path ./function.js --watch --env '{\"API_KEY\":\"$API_KEY\", \"API_URL\":\"$API_URL\", \"API_TIMEOUT\":\"$API_TIMEOUT\"}'"  
+      },
+      "dependencies": {
+        "node-fetch": "^3.3.1"
+      },
+      "devDependencies": {
+        "dotenv": "^16.0.3",
+        "nock": "^13.3.1"
+      }
+    }
+  },
   "postInit": [
-    "Copy .env.example to .env",
-    "Install dependencies: npm install"
+    "Copy .env.example to .env"
   ]
 }

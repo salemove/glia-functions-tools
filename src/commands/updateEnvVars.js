@@ -16,7 +16,7 @@ import { getApiConfig } from '../lib/config.js';
 import GliaApiClient from '../lib/api.js';
 import BaseCommand from '../cli/base-command.js';
 import { input, select, confirm, editor, checkbox } from '@inquirer/prompts';
-import chalk from 'chalk';
+import colorizer from '../utils/colorizer.js';
 import fs from 'fs';
 import path from 'path';
 import { parseAndValidateJson } from '../lib/validation.js';
@@ -29,7 +29,7 @@ import { parseAndValidateJson } from '../lib/validation.js';
  */
 function formatEnvVars(envVars, versionId = null) {
   if (!envVars || Object.keys(envVars).length === 0) {
-    return `No environment variables defined${versionId ? ` for version ${chalk.bold(versionId)}` : ''}.`;
+    return `No environment variables defined${versionId ? ` for version ${colorizer.bold(versionId)}` : ''}.`;
   }
   
   const longestKeyLength = Math.max(...Object.keys(envVars).map(key => key.length));
@@ -37,13 +37,13 @@ function formatEnvVars(envVars, versionId = null) {
   
   // If version ID is provided, include it in the header
   if (versionId) {
-    result.push(`Environment variables for version ${chalk.bold(versionId)}:`);
+    result.push(`Environment variables for version ${colorizer.bold(versionId)}:`);
   }
   
   for (const [key, value] of Object.entries(envVars)) {
     const paddedKey = key.padEnd(longestKeyLength);
-    const displayValue = value === '********' ? chalk.dim('(secured value)') : value;
-    result.push(`  ${chalk.bold(paddedKey)}: ${displayValue}`);
+    const displayValue = value === '********' ? colorizer.dim('(secured value)') : value;
+    result.push(`  ${colorizer.bold(paddedKey)}: ${displayValue}`);
   }
   
   return result.join('\n');
@@ -149,11 +149,11 @@ export async function interactiveEnvVars(options) {
     // Get current environment variables
     const currentEnvVars = await api.getVersionEnvVars(options.id, functionData.current_version.id);
     
-    console.log(chalk.blue(`\nManaging environment variables for function: ${chalk.bold(functionData.name)} (${options.id})`));
-    console.log(chalk.blue(`Current version: ${chalk.bold(functionData.current_version.id)}`));
-    console.log(chalk.blue(`Created at: ${new Date(functionData.current_version.created_at).toLocaleString()}`));
-    console.log(chalk.yellow(`\nNote: Changes to environment variables will create a new function version.`));
-    console.log(chalk.blue(`\nCurrent environment variables:`));
+    console.log(colorizer.blue(`\nManaging environment variables for function: ${colorizer.bold(functionData.name)} (${options.id})`));
+    console.log(colorizer.blue(`Current version: ${colorizer.bold(functionData.current_version.id)}`));
+    console.log(colorizer.blue(`Created at: ${new Date(functionData.current_version.created_at).toLocaleString()}`));
+    console.log(colorizer.yellow(`\nNote: Changes to environment variables will create a new function version.`));
+    console.log(colorizer.blue(`\nCurrent environment variables:`));
     console.log(formatEnvVars(currentEnvVars, functionData.current_version.id));
     
     // Ask which operation to perform
@@ -225,7 +225,7 @@ export async function interactiveEnvVars(options) {
         
         // If existing, show current value
         if (isExisting) {
-          console.log(chalk.yellow(`Current value: ${currentEnvVars[name]}`));
+          console.log(colorizer.yellow(`Current value: ${currentEnvVars[name]}`));
         }
         
         // Ask for variable value
@@ -235,14 +235,14 @@ export async function interactiveEnvVars(options) {
         });
         
         updates[name] = value;
-        console.log(chalk.green(`✓ Variable ${chalk.bold(name)} ${isExisting ? 'updated' : 'added'}`));
+        console.log(colorizer.green(`✓ Variable ${colorizer.bold(name)} ${isExisting ? 'updated' : 'added'}`));
       }
     } else if (operation === 'delete') {
       // Delete mode - first check if there are any vars to delete
       const envVarKeys = Object.keys(currentEnvVars);
       
       if (envVarKeys.length === 0) {
-        console.log(chalk.yellow('No environment variables to delete.'));
+        console.log(colorizer.yellow('No environment variables to delete.'));
         return { message: 'No environment variables to delete.' };
       }
       
@@ -264,7 +264,7 @@ export async function interactiveEnvVars(options) {
         updates[key] = null; // Setting to null deletes it
       });
       
-      console.log(chalk.yellow(`Selected ${keysToDelete.length} variable(s) for deletion.`));
+      console.log(colorizer.yellow(`Selected ${keysToDelete.length} variable(s) for deletion.`));
     } else if (operation === 'bulk') {
       // Open JSON editor with current vars
       let envVarsJson = JSON.stringify(currentEnvVars, null, 2);
@@ -293,9 +293,9 @@ export async function interactiveEnvVars(options) {
       
       try {
         updates = JSON.parse(editedJson);
-        console.log(chalk.green(`✓ Successfully parsed environment variables.`));
+        console.log(colorizer.green(`✓ Successfully parsed environment variables.`));
       } catch (error) {
-        console.log(chalk.red(`Error parsing JSON: ${error.message}`));
+        console.log(colorizer.red(`Error parsing JSON: ${error.message}`));
         return { message: 'Invalid JSON format. Operation cancelled.' };
       }
     } else if (operation === 'import') {
@@ -316,9 +316,9 @@ export async function interactiveEnvVars(options) {
       try {
         const fileContent = fs.readFileSync(filePath, 'utf8');
         updates = JSON.parse(fileContent);
-        console.log(chalk.green(`✓ Successfully imported environment variables from ${filePath}`));
+        console.log(colorizer.green(`✓ Successfully imported environment variables from ${filePath}`));
       } catch (error) {
-        console.log(chalk.red(`Error reading or parsing file: ${error.message}`));
+        console.log(colorizer.red(`Error reading or parsing file: ${error.message}`));
         return { message: `Error importing file: ${error.message}` };
       }
     } else if (operation === 'export') {
@@ -346,10 +346,10 @@ export async function interactiveEnvVars(options) {
           fs.writeFileSync(filePath, JSON.stringify(currentEnvVars, null, 2));
         }
         
-        console.log(chalk.green(`✓ Successfully exported environment variables to ${filePath}`));
+        console.log(colorizer.green(`✓ Successfully exported environment variables to ${filePath}`));
         return { message: `Environment variables exported to ${filePath}` };
       } catch (error) {
-        console.log(chalk.red(`Error exporting to file: ${error.message}`));
+        console.log(colorizer.red(`Error exporting to file: ${error.message}`));
         return { message: `Error exporting file: ${error.message}` };
       }
     }
@@ -360,9 +360,9 @@ export async function interactiveEnvVars(options) {
     }
     
     // Confirm update
-    console.log(chalk.blue('\nPreparing to update environment variables:'));
+    console.log(colorizer.blue('\nPreparing to update environment variables:'));
     Object.entries(updates).forEach(([key, value]) => {
-      console.log(`${chalk.bold(key)}: ${value === null ? chalk.red('[DELETE]') : value}`);
+      console.log(`${colorizer.bold(key)}: ${value === null ? colorizer.red('[DELETE]') : value}`);
     });
     
     const shouldDeploy = await confirm({

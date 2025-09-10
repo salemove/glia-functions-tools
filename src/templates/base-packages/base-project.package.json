@@ -1,0 +1,36 @@
+{
+  "name": "{{projectName}}",
+  "version": "0.1.0",
+  "description": "{{description}}",
+  "type": "module",
+  "scripts": {
+    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest",
+    "build": "npm run build:functions",
+    "build:functions": "for file in $(find . -name \"function.js\" -not -path \"*/node_modules/*\"); do npx esbuild $file --bundle --outfile=${file%.*}-out.js --format=esm --platform=browser --define:global=globalThis --target=es2020; done",
+    "build:watch": "npx esbuild ./function.js --bundle --outfile=./function-out.js --format=esm --platform=browser --define:global=globalThis --target=es2020 --watch",
+    "dev": "glia-functions dev --path ./function.js --watch",
+    "deploy": "glia-functions deploy-project",
+    "deploy:dry-run": "glia-functions deploy-project --dry-run",
+    "kv:list": "glia-functions kv:list --namespace $KV_NAMESPACE"
+  },
+  "keywords": [
+    "glia",
+    "functions",
+    "project",
+    "serverless"
+  ],
+  "author": "{{author}}",
+  "license": "MIT",
+  "devDependencies": {
+    "@glia/functions-tools": "latest",
+    "jest": "^29.5.0",
+    "esbuild": "^0.20.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {},
+    "testMatch": [
+      "**/test/**/*.test.js"
+    ]
+  }
+}

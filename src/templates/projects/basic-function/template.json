@@ -49,12 +49,26 @@
   "files": [
     "README.md",
     "function.js",
-    "package.json",
     "test/function.test.js",
-    ".env.example"
+    ".env.example",
+    "glia-project.json.template:glia-project.json"
   ],
+  "packageJson": {
+    "inherits": "base-function",
+    "components": [
+      "scripts/basic",
+      "scripts/watch",
+      "scripts/deploy",
+      "scripts/invoke"
+    ],
+    "customizations": {
+      "keywords": ["glia-function", "template"],
+      "scripts": {
+        "update": "glia-functions update-function --id $FUNCTION_ID --name \"{{projectName}}\""
+      }
+    }
+  },
   "postInit": [
-    "Copy .env.example to .env",
-    "Install dependencies: npm install"
+    "Copy .env.example to .env"
   ]
 }

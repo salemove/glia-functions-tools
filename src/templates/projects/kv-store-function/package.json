@@ -1,0 +1,36 @@
+{
+  "name": "{{projectName}}",
+  "version": "{{version}}",
+  "description": "{{description}}",
+  "type": "module",
+  "main": "function.js",
+  "scripts": {
+    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest",
+    "build": "glia-functions build ./function.js",
+    "build:watch": "glia-functions build:watch ./function.js",
+    "dev": "glia-functions dev --path ./function.js --watch",
+    "deploy": "npm run build && glia-functions create-version --function-id $FUNCTION_ID --path ./function-out.js --deploy",
+    "invoke": "glia-functions invoke-function --function-id $FUNCTION_ID --payload '{}'",
+    "logs": "glia-functions fetch-logs --function-id $FUNCTION_ID"
+  },
+  "keywords": [
+    "glia",
+    "functions",
+    "kv-store",
+    "serverless"
+  ],
+  "author": "{{author}}",
+  "license": "MIT",
+  "devDependencies": {
+    "@glia/functions-tools": "latest",
+    "jest": "^29.5.0",
+    "supertest": "^6.3.3"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {},
+    "testMatch": [
+      "**/test/**/*.test.js"
+    ]
+  }
+}

@@ -10,7 +10,8 @@ import BaseCommand from '../cli/base-command.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { createFromTemplate, getTemplateEnvVars, listTemplates } from '../utils/template-manager.js';
+// Use the unified template manager
+import { createFunctionFromTemplate, getTemplateEnvVars, listTemplates } from '../utils/unified-template-manager.js';
 
 // Get the directory of this file
 const __filename = fileURLToPath(import.meta.url);
@@ -54,8 +55,8 @@ export async function createFunction(options) {
       
       console.log(`Creating function file from template "${options.template}"...`);
       
-      // Create function file from template
-      await createFromTemplate(options.template, outputPath, {
+      // Create function file from template using the unified template manager
+      await createFunctionFromTemplate(options.template, outputPath, {
         functionName: options.name
       });
       

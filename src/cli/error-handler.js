@@ -5,7 +5,7 @@
  * and troubleshooting information
  */
 
-import chalk from 'chalk';
+import colorizer from '../utils/colorizer.js';
 import { 
   GliaError, 
   ValidationError, 
@@ -24,9 +24,9 @@ import {
 function displayTroubleshootingHints(hints) {
   if (!hints || hints.length === 0) return;
   
-  console.error(chalk.yellow('\n⚠️  Troubleshooting:'));
+  console.error(colorizer.yellow('\n⚠️  Troubleshooting:'));
   hints.forEach(hint => {
-    console.error(chalk.yellow('  • ') + hint);
+    console.error(colorizer.yellow('  • ') + hint);
   });
 }
 
@@ -39,36 +39,36 @@ function displayTroubleshootingHints(hints) {
 function displayRequestDetails(error, verbose) {
   if (!verbose) return;
   
-  console.error(chalk.gray('\n📡 Request Information:'));
+  console.error(colorizer.gray('\n📡 Request Information:'));
   
   if (error.endpoint) {
-    console.error(chalk.gray(`  Endpoint: ${error.method || 'GET'} ${error.endpoint}`));
+    console.error(colorizer.gray(`  Endpoint: ${error.method || 'GET'} ${error.endpoint}`));
   }
   
   if (error.statusCode) {
-    console.error(chalk.gray(`  Status Code: ${error.statusCode}`));
+    console.error(colorizer.gray(`  Status Code: ${error.statusCode}`));
   }
   
   if (error.requestId) {
-    console.error(chalk.gray(`  Request ID: ${error.requestId}`));
+    console.error(colorizer.gray(`  Request ID: ${error.requestId}`));
   }
   
   if (error.timestamp) {
-    console.error(chalk.gray(`  Timestamp: ${error.timestamp}`));
+    console.error(colorizer.gray(`  Timestamp: ${error.timestamp}`));
   }
   
   if (error.requestPayload && verbose) {
-    console.error(chalk.gray('  Request Payload:'));
-    console.error(chalk.gray('  ' + JSON.stringify(error.requestPayload, null, 2)
+    console.error(colorizer.gray('  Request Payload:'));
+    console.error(colorizer.gray('  ' + JSON.stringify(error.requestPayload, null, 2)
       .replace(/\n/g, '\n  ')));
   }
   
   if (error.responseBody && verbose) {
-    console.error(chalk.gray('  Response Body:'));
+    console.error(colorizer.gray('  Response Body:'));
     const response = typeof error.responseBody === 'string' 
       ? error.responseBody 
       : JSON.stringify(error.responseBody, null, 2);
-    console.error(chalk.gray('  ' + response.replace(/\n/g, '\n  ')));
+    console.error(colorizer.gray('  ' + response.replace(/\n/g, '\n  ')));
   }
 }
 
@@ -79,21 +79,21 @@ function displayRequestDetails(error, verbose) {
  */
 function displayValidationDetails(error) {
   if (error.field) {
-    console.error(chalk.yellow(`  Field: ${error.field}`));
+    console.error(colorizer.yellow(`  Field: ${error.field}`));
   }
   
   if (error.provided !== undefined) {
     const providedValue = typeof error.provided === 'object' 
       ? JSON.stringify(error.provided) 
       : String(error.provided);
-    console.error(chalk.yellow(`  Provided: ${providedValue}`));
+    console.error(colorizer.yellow(`  Provided: ${providedValue}`));
   }
   
   if (error.expected !== undefined) {
     const expectedValue = typeof error.expected === 'object' 
       ? JSON.stringify(error.expected) 
       : String(error.expected);
-    console.error(chalk.yellow(`  Expected: ${expectedValue}`));
+    console.error(colorizer.yellow(`  Expected: ${expectedValue}`));
   }
 }
 
@@ -105,20 +105,20 @@ function displayValidationDetails(error) {
  */
 export function handleError(error, verbose = false) {
   if (error instanceof ValidationError) {
-    console.error(chalk.red('❌ Validation Error:'), error.message);
+    console.error(colorizer.red('❌ Validation Error:'), error.message);
     displayValidationDetails(error);
     
     // Display troubleshooting hints if any
     if (verbose && error.details) {
-      console.error(chalk.yellow('\nDetails:'));
-      console.error(chalk.yellow(JSON.stringify(error.details, null, 2)));
+      console.error(colorizer.yellow('\nDetails:'));
+      console.error(colorizer.yellow(JSON.stringify(error.details, null, 2)));
     }
     
     process.exit(1);
   }
   
   if (error instanceof AuthenticationError) {
-    console.error(chalk.red('🔒 Authentication Error:'), error.message);
+    console.error(colorizer.red('🔒 Authentication Error:'), error.message);
     
     // Display troubleshooting hints
     displayTroubleshootingHints(error.getTroubleshootingHints?.() || [
@@ -133,7 +133,7 @@ export function handleError(error, verbose = false) {
   }
   
   if (error instanceof ConfigurationError) {
-    console.error(chalk.red('⚙️  Configuration Error:'), error.message);
+    console.error(colorizer.red('⚙️  Configuration Error:'), error.message);
     
     // Display troubleshooting hints
     displayTroubleshootingHints(error.getTroubleshootingHints?.() || [
@@ -142,39 +142,39 @@ export function handleError(error, verbose = false) {
     ]);
     
     if (error.missingFields?.length) {
-      console.error(chalk.yellow('\nMissing Fields:'));
+      console.error(colorizer.yellow('\nMissing Fields:'));
       error.missingFields.forEach(field => {
-        console.error(chalk.yellow(`  • ${field}`));
+        console.error(colorizer.yellow(`  • ${field}`));
       });
     }
     
     if (error.invalidFields?.length) {
-      console.error(chalk.yellow('\nInvalid Fields:'));
+      console.error(colorizer.yellow('\nInvalid Fields:'));
       error.invalidFields.forEach(field => {
-        console.error(chalk.yellow(`  • ${field}`));
+        console.error(colorizer.yellow(`  • ${field}`));
       });
     }
     
     if (error.configFile) {
-      console.error(chalk.yellow(`\nConfiguration File: ${error.configFile}`));
+      console.error(colorizer.yellow(`\nConfiguration File: ${error.configFile}`));
     }
     
     process.exit(1);
   }
 
   if (error instanceof FunctionError) {
-    console.error(chalk.red('🛑 Function Error:'), error.message);
+    console.error(colorizer.red('🛑 Function Error:'), error.message);
     
     if (error.functionId) {
-      console.error(chalk.yellow(`Function ID: ${error.functionId}`));
+      console.error(colorizer.yellow(`Function ID: ${error.functionId}`));
     }
     
     if (error.versionId) {
-      console.error(chalk.yellow(`Version ID: ${error.versionId}`));
+      console.error(colorizer.yellow(`Version ID: ${error.versionId}`));
     }
     
     if (error.operation) {
-      console.error(chalk.yellow(`Operation: ${error.operation}`));
+      console.error(colorizer.yellow(`Operation: ${error.operation}`));
     }
     
     // Display troubleshooting hints
@@ -187,14 +187,14 @@ export function handleError(error, verbose = false) {
   }
   
   if (error instanceof RateLimitError) {
-    console.error(chalk.red('⏱️  Rate Limit Error:'), error.message);
+    console.error(colorizer.red('⏱️  Rate Limit Error:'), error.message);
     
     if (error.retryAfter) {
-      console.error(chalk.yellow(`Retry after: ${error.retryAfter} seconds`));
+      console.error(colorizer.yellow(`Retry after: ${error.retryAfter} seconds`));
     }
     
     if (error.limit) {
-      console.error(chalk.yellow(`Rate limit: ${error.limit} requests`));
+      console.error(colorizer.yellow(`Rate limit: ${error.limit} requests`));
     }
     
     // Display troubleshooting hints
@@ -207,7 +207,7 @@ export function handleError(error, verbose = false) {
   }
   
   if (error instanceof NetworkError) {
-    console.error(chalk.red('📶 Network Error:'), error.message);
+    console.error(colorizer.red('📶 Network Error:'), error.message);
     
     // Display troubleshooting hints
     displayTroubleshootingHints(error.getTroubleshootingHints?.() || [
@@ -223,16 +223,16 @@ export function handleError(error, verbose = false) {
   }
   
   if (error instanceof GliaError) {
-    console.error(chalk.red(`❗ Error (${error.code}):`), error.message);
+    console.error(colorizer.red(`❗ Error (${error.code}):`), error.message);
     
     // Use formatWithContext if available, otherwise display basic details
     if (error.formatWithContext && verbose) {
       const formattedError = error.formatWithContext();
-      console.error(chalk.gray('\nError Context:'));
-      console.error(chalk.gray(formattedError.split('\n').slice(1).join('\n')));
+      console.error(colorizer.gray('\nError Context:'));
+      console.error(colorizer.gray(formattedError.split('\n').slice(1).join('\n')));
     } else if (error.details && verbose) {
-      console.error(chalk.yellow('\nDetails:'));
-      console.error(chalk.yellow(JSON.stringify(error.details, null, 2)));
+      console.error(colorizer.yellow('\nDetails:'));
+      console.error(colorizer.yellow(JSON.stringify(error.details, null, 2)));
     }
     
     // Display request details if relevant
@@ -242,12 +242,12 @@ export function handleError(error, verbose = false) {
   }
   
   // Unexpected errors
-  console.error(chalk.red('💥 Unexpected Error:'), error.message);
+  console.error(colorizer.red('💥 Unexpected Error:'), error.message);
   if (verbose) {
-    console.error(chalk.gray('\nStack Trace:'));
-    console.error(chalk.gray(error.stack));
+    console.error(colorizer.gray('\nStack Trace:'));
+    console.error(colorizer.gray(error.stack));
   } else {
-    console.error(chalk.yellow('\nFor more details, run with --verbose flag.'));
+    console.error(colorizer.yellow('\nFor more details, run with --verbose flag.'));
   }
   process.exit(1);
 }
@@ -258,7 +258,7 @@ export function handleError(error, verbose = false) {
  * @param {string} message - Warning message to display
  */
 export function showWarning(message) {
-  console.warn(chalk.yellow('⚠️  Warning:'), message);
+  console.warn(colorizer.yellow('⚠️  Warning:'), message);
 }
 
 /**
@@ -267,7 +267,7 @@ export function showWarning(message) {
  * @param {string} message - Success message to display
  */
 export function showSuccess(message) {
-  console.log(chalk.green('✅ Success:'), message);
+  console.log(colorizer.green('✅ Success:'), message);
 }
 
 /**
@@ -276,7 +276,7 @@ export function showSuccess(message) {
  * @param {string} message - Info message to display
  */
 export function showInfo(message) {
-  console.log(chalk.blue('ℹ️  Info:'), message);
+  console.log(colorizer.blue('ℹ️  Info:'), message);
 }
 
 /**
@@ -285,7 +285,7 @@ export function showInfo(message) {
  * @param {string} message - Error message to display
  */
 export function showError(message) {
-  console.error(chalk.red('❌ Error:'), message);
+  console.error(colorizer.red('❌ Error:'), message);
 }
 
 /**
@@ -296,7 +296,7 @@ export function showError(message) {
  */
 export function showDebug(message, verbose = false) {
   if (verbose) {
-    console.log(chalk.gray('🔍 Debug:'), message);
+    console.log(colorizer.gray('🔍 Debug:'), message);
   }
 }
 

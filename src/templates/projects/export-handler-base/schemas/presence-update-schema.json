@@ -1,0 +1,153 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://glia.com/schemas/export-events/presence-update-schema.json",
+  "title": "Glia User Presence Update Event",
+  "description": "Schema for Glia user presence update export events",
+  "type": "object",
+  "required": ["sent_at", "events", "action"],
+  "properties": {
+    "sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO timestamp when the presence update was sent"
+    },
+    "action": {
+      "type": "string",
+      "const": "user_presence_update",
+      "description": "Type of action - always 'user_presence_update' for this event type"
+    },
+    "events": {
+      "type": "array",
+      "description": "List of presence update events",
+      "items": {
+        "type": "object",
+        "required": ["valid_from", "user_id", "user_email", "status", "account_id"],
+        "properties": {
+          "valid_from": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO timestamp indicating when this presence state became valid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the user"
+          },
+          "user_email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email address of the user"
+          },
+          "status": {
+            "type": "object",
+            "required": ["value", "changed_at"],
+            "description": "User status information",
+            "properties": {
+              "value": {
+                "type": "string",
+                "description": "Current status value (available, offline, quick-break, post-engagement-break, etc.)"
+              },
+              "changed_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "ISO timestamp when the status was last changed"
+              }
+            }
+          },
+          "capacity": {
+            "type": "object",
+            "description": "User capacity and media settings",
+            "properties": {
+              "unavailable_after_interactions": {
+                "type": "boolean",
+                "description": "Whether the user becomes unavailable after interactions"
+              },
+              "media_before_interactions": {
+                "type": "array",
+                "description": "Media types available before any interactions",
+                "items": {
+                  "type": "string",
+                  "enum": ["chat", "messaging", "audio", "video"]
+                }
+              },
+              "media": {
+                "type": "array",
+                "description": "Currently available media types",
+                "items": {
+                  "type": "string",
+                  "enum": ["chat", "messaging", "audio", "video"]
+                }
+              },
+              "change_reason": {
+                "type": ["string", "null"],
+                "description": "Reason for the capacity change (changed_by_user, alert_declined, etc.)"
+              }
+            }
+          },
+          "availability": {
+            "type": "string",
+            "description": "Overall availability status (available, unavailable, offline)"
+          },
+          "activity": {
+            "type": "object",
+            "description": "User activity information",
+            "properties": {
+              "only_after_call_work": {
+                "type": "boolean",
+                "description": "Whether user is only in after call work state"
+              },
+              "level": {
+                "type": ["string", "null"],
+                "description": "Activity level (idle, interacting_at_capacity, etc.)"
+              },
+              "interactions": {
+                "type": "array",
+                "description": "Current user interactions",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "status_changed_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "ISO timestamp when the interaction status last changed"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Interaction status (alerting, connected, after_call_work, etc.)"
+                    },
+                    "role": {
+                      "type": "string",
+                      "description": "User role in the interaction (host, participant, etc.)"
+                    },
+                    "media": {
+                      "type": "array",
+                      "description": "Media types used in this interaction",
+                      "items": {
+                        "type": "string",
+                        "enum": ["chat", "messaging", "audio", "video"]
+                      }
+                    },
+                    "initial_request_direction": {
+                      "type": "string",
+                      "description": "Direction of the initial request (proactive, reactive)"
+                    },
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Unique identifier for the interaction"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "account_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Account identifier"
+          }
+        }
+      }
+    }
+  }
+}

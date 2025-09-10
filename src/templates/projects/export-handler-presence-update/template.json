@@ -1,0 +1,90 @@
+{
+  "name": "export-handler-presence-update",
+  "displayName": "Presence Update Handler",
+  "description": "Handler for Glia operator presence update export events",
+  "version": "1.0.0",
+  "type": "project",
+  "tags": ["export", "webhook", "operator", "presence"],
+  "extends": "export-handler-base",
+  "variables": {
+    "projectName": {
+      "description": "Project name (used in package.json and README)",
+      "default": "presence-update-handler",
+      "required": true
+    },
+    "description": {
+      "description": "Project description",
+      "default": "Handler for Glia operator presence update export events",
+      "required": true
+    },
+    "includeForwarding": {
+      "description": "Include code for forwarding events to external services",
+      "default": "true",
+      "required": false
+    },
+    "forwardingUrl": {
+      "description": "URL to forward events to",
+      "default": "https://example.com/webhook",
+      "required": false
+    },
+    "authType": {
+      "description": "Authentication type for forwarding",
+      "default": "none",
+      "enum": ["none", "api-key", "bearer", "basic"],
+      "required": false
+    },
+    "includeFiltering": {
+      "description": "Include code for filtering PII data",
+      "default": "false",
+      "required": false
+    },
+    "includeTypescript": {
+      "description": "Include TypeScript definitions",
+      "default": "true",
+      "required": false
+    },
+    "eventType": {
+      "description": "Export event type",
+      "default": "presence-update",
+      "required": true
+    }
+  },
+  "files": [
+    "function.js",
+    "README.md",
+    "package.json",
+    ".env.example",
+    "lib/validation.js",
+    "lib/retry.js",
+    "lib/logging.js",
+    "test/function.test.js",
+    "schemas/presence-update-schema.json",
+    "schemas/presence-update-sample.json"
+  ],
+  "conditionalFiles": {
+    "includeTypescript": [
+      "types/index.d.ts",
+      "types/presence-update.d.ts"
+    ],
+    "includeFiltering": [
+      "lib/filtering.js"
+    ]
+  },
+  "postInit": [
+    "Copy .env.example to .env",
+    "Install dependencies: npm install"
+  ],
+  "dependencies": [
+    "ajv"
+  ],
+  "devDependencies": [
+    "jest"
+  ],
+  "envVars": {
+    "DEBUG": "false",
+    "LOG_LEVEL": "info",
+    "FORWARDING_URL": "https://example.com/webhook",
+    "API_KEY": "",
+    "TRACK_STATUS_CHANGES": "true"
+  }
+}

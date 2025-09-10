@@ -1,0 +1,328 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://glia.com/schemas/export-events/engagement-end-schema.json",
+  "title": "Glia Engagement End Event",
+  "description": "Schema for Glia engagement end export events",
+  "type": "object",
+  "allOf": [
+    { "$ref": "base-schema.json" }
+  ],
+  "required": [
+    "engagement", 
+    "visitor", 
+    "site",
+    "operators",
+    "source",
+    "platform",
+    "queue_wait_time",
+    "queues",
+    "audio_used",
+    "cobrowsing_used",
+    "video_used",
+    "initiator"
+  ],
+  "properties": {
+    "version": {
+      "enum": ["v1"],
+      "description": "Version of the export event schema"
+    },
+    "export_type": {
+      "const": "engagement",
+      "description": "Type of export event"
+    },
+    "audio_used": {
+      "type": "boolean",
+      "description": "Whether audio was used during the engagement"
+    },
+    "chat_transcript_plain_text": {
+      "type": "string",
+      "description": "Plain text version of the chat transcript"
+    },
+    "chat_transcript": {
+      "type": "array",
+      "description": "Structured chat transcript with messages",
+      "items": {
+        "type": "object",
+        "required": ["content", "created_at", "sender"],
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Message content"
+          },
+          "attachment": {
+            "type": ["object", "null"],
+            "description": "Attachment information if the message includes files",
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "Type of attachment"
+              },
+              "files": {
+                "type": "array",
+                "description": "List of attached files",
+                "items": {
+                  "type": "object",
+                  "required": ["name", "content_type", "url"],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "File name"
+                    },
+                    "content_type": {
+                      "type": "string",
+                      "description": "MIME type of the file"
+                    },
+                    "url": {
+                      "type": "string",
+                      "description": "URL to download the file"
+                    },
+                    "deleted": {
+                      "type": "boolean",
+                      "description": "Whether the file has been deleted"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO timestamp when the message was created"
+          },
+          "sender": {
+            "type": "object",
+            "required": ["name", "type"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of the sender"
+              },
+              "type": {
+                "type": "string",
+                "enum": ["visitor", "operator", "system"],
+                "description": "Type of sender"
+              }
+            }
+          }
+        }
+      }
+    },
+    "cobrowsing_used": {
+      "type": "boolean",
+      "description": "Whether cobrowsing was used during the engagement"
+    },
+    "crm_forwarded": {
+      "type": "boolean",
+      "description": "Whether the engagement was forwarded to a CRM system"
+    },
+    "custom_fields": {
+      "type": "array",
+      "description": "Custom fields defined for this engagement",
+      "items": {
+        "type": "object",
+        "required": ["key", "value"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key of the custom field"
+          },
+          "value": {
+            "type": ["string", "number", "boolean", "null"],
+            "description": "Value of the custom field"
+          }
+        }
+      }
+    },
+    "engagement": {
+      "type": "object",
+      "required": ["id", "duration", "ended_at", "started_at", "type"],
+      "description": "Core engagement information",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the engagement",
+          "format": "uuid"
+        },
+        "flagged": {
+          "type": "boolean",
+          "description": "Whether the engagement was flagged"
+        },
+        "duration": {
+          "type": "number",
+          "description": "Duration of the engagement in seconds"
+        },
+        "ended_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the engagement ended"
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the engagement started"
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of the engagement (reactive or proactive)"
+        }
+      }
+    },
+    "initiator": {
+      "type": "string",
+      "description": "Who initiated the engagement",
+      "enum": ["visitor", "operator"]
+    },
+    "notes": {
+      "type": "string",
+      "description": "Engagement notes"
+    },
+    "operator_shared_screen": {
+      "type": "boolean",
+      "description": "Whether the operator shared their screen during the engagement"
+    },
+    "operators": {
+      "type": "array",
+      "description": "Operators who participated in the engagement",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the operator",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Full name of the operator"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email of the operator"
+          }
+        }
+      }
+    },
+    "platform": {
+      "type": "string",
+      "description": "The Glia platform variant handling this engagement",
+      "examples": ["omnicore"]
+    },
+    "queue_wait_time": {
+      "type": "number",
+      "description": "Time in seconds the visitor waited in queue",
+      "minimum": 0
+    },
+    "queues": {
+      "type": "array",
+      "description": "Queues the engagement was routed through",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the queue",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the queue"
+          }
+        }
+      }
+    },
+    "site": {
+      "type": "object",
+      "required": ["id"],
+      "description": "Site information",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the site",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the site"
+        },
+        "names": {
+          "type": "array",
+          "description": "Alternative names for the site",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Alternative site name"
+              }
+            }
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "string",
+      "description": "Source of the engagement",
+      "examples": ["button_embed", "chat_embed", "api", "voice_callback"]
+    },
+    "summary_forwarded": {
+      "type": "boolean",
+      "description": "Whether the engagement summary was forwarded"
+    },
+    "video_used": {
+      "type": "boolean",
+      "description": "Whether video was used during the engagement"
+    },
+    "visitor_device_type": {
+      "type": "string",
+      "description": "Type of device the visitor was using",
+      "examples": ["mobile", "desktop", "tablet"]
+    },
+    "visitor": {
+      "type": "object",
+      "required": ["id"],
+      "description": "Information about the visitor",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the visitor",
+          "format": "uuid"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email of the visitor (PII)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the visitor (PII)"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Phone number of the visitor (PII)"
+        },
+        "last_name": {
+          "type": "string",
+          "description": "Last name of the visitor (PII)"
+        },
+        "shared_screen": {
+          "type": "boolean",
+          "description": "Whether the visitor shared their screen"
+        },
+        "device_type": {
+          "type": "string",
+          "description": "Type of device the visitor was using",
+          "examples": ["mobile", "desktop", "tablet"]
+        },
+        "browser": {
+          "type": "string",
+          "description": "Visitor's browser"
+        }
+      }
+    }
+  }
+}

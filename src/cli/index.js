@@ -4,7 +4,7 @@
  * Provides a modern, consistent interface for interacting with Glia Functions
  */
 
-import chalk from 'chalk';
+import colorizer from '../utils/colorizer.js';
 import { input, select, confirm, editor } from '@inquirer/prompts';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
@@ -25,22 +25,23 @@ import {
   deleteProfile
 } from '../lib/config.js';
 import GliaApiClient from '../lib/api.js';
-import { handleError, showSuccess, showInfo, showWarning } from './error-handler.js';
+import { handleError, showSuccess, showInfo, showWarning, showError } from './error-handler.js';
 import { parseAndValidateJson } from '../lib/validation.js';
 import { AuthenticationError, ConfigurationError, NetworkError } from '../lib/errors.js';
 import { routeCommand } from './command-router.js';
+import { CLISetupExportHandler } from './setup-export-handler.js';
 
 // ASCII art banner with version
 const separator = '============================='
 const CLIIntro = () => {
-  console.log(chalk.hex('#7C19DE').bold(` #####                     #######                                                   
+  console.log(colorizer.hex('#7C19DE').bold(` #####                     #######                                                   
 #     # #      #   ##      #       #    # #    #  ####  ##### #  ####  #    #  ####  
 #       #      #  #  #     #       #    # ##   # #    #   #   # #    # ##   # #      
 #  #### #      # #    #    #####   #    # # #  # #        #   # #    # # #  #  ####  
 #     # #      # ######    #       #    # #  # # #        #   # #    # #  # #      # 
 #     # #      # #    #    #       #    # #   ## #    #   #   # #    # #   ## #    # 
  #####  ###### # #    #    #        ####  #    #  ####    #   #  ####  #    #  ####  `))
-  console.log(chalk.italic(`v${getCliVersion()}`))
+  console.log(colorizer.italic(`v${getCliVersion()}`))
   console.log(separator)
 }
 
@@ -106,7 +107,7 @@ const CLIMainMenu = async () => {
       case 'profiles': await CLIProfileMenu(); return false;
       case 'changeSite': await CLIChangeSite(); return false;
       case 'exit': 
-        console.log(chalk.green('Exiting Glia Functions CLI. Goodbye!'));
+        console.log(colorizer.green('Exiting Glia Functions CLI. Goodbye!'));
         process.exit(0); // Explicitly exit with success code
     }
   } catch (error) {
@@ -306,7 +307,7 @@ async function createBearerToken(keyId, keySecret, apiUrl, siteId) {
     const credentials = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
     
     // Show that we're attempting to generate a token
-    console.log(chalk.blue(`Requesting token from ${apiUrl}/operator_authentication/tokens...`));
+    console.log(colorizer.blue(`Requesting token from ${apiUrl}/operator_authentication/tokens...`));
     
     const response = await fetch(`${apiUrl}/operator_authentication/tokens`, {
       method: 'POST',
@@ -341,7 +342,7 @@ async function createBearerToken(keyId, keySecret, apiUrl, siteId) {
     // If site ID was provided, validate that the token has access to it
     if (siteId) {
       try {
-        console.log(chalk.blue(`Validating token has access to site ${siteId}...`));
+        console.log(colorizer.blue(`Validating token has access to site ${siteId}...`));
         
         // Test that the token has access to the requested site
         const siteResponse = await fetch(`${apiUrl}/sites/${siteId}`, {
@@ -353,15 +354,15 @@ async function createBearerToken(keyId, keySecret, apiUrl, siteId) {
         });
         
         if (!siteResponse.ok) {
-          console.log(chalk.yellow(`Warning: Token was generated but does not have access to site ${siteId}`));
-          console.log(chalk.yellow(`API returned: ${siteResponse.status} ${siteResponse.statusText}`));
+          console.log(colorizer.yellow(`Warning: Token was generated but does not have access to site ${siteId}`));
+          console.log(colorizer.yellow(`API returned: ${siteResponse.status} ${siteResponse.statusText}`));
           
           if (siteResponse.status === 403) {
-            console.log(chalk.yellow('The API key may not have permissions for this site.'));
+            console.log(colorizer.yellow('The API key may not have permissions for this site.'));
             
             // Try to get a list of sites that this token does have access to
             try {
-              console.log(chalk.blue('Checking which sites this token has access to...'));
+              console.log(colorizer.blue('Checking which sites this token has access to...'));
               const sitesResponse = await fetch(`${apiUrl}/sites`, {
                 headers: {
                   'Authorization': `Bearer ${tokenInfo.token}`,
@@ -374,16 +375,16 @@ async function createBearerToken(keyId, keySecret, apiUrl, siteId) {
                 const sitesData = await sitesResponse.json();
                 
                 if (sitesData.sites && sitesData.sites.length > 0) {
-                  console.log(chalk.green(`Found ${sitesData.sites.length} sites that this token has access to.`));
+                  console.log(colorizer.green(`Found ${sitesData.sites.length} sites that this token has access to.`));
                   
                   // Show the first few sites
                   const sitesToShow = sitesData.sites.slice(0, 3);
                   sitesToShow.forEach((site) => {
-                    console.log(chalk.green(`- ${site.id}: ${site.name || '[No name]'}`));
+                    console.log(colorizer.green(`- ${site.id}: ${site.name || '[No name]'}`));
                   });
                   
                   if (sitesData.sites.length > 3) {
-                    console.log(chalk.green(`  and ${sitesData.sites.length - 3} more...`));
+                    console.log(colorizer.green(`  and ${sitesData.sites.length - 3} more...`));
                   }
                   
                   // Store available sites on tokenInfo
@@ -393,23 +394,23 @@ async function createBearerToken(keyId, keySecret, apiUrl, siteId) {
                   if (sitesData.sites.length === 1) {
                     const firstSite = sitesData.sites[0];
                     tokenInfo.suggestedSiteId = firstSite.id;
-                    console.log(chalk.blue(`Suggest using site ID: ${firstSite.id}`));
+                    console.log(colorizer.blue(`Suggest using site ID: ${firstSite.id}`));
                   } else {
-                    console.log(chalk.blue('You can use one of these site IDs for this profile.'));
+                    console.log(colorizer.blue('You can use one of these site IDs for this profile.'));
                   }
                 } else {
-                  console.log(chalk.yellow('This token does not have access to any sites.'));
+                  console.log(colorizer.yellow('This token does not have access to any sites.'));
                 }
               }
             } catch (sitesError) {
-              console.log(chalk.yellow(`Could not fetch available sites: ${sitesError.message}`));
+              console.log(colorizer.yellow(`Could not fetch available sites: ${sitesError.message}`));
             }
           }
         } else {
-          console.log(chalk.green(`✓ Token has confirmed access to site ${siteId}`));
+          console.log(colorizer.green(`✓ Token has confirmed access to site ${siteId}`));
         }
       } catch (validationError) {
-        console.log(chalk.yellow(`Warning: Could not validate token access to site: ${validationError.message}`));
+        console.log(colorizer.yellow(`Warning: Could not validate token access to site: ${validationError.message}`));
       }
     }
     
@@ -495,7 +496,7 @@ const CLIBuildMenu = async () => {
         {
           name: 'Initialize project from template',
           value: 'CLIInitProject',
-          description: 'Create a complete project structure using a template.',
+          description: 'Create a complete project structure using a template (including export handlers).',
         },
         {
           name: 'Run function locally',
@@ -506,6 +507,21 @@ const CLIBuildMenu = async () => {
           name: 'Manage existing functions',
           value: 'CLIListFunctions',
           description: 'Build and deploy function versions, access function logs, see usage statistics.',
+        },
+        {
+          name: 'Deploy project',
+          value: 'CLIDeployProject',
+          description: 'Deploy multiple functions and applets together with coordinated KV namespaces.',
+        },
+        {
+          name: 'Manage KV Store',
+          value: 'CLIManageKvStore',
+          description: 'Manage key-value pairs for persisting data across function invocations.',
+        },
+        {
+          name: 'Manage Applets',
+          value: 'CLIManageApplets',
+          description: 'Create, deploy, and manage applets for Glia.',
         },
         {
           name: '(Back)',
@@ -519,6 +535,9 @@ const CLIBuildMenu = async () => {
       case 'CLIInitProject': await CLIInitProject(); return false;
       case 'CLIDevFunction': await CLIDevFunction(); return false;
       case 'CLIListFunctions': await CLIListFunctions(); return false;
+      case 'CLIDeployProject': await CLIDeployProject(); return false;
+      case 'CLIManageKvStore': await CLIManageKvStore(); return false;
+      case 'CLIManageApplets': await CLIManageApplets(); return false;
       case 'back': await CLIMainMenu(); return false;
     }
   } catch (error) {
@@ -531,50 +550,26 @@ const CLIBuildMenu = async () => {
  */
 const CLIInitProject = async () => {
   try {
-    // Import required functions
+    // Import the template selector utilities
     const { 
-      listProjectTemplates, 
-      getProjectTemplate, 
-      createProjectFromTemplate,
-      getTemplateDefaultVars 
-    } = await import('../utils/project-template-manager.js');
+      selectTemplate, 
+      collectTemplateVariables, 
+      createFromSelectedTemplate 
+    } = await import('./template-selector.js');
     
-    // Get available templates
-    const templates = await listProjectTemplates();
+    // Select a template (project or applet)
+    const template = await selectTemplate({
+      type: ['project', 'applet'],
+      message: 'Select a template:',
+      showDescription: true
+    });
     
-    if (templates.length === 0) {
-      showWarning('No project templates available');
+    if (!template || template.canceled) {
       await CLIBuildMenu();
       return false;
     }
     
-    // Create template choices
-    const templateChoices = templates.map(template => ({
-      name: template.displayName,
-      value: template.name,
-      description: template.description
-    }));
-    
-    templateChoices.push({
-      name: '(Back)',
-      value: 'back'
-    });
-    
-    // Select template
-    const selectedTemplate = await select({
-      message: 'Select a project template:',
-      choices: templateChoices
-    });
-    
-    if (selectedTemplate === 'back') {
-      await CLIBuildMenu();
-      return false;
-    }
-    
-    // Get template details
-    const template = await getProjectTemplate(selectedTemplate);
-    
-    // Get output directory
+    // Get project name
     const projectName = await input({
       message: 'Project name:',
       default: template.name
@@ -585,51 +580,18 @@ const CLIInitProject = async () => {
       default: `./${projectName}`
     });
     
-    // Check if directory exists and is not empty
-    if (fs.existsSync(outputDir) && fs.readdirSync(outputDir).length > 0) {
-      const overwrite = await confirm({
-        message: `Directory "${outputDir}" already exists and is not empty. Proceed anyway?`,
-        default: false
-      });
-      
-      if (!overwrite) {
-        showInfo('Project initialization cancelled');
-        await CLIBuildMenu();
-        return false;
-      }
-    }
+    // Collect template variables
+    const initialVars = { projectName };
+    const variables = await collectTemplateVariables(template, initialVars);
     
-    // Get default variables
-    const defaultVars = getTemplateDefaultVars(template);
-    
-    // Collect variable values
-    const variables = { ...defaultVars };
-    
-    if (template.variables) {
-      console.log(chalk.blue('\nTemplate variables:'));
-      
-      for (const [key, config] of Object.entries(template.variables)) {
-        if (key === 'projectName') {
-          // Use project name for projectName variable
-          variables[key] = projectName;
-          console.log(`- ${key}: ${projectName} ${config.required ? '(required)' : ''}`);
-          continue;
-        }
-        
-        const defaultValue = config.default || '';
-        const value = await input({
-          message: `${config.description || key}${config.required ? ' (required)' : ''}:`,
-          default: defaultValue
-        });
-        
-        variables[key] = value;
-      }
-    }
-    
-    // Create project
+    // Create project from selected template
     showInfo(`Creating project from template "${template.displayName}"...`);
     
-    const result = await createProjectFromTemplate(template.name, outputDir, variables);
+    const result = await createFromSelectedTemplate({
+      template,
+      outputDir,
+      variables
+    });
     
     if (result.files.every(f => f.success)) {
       showSuccess(`Project created successfully in ${outputDir}`);
@@ -675,36 +637,25 @@ const CLINewFunction = async () => {
     });
     
     let selectedTemplate = null;
+    let templateObj = null;
+    
     if (useTemplate) {
       try {
-        // Import the template manager functions
-        const { listTemplates } = await import('../utils/template-manager.js');
+        // Import the template selector
+        const { selectTemplate } = await import('./template-selector.js');
         
-        // Get templates
-        const templates = await listTemplates();
+        // Select a function template
+        templateObj = await selectTemplate({
+          type: 'function',
+          message: 'Select a function template:',
+          showDescription: true
+        });
         
-        if (templates.length > 0) {
-          // Create template choices
-          const templateChoices = templates.map(template => ({
-            name: `${template.name}: ${template.description}`,
-            value: template.name
-          }));
-          
-          // Add option to continue without a template
-          templateChoices.push({
-            name: '(None/Cancel)',
-            value: null
-          });
-          
-          selectedTemplate = await select({
-            message: 'Select a template:',
-            choices: templateChoices
-          });
-        } else {
-          showWarning('No templates found. Continuing without a template.');
+        if (templateObj && !templateObj.canceled) {
+          selectedTemplate = templateObj.name;
         }
       } catch (error) {
-        console.error('Error loading templates:', error);
+        console.error('Error selecting template:', error);
         showWarning('Failed to load templates. Continuing without a template.');
       }
     }
@@ -737,16 +688,21 @@ const CLINewFunction = async () => {
       console.log(newGliaFunction);
       
       // Create from template if selected
-      if (selectedTemplate) {
+      if (selectedTemplate && templateObj) {
         try {
-          const { createFromTemplate, getTemplateEnvVars } = await import('../utils/template-manager.js');
+          // Import the template utilities
+          const { createFunctionFromTemplate, getTemplateEnvVars } = await import('../utils/unified-template-manager.js');
+          const { collectTemplateVariables } = await import('./template-selector.js');
           
           showInfo(`Creating function file from template "${selectedTemplate}"...`);
           
-          // Create function file from template
-          await createFromTemplate(selectedTemplate, outputPath, {
+          // Collect any template variables
+          const variables = await collectTemplateVariables(templateObj, {
             functionName: functionName
-          });
+          }, { onlyRequired: true });
+          
+          // Create function file from template using the unified template manager
+          await createFunctionFromTemplate(selectedTemplate, outputPath, variables);
           
           showSuccess(`Function file created at: ${outputPath}`);
           
@@ -806,7 +762,7 @@ function validateApiConfiguration(config) {
  */
 const CLIListFunctions = async () => {
   try {
-    console.log(chalk.blue('Fetching functions list...'));
+    console.log(colorizer.blue('Fetching functions list...'));
     
     try {
       // Get API configuration
@@ -818,12 +774,12 @@ const CLIListFunctions = async () => {
       // Check if configuration looks reasonable 
       const configIssues = validateApiConfiguration(apiConfig);
       if (configIssues.length > 0) {
-        console.error(chalk.yellow('⚠️ Configuration warning: Issues found with API configuration:'));
+        console.error(colorizer.yellow('⚠️ Configuration warning: Issues found with API configuration:'));
         configIssues.forEach(issue => {
-          console.error(chalk.yellow(`  • ${issue}`));
+          console.error(colorizer.yellow(`  • ${issue}`));
         });
-        console.error(chalk.yellow('\nYou may need to re-run the setup process to fix these issues.'));
-        console.error(chalk.yellow('Attempting to continue anyway...'));
+        console.error(colorizer.yellow('\nYou may need to re-run the setup process to fix these issues.'));
+        console.error(colorizer.yellow('Attempting to continue anyway...'));
       }
       
       // Try to retrieve the site details first to validate the token and site ID
@@ -840,19 +796,19 @@ const CLIListFunctions = async () => {
               showInfo('Using refreshed credentials.');
             }
           } catch (refreshError) {
-            console.error(chalk.yellow('Could not refresh token:'), refreshError.message);
+            console.error(colorizer.yellow('Could not refresh token:'), refreshError.message);
           }
         }
         
         // Only show debug info when in verbose mode
         if (isVerbose) {
-          console.log(chalk.blue('Debug info:'));
-          console.log(chalk.blue('- API URL:'), apiConfig.apiUrl);
-          console.log(chalk.blue('- Site ID:'), apiConfig.siteId);
-          console.log(chalk.blue('- Has API Key ID:'), !!apiConfig.keyId);
-          console.log(chalk.blue('- Has API Key Secret:'), !!apiConfig.keySecret);
-          console.log(chalk.blue('- Has Bearer Token:'), !!apiConfig.bearerToken);
-          console.log(chalk.blue('- Token expires:'), apiConfig.tokenExpiresAt ? new Date(apiConfig.tokenExpiresAt).toLocaleString() : 'n/a');
+          console.log(colorizer.blue('Debug info:'));
+          console.log(colorizer.blue('- API URL:'), apiConfig.apiUrl);
+          console.log(colorizer.blue('- Site ID:'), apiConfig.siteId);
+          console.log(colorizer.blue('- Has API Key ID:'), !!apiConfig.keyId);
+          console.log(colorizer.blue('- Has API Key Secret:'), !!apiConfig.keySecret);
+          console.log(colorizer.blue('- Has Bearer Token:'), !!apiConfig.bearerToken);
+          console.log(colorizer.blue('- Token expires:'), apiConfig.tokenExpiresAt ? new Date(apiConfig.tokenExpiresAt).toLocaleString() : 'n/a');
         }
         
         // Create simple fetch request to test connectivity
@@ -868,7 +824,7 @@ const CLIListFunctions = async () => {
           throw new Error(`Connection test failed with status ${connectivityTest.status}: ${connectivityTest.statusText}`);
         }
       } catch (connectError) {
-        console.error(chalk.red('Connection test failed:'), connectError.message);
+        console.error(colorizer.red('Connection test failed:'), connectError.message);
         
         // Check if we have credentials but no valid token or got 401/403 error
         if (apiConfig.keyId && apiConfig.keySecret && 
@@ -1015,33 +971,33 @@ const CLIListFunctions = async () => {
         return false;
       } catch (apiError) {
         // Log detailed error information for debugging
-        console.error(chalk.red('Error while fetching functions:'));
-        console.error(chalk.red(`Error type: ${apiError.constructor.name}`));
-        console.error(chalk.red(`Error message: ${apiError.message}`));
+        console.error(colorizer.red('Error while fetching functions:'));
+        console.error(colorizer.red(`Error type: ${apiError.constructor.name}`));
+        console.error(colorizer.red(`Error message: ${apiError.message}`));
         
         if (apiError.code) {
-          console.error(chalk.red(`Error code: ${apiError.code}`));
+          console.error(colorizer.red(`Error code: ${apiError.code}`));
         }
         
         if (apiError.details) {
-          console.error(chalk.red('Error details:'), apiError.details);
+          console.error(colorizer.red('Error details:'), apiError.details);
         }
         
         if (apiError.endpoint) {
-          console.error(chalk.red(`Endpoint: ${apiError.endpoint}`));
+          console.error(colorizer.red(`Endpoint: ${apiError.endpoint}`));
         }
         
         if (apiError.statusCode) {
-          console.error(chalk.red(`Status code: ${apiError.statusCode}`));
+          console.error(colorizer.red(`Status code: ${apiError.statusCode}`));
         }
         
         // Handle different error types
         if (apiError instanceof NetworkError) {
           showWarning('Network error while fetching functions list');
-          console.error(chalk.red('Network Error:'), apiError.message);
+          console.error(colorizer.red('Network Error:'), apiError.message);
         } else if (apiError instanceof AuthenticationError) {
           showWarning('Authentication error - your token may be invalid or expired');
-          console.error(chalk.red('Auth Error:'), apiError.message);
+          console.error(colorizer.red('Auth Error:'), apiError.message);
           
           const reAuth = await confirm({
             message: 'Would you like to re-authenticate now?'
@@ -1060,7 +1016,7 @@ const CLIListFunctions = async () => {
         return false;
       }
     } catch (configError) {
-      console.error(chalk.red('Configuration error:'), configError.message);
+      console.error(colorizer.red('Configuration error:'), configError.message);
       showWarning('Your API configuration appears to be invalid or missing required values');
       
       const setupNow = await confirm({
@@ -1077,7 +1033,7 @@ const CLIListFunctions = async () => {
     }
   } catch (error) {
     // Log any unexpected errors outside of API calls
-    console.error(chalk.red('Unexpected error:'), error);
+    console.error(colorizer.red('Unexpected error:'), error);
     handleError(error);
   }
 }
@@ -1090,7 +1046,7 @@ const CLIListFunctions = async () => {
 const CLIFunctionDetailsMenu = async (functionId) => {
   try {
     console.log(separator);
-    console.log(chalk.bold('Function details:'));
+    console.log(colorizer.bold('Function details:'));
     
     // Get API configuration
     const apiConfig = await getApiConfig();
@@ -1316,7 +1272,7 @@ const CLIFunctionVersions = async (functionId, currentVersion) => {
 const CLIFunctionVersion = async (functionId, versionId) => {
   try {
     console.log(separator);
-    console.log(chalk.bold('Function version details:'));
+    console.log(colorizer.bold('Function version details:'));
     
     // Get API configuration
     const apiConfig = await getApiConfig();
@@ -1404,19 +1360,19 @@ const CLIDeployFunction = async (functionId, versionId) => {
 const CLIUpdateEnvironment = async (functionId, versionId, version) => {
   try {
     console.log(separator);
-    console.log(chalk.bold('Update environment variables:'));
+    console.log(colorizer.bold('Update environment variables:'));
     
     // Show current environment variables if available
     const currentEnvVars = version.defined_environment_variables || [];
     
     if (currentEnvVars.length > 0) {
-      console.log(chalk.blue('Current environment variables:'));
+      console.log(colorizer.blue('Current environment variables:'));
       currentEnvVars.forEach(varName => {
         console.log(`- ${varName}`);
       });
       console.log('');
     } else {
-      console.log(chalk.blue('No environment variables currently defined.'));
+      console.log(colorizer.blue('No environment variables currently defined.'));
       console.log('');
     }
     
@@ -1546,7 +1502,7 @@ const CLIUpdateEnvironment = async (functionId, versionId, version) => {
 const CLIFunctionLogs = async (functionId) => {
   try {
     console.log(separator);
-    console.log(chalk.bold('Function logs:'));
+    console.log(colorizer.bold('Function logs:'));
     
     // Fetch logs options
     const fetchAllLogs = await confirm({
@@ -1586,7 +1542,7 @@ const CLIFunctionLogs = async (functionId) => {
       });
     }
     
-    console.log(chalk.blue('Fetching logs, please wait...'));
+    console.log(colorizer.blue('Fetching logs, please wait...'));
     
     // Get API configuration
     const apiConfig = await getApiConfig();
@@ -1596,7 +1552,7 @@ const CLIFunctionLogs = async (functionId) => {
     
     // Create a mock BaseCommand for progress reporting
     const mockCommand = {
-      info: (message) => console.log(chalk.blue(message))
+      info: (message) => console.log(colorizer.blue(message))
     };
     
     // Options for the fetch logs command
@@ -1619,11 +1575,11 @@ const CLIFunctionLogs = async (functionId) => {
     
     // Show logs count
     if (logs.logs && logs.logs.length > 0) {
-      console.log(chalk.green(`Found ${logs.logs.length} log entries`));
+      console.log(colorizer.green(`Found ${logs.logs.length} log entries`));
       
       // Display logs as a table with timestamps and messages
       console.log(separator);
-      console.log(chalk.bold('Latest logs:'));
+      console.log(colorizer.bold('Latest logs:'));
       
       // Sort logs by timestamp (most recent first)
       const sortedLogs = [...logs.logs].sort((a, b) => 
@@ -1640,7 +1596,7 @@ const CLIFunctionLogs = async (functionId) => {
       });
       
       if (sortedLogs.length > displayLimit) {
-        console.log(chalk.blue(`\nShowing ${displayLimit} most recent logs out of ${sortedLogs.length} total`));
+        console.log(colorizer.blue(`\nShowing ${displayLimit} most recent logs out of ${sortedLogs.length} total`));
       }
       
       // Offer to save logs to file
@@ -1656,10 +1612,10 @@ const CLIFunctionLogs = async (functionId) => {
         });
         
         await fs.writeFileSync(filePath, JSON.stringify(logs, null, 2));
-        console.log(chalk.green(`Logs saved to ${filePath}`));
+        console.log(colorizer.green(`Logs saved to ${filePath}`));
       }
     } else {
-      console.log(chalk.yellow('No logs found for this function'));
+      console.log(colorizer.yellow('No logs found for this function'));
     }
     
     await CLIFunctionDetailsMenu(functionId);
@@ -1710,7 +1666,7 @@ const CLIFunctionInvoke = async (functionId, invocationUri) => {
     const response = await api.invokeFunction(invocationUri, payload);
     
     console.log(separator);
-    console.log(chalk.bold('Function response:'));
+    console.log(colorizer.bold('Function response:'));
     console.log(response);
     
     await CLIFunctionDetailsMenu(functionId);
@@ -1726,6 +1682,36 @@ const CLIFunctionInvoke = async (functionId, invocationUri) => {
 export async function runCLI() {
   try {
     CLIIntro();
+    
+    // Reset environment variables to ensure clean state
+    const GLIA_ENV_VARS = [
+      'GLIA_BEARER_TOKEN', 'GLIA_TOKEN_EXPIRES_AT', 'GLIA_SITE_ID', 
+      'GLIA_KEY_ID', 'GLIA_KEY_SECRET', 'GLIA_API_URL'
+    ];
+    
+    // Save current CLI arguments
+    const cliArgs = {};
+    GLIA_ENV_VARS.forEach(key => {
+      if (process.env[key]) {
+        cliArgs[key] = process.env[key];
+      }
+    });
+    
+    // Load full configuration first to ensure site ID is properly loaded
+    // This is a critical step to fix the site persistence issue
+    const config = await loadConfig();
+    console.log(colorizer.dim(`[DEBUG] Initial config loaded: GLIA_SITE_ID=${config.siteId}, profile=${config.profile}`));
+    
+    // If there's no site ID after loading, show a warning
+    if (!config.siteId) {
+      console.log(colorizer.yellow('\n⚠️ Warning: No site ID found in configuration. Some commands may not work properly.'));
+      console.log(colorizer.yellow('Use "Change active site" from the main menu to set a site ID.\n'));
+    } else {
+      // Verify site ID is set in the environment
+      if (!process.env.GLIA_SITE_ID) {
+        console.log(colorizer.yellow(`\n⚠️ Warning: Site ID from config not applied to environment!\n`));
+      }
+    }
     
     // Check if we have valid API configuration and attempt to refresh if expired
     const hasToken = await hasValidBearerToken(true);
@@ -1760,8 +1746,8 @@ const CLIChangeSite = async () => {
     const currentProfile = process.env.GLIA_PROFILE || 'default';
     const currentSiteId = process.env.GLIA_SITE_ID;
     
-    console.log(chalk.blue('Current active profile:'), chalk.bold(currentProfile));
-    console.log(chalk.blue('Current active site ID:'), chalk.bold(currentSiteId || 'none'));
+    console.log(colorizer.blue('Current active profile:'), colorizer.bold(currentProfile));
+    console.log(colorizer.blue('Current active site ID:'), colorizer.bold(currentSiteId || 'none'));
     console.log(separator);
     
     // Get API configuration to access token
@@ -1814,7 +1800,7 @@ const CLIChangeSite = async () => {
     }
     
     // Fetch the list of sites this token has access to
-    console.log(chalk.blue('Fetching available sites...'));
+    console.log(colorizer.blue('Fetching available sites...'));
     try {
       const sitesResponse = await fetch(`${config.apiUrl}/sites`, {
         headers: {
@@ -1863,6 +1849,9 @@ const CLIChangeSite = async () => {
       const selectedSite = sitesData.sites.find(site => site.id === selectedSiteId);
       const siteName = selectedSite.name || selectedSiteId;
       
+      // Clear any existing site ID from process.env to prevent it from overriding
+      delete process.env.GLIA_SITE_ID;
+      
       // Update profile with new site ID
       if (currentProfile === 'default') {
         await updateGlobalConfig({
@@ -1874,8 +1863,30 @@ const CLIChangeSite = async () => {
         });
       }
       
-      // Update current process.env
+      // Important: Use a direct file write to local .env to avoid conflicts
+      // This ensures the local .env won't override the profile setting
+      if (fs.existsSync(LOCAL_CONFIG_FILE)) {
+        console.log(colorizer.dim(`[DEBUG] Updating local .env file with new site ID`));
+        await updateEnvFile({
+          'GLIA_SITE_ID': selectedSiteId
+        });
+      }
+      
+      // Update current process.env AFTER updating all config files
       process.env.GLIA_SITE_ID = selectedSiteId;
+      
+      // Force reload of configuration with new site ID
+      await loadConfig();
+      
+      // Verify the site ID was set properly
+      const verifyConfig = await loadConfig();
+      console.log(colorizer.dim(`[DEBUG] Site change verification - new site ID: ${verifyConfig.siteId}`));
+      
+      // Double check that process.env has the correct site ID
+      if (process.env.GLIA_SITE_ID !== selectedSiteId) {
+        console.log(colorizer.yellow(`[WARNING] Site ID mismatch after update! Expected: ${selectedSiteId}, Got: ${process.env.GLIA_SITE_ID || 'none'}`));
+        process.env.GLIA_SITE_ID = selectedSiteId; // Force it to be correct
+      }
       
       showSuccess(`Switched to site: ${siteName} (${selectedSiteId})`);
       showInfo('The new site will be used for all subsequent operations.');
@@ -1911,7 +1922,7 @@ const CLIProfileMenu = async () => {
       profiles.unshift('default');
     }
     
-    console.log(chalk.blue('Current active profile:'), chalk.bold(currentProfile));
+    console.log(colorizer.blue('Current active profile:'), colorizer.bold(currentProfile));
     console.log(separator);
     
     const answer = await select({
@@ -1972,11 +1983,11 @@ const CLIListProfiles = async () => {
       profiles.unshift('default');
     }
     
-    console.log(chalk.blue('Available profiles:'));
+    console.log(colorizer.blue('Available profiles:'));
     
     profiles.forEach(profile => {
       if (profile === currentProfile) {
-        console.log(`  ${chalk.green('*')} ${profile} ${chalk.green('(current)')}`);
+        console.log(`  ${colorizer.green('*')} ${profile} ${colorizer.green('(current)')}`);
       } else {
         console.log(`  ${profile}`);
       }
@@ -2066,14 +2077,14 @@ const CLISwitchProfile = async () => {
     const config = await loadConfig();
     
     // Debug info after profile switch
-    console.log(chalk.blue('Profile switch debug info:'));
-    console.log(chalk.blue('- Profile:'), profileName);
-    console.log(chalk.blue('- API URL:'), config.apiUrl);
-    console.log(chalk.blue('- Site ID:'), config.siteId);
-    console.log(chalk.blue('- Has API Key ID:'), !!config.keyId);
-    console.log(chalk.blue('- Has API Key Secret:'), !!config.keySecret);
-    console.log(chalk.blue('- Has Bearer Token:'), !!config.bearerToken);
-    console.log(chalk.blue('- Token expires:'), config.tokenExpiresAt ? new Date(config.tokenExpiresAt).toLocaleString() : 'n/a');
+    console.log(colorizer.blue('Profile switch debug info:'));
+    console.log(colorizer.blue('- Profile:'), profileName);
+    console.log(colorizer.blue('- API URL:'), config.apiUrl);
+    console.log(colorizer.blue('- Site ID:'), config.siteId);
+    console.log(colorizer.blue('- Has API Key ID:'), !!config.keyId);
+    console.log(colorizer.blue('- Has API Key Secret:'), !!config.keySecret);
+    console.log(colorizer.blue('- Has Bearer Token:'), !!config.bearerToken);
+    console.log(colorizer.blue('- Token expires:'), config.tokenExpiresAt ? new Date(config.tokenExpiresAt).toLocaleString() : 'n/a');
     
     if (config.keyId && config.keySecret) {
       try {
@@ -2082,7 +2093,7 @@ const CLISwitchProfile = async () => {
             Date.now() >= (config.tokenExpiresAt - (5 * 60 * 1000))) {
           
           // Create a token using existing credentials
-          console.log(chalk.blue('Generating new token with credentials from profile...'));
+          console.log(colorizer.blue('Generating new token with credentials from profile...'));
           const tokenInfo = await createBearerToken(
             config.keyId,
             config.keySecret,
@@ -2333,14 +2344,14 @@ const CLIDevFunction = async () => {
 const CLIUpdateFunction = async (functionId, functionDetails) => {
   try {
     console.log(separator);
-    console.log(chalk.bold('Update function details:'));
+    console.log(colorizer.bold('Update function details:'));
     
     // Get current function name and description
     const currentName = functionDetails.name || '';
     const currentDescription = functionDetails.description || '';
     
-    console.log(chalk.blue('Current name:'), currentName);
-    console.log(chalk.blue('Current description:'), currentDescription);
+    console.log(colorizer.blue('Current name:'), currentName);
+    console.log(colorizer.blue('Current description:'), currentDescription);
     console.log('');
     
     // Ask for new name (default to current)
@@ -2393,10 +2404,10 @@ const CLIUpdateFunction = async (functionId, functionDetails) => {
     
     // Show what was updated
     if (newName !== currentName) {
-      console.log(chalk.blue('New name:'), updatedFunction.name);
+      console.log(colorizer.blue('New name:'), updatedFunction.name);
     }
     if (newDescription !== currentDescription) {
-      console.log(chalk.blue('New description:'), updatedFunction.description);
+      console.log(colorizer.blue('New description:'), updatedFunction.description);
     }
     
     // Return to function details menu
@@ -2413,7 +2424,7 @@ const CLIUpdateFunction = async (functionId, functionDetails) => {
 const CLIManageEnvVars = async () => {
   try {
     console.log(separator);
-    console.log(chalk.bold('Environment Variables Management'));
+    console.log(colorizer.bold('Environment Variables Management'));
     
     // Get API configuration
     const apiConfig = await getApiConfig();
@@ -2422,7 +2433,7 @@ const CLIManageEnvVars = async () => {
     const api = new GliaApiClient(apiConfig);
     
     // First get functions list
-    console.log(chalk.blue('Fetching functions list...'));
+    console.log(colorizer.blue('Fetching functions list...'));
     const list = await api.listFunctions();
     
     if (!list?.functions || list.functions.length === 0) {
@@ -2482,6 +2493,500 @@ const CLIManageEnvVars = async () => {
     
     // After completing environment variable management, return to build menu
     await CLIBuildMenu();
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIBuildMenu();
+    return false;
+  }
+};
+
+/**
+ * Deploy project function
+ */
+const CLIDeployProject = async () => {
+  try {
+    console.log(separator);
+    console.log(colorizer.bold('Deploy Project'));
+    
+    // Prompt for the manifest path
+    const manifestPath = await input({
+      message: 'Path to project manifest file:',
+      default: 'glia-project.json'
+    });
+    
+    // Confirm file exists
+    try {
+      await fs.access(manifestPath);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        showError(`Project manifest file not found: ${manifestPath}`);
+        showInfo(`Create a ${colorizer.bold('glia-project.json')} file in your project directory.`);
+        
+        const showExample = await confirm({
+          message: 'Would you like to see an example project manifest structure?',
+          default: true
+        });
+        
+        if (showExample) {
+          // Show example structure from README-project-deploy.md or provide inline example
+          console.log(colorizer.blue('\nExample project manifest structure:'));
+          console.log(`{
+  "name": "customer-support-project",
+  "version": "1.0.0",
+  "description": "A project with multiple components",
+  "components": {
+    "functions": [
+      {
+        "name": "api-handler",
+        "description": "API handler function",
+        "path": "functions/api-handler.js",
+        "environment": {
+          "API_KEY": "your-api-key"
+        },
+        "kvStore": {
+          "namespaces": ["user_data"]
+        }
+      }
+    ],
+    "applets": [
+      {
+        "name": "user-widget",
+        "description": "User interface widget",
+        "path": "applets/user-widget.html",
+        "scope": "engagement"
+      }
+    ]
+  },
+  "kvStore": {
+    "namespaces": [
+      {
+        "name": "user_data",
+        "description": "User data storage for tracking sessions",
+        "ttl": 86400
+      }
+    ]
+  },
+  "linkages": [
+    {
+      "from": "functions.api-handler",
+      "to": "applets.user-widget",
+      "placeholders": {
+        "API_URI": "invocation_uri"
+      }
+    }
+  ]
+}`);
+        }
+        
+        await CLIBuildMenu();
+        return false;
+      }
+      throw error;
+    }
+    
+    // Ask for deployment options
+    const dryRun = await confirm({
+      message: 'Run in dry-run mode (validate only, no deployment)?',
+      default: false
+    });
+    
+    // Only ask for more options if not in dry run mode
+    let skipFunctions = false;
+    let skipApplets = false;
+    let noRollback = false;
+    
+    if (!dryRun) {
+      skipFunctions = await confirm({
+        message: 'Skip function deployment?',
+        default: false
+      });
+      
+      skipApplets = await confirm({
+        message: 'Skip applet deployment?',
+        default: false
+      });
+      
+      noRollback = await confirm({
+        message: 'Disable rollback on failure?',
+        default: false
+      });
+    }
+    
+    // Confirm deployment
+    const confirmDeployment = await confirm({
+      message: dryRun ? 
+        'Proceed with validation?' : 
+        'Proceed with project deployment?',
+      default: true
+    });
+    
+    if (!confirmDeployment) {
+      showInfo('Deployment cancelled');
+      await CLIBuildMenu();
+      return false;
+    }
+    
+    // Prepare options for command
+    const options = {
+      manifest: manifestPath,
+      dryRun,
+      skipFunctions,
+      skipApplets,
+      rollbackOnFailure: !noRollback,
+      command: {
+        info: (message) => console.log(colorizer.blue(message)),
+        success: (message) => console.log(colorizer.green(message)),
+        warning: (message) => console.log(colorizer.yellow(message)),
+        error: (message) => console.log(colorizer.red(message))
+      },
+      // Add a callback function to fix the "cb must be a function" error
+      cb: (error, result) => {
+        if (error) {
+          console.error(colorizer.red(`Error: ${error.message}`));
+          return false;
+        }
+        return result;
+      }
+    };
+    
+    // Execute the command
+    showInfo(dryRun ? 'Validating project...' : 'Deploying project...');
+    const result = await routeCommand('deploy-project', options);
+    
+    if (!result.success) {
+      showError(`Project ${dryRun ? 'validation' : 'deployment'} failed: ${result.error}`);
+    } else if (dryRun) {
+      showSuccess('Project validation successful!');
+    } else {
+      showSuccess('Project deployment completed successfully!');
+      
+      // Show deployment summary
+      console.log(colorizer.blue('\nDeployment summary:'));
+      if (result.deploymentState) {
+        console.log(`- Functions: ${result.deploymentState.functions || 0}`);
+        console.log(`- Function versions: ${result.deploymentState.functionVersions || 0}`);
+        console.log(`- Function deployments: ${result.deploymentState.functionDeployments || 0}`);
+        console.log(`- Applets: ${result.deploymentState.applets || 0}`);
+        console.log(`- KV pairs: ${result.deploymentState.kvPairs || 0}`);
+      }
+    }
+    
+    await CLIBuildMenu();
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIBuildMenu();
+    return false;
+  }
+};
+
+/**
+ * KV Store management menu
+ */
+const CLIManageKvStore = async () => {
+  try {
+    console.log(separator);
+    console.log(colorizer.bold('KV Store Management'));
+    
+    // Check if we have a valid token and site ID first
+    if (!process.env.GLIA_BEARER_TOKEN || !process.env.GLIA_SITE_ID) {
+      showWarning('You need to be authenticated with a valid site ID to use KV Store.');
+      const setupNow = await confirm({
+        message: 'Would you like to run setup now?'
+      });
+      
+      if (setupNow) {
+        await CLISetup();
+      } else {
+        await CLIBuildMenu();
+      }
+      return false;
+    }
+    
+    // Ask for namespace first
+    const namespace = await input({
+      message: 'Enter KV store namespace:',
+      validate: (input) => {
+        if (!input) return 'Namespace is required';
+        if (Buffer.from(input).length > 128) {
+          return 'Namespace exceeds maximum length of 128 bytes';
+        }
+        return true;
+      }
+    });
+    
+    // KV Store operation menu
+    const answer = await select({
+      message: 'Select operation:',
+      choices: [
+        {
+          name: 'List values in namespace',
+          value: 'list',
+          description: 'List all key-value pairs in the namespace',
+        },
+        {
+          name: 'Get a value',
+          value: 'get',
+          description: 'Get a specific value by key',
+        },
+        {
+          name: 'Set a value',
+          value: 'set',
+          description: 'Set a value for a specific key',
+        },
+        {
+          name: 'Delete a value',
+          value: 'delete',
+          description: 'Delete a specific key-value pair',
+        },
+        {
+          name: 'Conditional update (test-and-set)',
+          value: 'test-and-set',
+          description: 'Update a value only if it matches expected current value',
+        },
+        {
+          name: '(Back)',
+          value: 'back'
+        }
+      ]
+    });
+    
+    // Process the selected operation
+    switch(answer) {
+      case 'list':
+        await routeCommand('kv:list', { namespace, all: true, json: false });
+        break;
+      case 'get':
+        const getKey = await input({
+          message: 'Enter key to get:',
+          validate: (input) => {
+            if (!input) return 'Key is required';
+            if (Buffer.from(input).length > 512) {
+              return 'Key exceeds maximum length of 512 bytes';
+            }
+            return true;
+          }
+        });
+        await routeCommand('kv:get', { namespace, key: getKey });
+        break;
+      case 'set':
+        const setKey = await input({
+          message: 'Enter key to set:',
+          validate: (input) => {
+            if (!input) return 'Key is required';
+            if (Buffer.from(input).length > 512) {
+              return 'Key exceeds maximum length of 512 bytes';
+            }
+            return true;
+          }
+        });
+        
+        const valueType = await select({
+          message: 'Select value type:',
+          choices: [
+            { name: 'String', value: 'string' },
+            { name: 'Boolean (true)', value: 'true' },
+            { name: 'Boolean (false)', value: 'false' },
+            { name: 'Null', value: 'null' }
+          ]
+        });
+        
+        let setValue;
+        if (valueType === 'string') {
+          setValue = await input({
+            message: 'Enter string value:',
+            validate: (input) => {
+              if (input === undefined) return 'Value is required';
+              if (Buffer.from(input).length > 16000) {
+                return 'Value exceeds maximum size of 16,000 bytes';
+              }
+              return true;
+            }
+          });
+        } else {
+          setValue = valueType; // 'true', 'false', or 'null'
+        }
+        
+        await routeCommand('kv:set', { namespace, key: setKey, value: setValue });
+        break;
+      case 'delete':
+        const deleteKey = await input({
+          message: 'Enter key to delete:',
+          validate: (input) => {
+            if (!input) return 'Key is required';
+            return true;
+          }
+        });
+        await routeCommand('kv:delete', { namespace, key: deleteKey });
+        break;
+      case 'test-and-set':
+        const testKey = await input({
+          message: 'Enter key to update:',
+          validate: (input) => {
+            if (!input) return 'Key is required';
+            if (Buffer.from(input).length > 512) {
+              return 'Key exceeds maximum length of 512 bytes';
+            }
+            return true;
+          }
+        });
+        
+        const oldValueType = await select({
+          message: 'Select current value type:',
+          choices: [
+            { name: 'String', value: 'string' },
+            { name: 'Boolean (true)', value: 'true' },
+            { name: 'Boolean (false)', value: 'false' },
+            { name: 'Null', value: 'null' }
+          ]
+        });
+        
+        let oldValue;
+        if (oldValueType === 'string') {
+          oldValue = await input({
+            message: 'Enter current string value:',
+            validate: (input) => {
+              if (input === undefined) return 'Value is required';
+              return true;
+            }
+          });
+        } else {
+          oldValue = oldValueType;
+        }
+        
+        const newValueType = await select({
+          message: 'Select new value type:',
+          choices: [
+            { name: 'String', value: 'string' },
+            { name: 'Boolean (true)', value: 'true' },
+            { name: 'Boolean (false)', value: 'false' },
+            { name: 'Null', value: 'null' }
+          ]
+        });
+        
+        let newValue;
+        if (newValueType === 'string') {
+          newValue = await input({
+            message: 'Enter new string value:',
+            validate: (input) => {
+              if (input === undefined) return 'Value is required';
+              if (Buffer.from(input).length > 16000) {
+                return 'Value exceeds maximum size of 16,000 bytes';
+              }
+              return true;
+            }
+          });
+        } else {
+          newValue = newValueType;
+        }
+        
+        await routeCommand('kv:test-and-set', { 
+          namespace, 
+          key: testKey, 
+          oldValue, 
+          newValue 
+        });
+        break;
+      case 'back':
+        await CLIBuildMenu(); 
+        return false;
+    }
+    
+    // After the operation is complete, ask if user wants to do another operation
+    const continueOperations = await confirm({
+      message: 'Would you like to perform another KV Store operation?',
+      default: true
+    });
+    
+    if (continueOperations) {
+      await CLIManageKvStore();
+    } else {
+      await CLIBuildMenu();
+    }
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIBuildMenu();
+    return false;
+  }
+};
+
+/**
+ * Applet management menu
+ */
+const CLIManageApplets = async () => {
+  try {
+    console.log(separator);
+    console.log(colorizer.bold('Applet Management'));
+    
+    const answer = await select({
+      message: 'Select action:',
+      choices: [
+        {
+          name: 'Create new applet from template',
+          value: 'create',
+          description: 'Create a new applet using HTML or React templates',
+        },
+        {
+          name: 'List available templates',
+          value: 'list-templates',
+          description: 'Show all available applet templates',
+        },
+        {
+          name: 'Deploy an applet',
+          value: 'deploy',
+          description: 'Upload and deploy an existing applet HTML file',
+        },
+        {
+          name: 'List and manage applets',
+          value: 'select',
+          description: 'List, view, and manage your site\'s applets',
+        },
+        {
+          name: 'Update an applet',
+          value: 'update',
+          description: 'Update an existing applet',
+        },
+        {
+          name: '(Back)',
+          value: 'back'
+        }
+      ]
+    });
+    
+    switch(answer) {
+      case 'create':
+        await routeCommand('create-applet', { interactive: true });
+        break;
+      case 'list-templates':
+        await routeCommand('list-applet-templates', {});
+        break;
+      case 'deploy':
+        await routeCommand('deploy-applet', { interactive: true });
+        break;
+      case 'select':
+        await routeCommand('select-applet', { interactive: true });
+        break;
+      case 'update':
+        await routeCommand('update-applet', { interactive: true });
+        break;
+      case 'back':
+        await CLIBuildMenu();
+        return false;
+    }
+    
+    // Return to applet management menu after operation completes
+    const continueOperations = await confirm({
+      message: 'Would you like to perform another applet operation?',
+      default: true
+    });
+    
+    if (continueOperations) {
+      await CLIManageApplets();
+    } else {
+      await CLIBuildMenu();
+    }
     return false;
   } catch (error) {
     handleError(error);

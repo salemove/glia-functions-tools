@@ -148,6 +148,10 @@ export async function getTemplateEnvVars(templateName) {
             MODEL: 'gpt-3.5-turbo',
             TEMPERATURE: '0.7',
             MAX_TOKENS: '500'
+        },
+        'kv-store-function': {
+            EXAMPLE_CONFIG: 'sample-config-value',
+            DEBUG_MODE: 'false'
         }
     };
     
