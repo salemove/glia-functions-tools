@@ -1,0 +1,30 @@
+---
+update:
+  summary: Update Direct ID Token validation public key
+  tags:
+    - Direct ID Token
+  # yamllint disable rule:line-length
+  description: |
+    Forces an update of the public key used to validate the signature of the Direct ID Token authentication.
+
+    The responsibility of the endpoint is to trigger the update of Direct ID validation keys of the requested site from the provider URL.
+
+    ### Implementation
+
+    For more information on how to set up Direct ID Token authentication, see:
+
+    * <a href="https://docs.glia.com/glia-how-to/docs/implementing-direct-id-token-authentication" target="implementing-direct-id-token-authentication">Implementing Direct ID Authentication</a>
+    * <a href="https://docs.glia.com/glia-dev/reference/post_sites-site-id-visitor-authentication-providers">`POST /sites/{site_id}/visitor_authentication_providers` endpoint</a>
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * Base of the user's role: `super_manager`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../../common_components/parameters.yaml#/path/site_id'
+  responses:
+    $ref: '../responses/direct_id_validation_public_key.yaml#/success'

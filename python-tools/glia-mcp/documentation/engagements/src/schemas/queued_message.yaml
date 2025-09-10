@@ -1,0 +1,61 @@
+---
+schema:
+  type: object
+  properties:
+    content:
+      $ref: '../properties/messaging.yaml#/properties/content'
+    site_id:
+      $ref: '../properties/messaging.yaml#/properties/site_id'
+    attachment:
+      $ref: '../properties/messaging.yaml#/properties/attachment'
+    visitor_id:
+      $ref: '../properties/messaging.yaml#/properties/visitor_id'
+    metadata:
+      $ref: '../properties/messaging.yaml#/properties/metadata'
+    webhooks:
+      $ref: '../properties/messaging.yaml#/properties/webhooks'
+      description: |
+        See [Webhooks](ref:webhooks) section for more information.
+  required:
+    - content
+    - site_id
+
+examples:
+  chat_message:
+    summary: Message only
+    value: &base_chat_message
+      content: Hi, I would like some suggestions regarding insurance.
+      site_id: def34343-e888-43ae-99e0-07a676e9a111
+
+  file_attachment:
+    summary: Message with file attachment
+    value:
+      <<: *base_chat_message
+      content: ''
+      attachment:
+        type: files
+        files:
+          - id: 53b236ee-f888-45ec-8e0f-5bf4d5e16a2e
+
+  single_choice_attachment:
+    summary: Message with single choice attachment
+    value:
+      <<: *base_chat_message
+      content: Which of these is correct?
+      attachment:
+        type: single_choice
+        options:
+          - text: Choice 1
+            value: choice_1
+          - text: Choice 2
+            value: choice_2
+        image_url: https://example.com/files/image.png
+
+  single_choice_response_attachment:
+    summary: Message with single choice response attachment
+    value:
+      <<: *base_chat_message
+      content: Choice 2
+      attachment:
+        type: single_choice_response
+        selected_option: choice_2

@@ -1,0 +1,96 @@
+---
+openapi: 3.0.0
+info:
+  title: Queues
+  version: '1.0'
+
+# Base URLS
+servers:
+  - url: 'https://api.glia.com'
+    description: For users worldwide, except Europe
+  - url: 'https://api.glia.eu'
+    description: For users in Europe
+
+# # User bearer access token by default
+security:
+  - userBearer: []
+
+paths:
+  # tag: Queues
+  /queues:
+    post:
+      $ref: './src/paths/queues.yaml#/create'
+    get:
+      # Additional token
+      security:
+        - userBearer: []
+        - visitorBearer: []
+      $ref: './src/paths/queues.yaml#/list'
+  /queues/{queue_id}:
+    get:
+      $ref: './src/paths/queues.yaml#/show'
+    put:
+      $ref: './src/paths/queues.yaml#/update'
+    delete:
+      $ref: './src/paths/queues.yaml#/delete'
+
+  # tag: Operator ordering
+  /queues/{queue_id}/rankings:
+    get:
+      $ref: './src/paths/operator_rankings.yaml#/list'
+    patch:
+      $ref: './src/paths/operator_rankings.yaml#/update'
+
+  # tag: Queue tickets
+  /queue_tickets:
+    post:
+      # Different token
+      security:
+        - visitorBearer: []
+      $ref: './src/paths/queue_tickets.yaml#/create'
+  /queue_tickets/{queue_ticket_id}:
+    get:
+      # Different token
+      security:
+        - visitorBearer: []
+      $ref: './src/paths/queue_tickets.yaml#/show'
+    delete:
+      # Different token
+      security:
+        - visitorBearer: []
+      $ref: './src/paths/queue_tickets.yaml#/delete'
+
+  # tag: Queue scheduling
+  /queues/scheduling_policies:
+    post:
+      $ref: './src/paths/scheduling_policies.yaml#/create'
+    get:
+      $ref: './src/paths/scheduling_policies.yaml#/list'
+  /queues/scheduling_policies/{scheduling_policy_id}:
+    get:
+      $ref: './src/paths/scheduling_policies.yaml#/show'
+    put:
+      $ref: './src/paths/scheduling_policies.yaml#/update'
+    delete:
+      $ref: './src/paths/scheduling_policies.yaml#/delete'
+
+  # tag: Queue scheduling exceptions
+  /queues/scheduling_exception_policies:
+    post:
+      $ref: './src/paths/scheduling_exception_policies.yaml#/create'
+    get:
+      $ref: './src/paths/scheduling_exception_policies.yaml#/list'
+  /queues/scheduling_exception_policies/{scheduling_exception_policy_id}:
+    get:
+      $ref: './src/paths/scheduling_exception_policies.yaml#/show'
+    patch:
+      $ref: './src/paths/scheduling_exception_policies.yaml#/update'
+    delete:
+      $ref: './src/paths/scheduling_exception_policies.yaml#/delete'
+
+components:
+  securitySchemes:
+    userBearer:
+      $ref: '../common_components/security.yaml#/userBearerAuth'
+    visitorBearer:
+      $ref: '../common_components/security.yaml#/visitorBearerAuth'

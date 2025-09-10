@@ -1,0 +1,13 @@
+---
+client_id:
+  name: client_id
+  in: query
+  required: true
+  description: >
+    The ID assigned to the integrator. Glia provides a unique client ID for each integrator who wish to encrypt the tokens.
+
+
+    To obtain the client ID, please submit a ticket via <a href="https://glia.atlassian.net/servicedesk/customer/portal/1" target="glia-service-desk">Glia Service Desk</a>.
+  schema:
+    type: string
+  example: 38b006e1-d801-477d-889c-987105e4fe5c

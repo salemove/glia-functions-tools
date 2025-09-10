@@ -1,0 +1,15 @@
+failure_cause:
+  type: string
+  description: Code that indicates the reason why the transfer summary generation by Cortex AI failed.
+  example: not_enough_content
+success:
+  type: boolean
+  description: Indicates whether the Cortex Transfer Summary generation for the transfer was successful.
+  example: true
+summary:
+  type: object
+  properties:
+    response:
+      type: string
+      description: The transfer summary provided by Cortex AI.
+      example: 'The customer asked what his maximum loan amount was and received the answer that it is 1000 dollars.'

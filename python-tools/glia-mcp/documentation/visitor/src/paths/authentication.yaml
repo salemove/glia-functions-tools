@@ -1,0 +1,36 @@
+---
+create:
+  summary: Request authentication
+  tags:
+    - Authentication requests
+  # yamllint disable rule:line-length
+  description: |
+    Creates an authentication request to authenticate the visitor using a specific authentication provider.
+
+    Note that in addition to this REST API endpoint, there is an authentication request message that can be used to request authentication from a bot and the Visitor JS SDK has a method `createAuthenticationRequest` to request authentication from visitor side.
+
+    See:
+      * [Authentication request message](doc:authentication-request)
+      * [`createAuthenticationRequest`](https://sdk-docs.glia.com/visitor-js-api/current/Salemove.html#createAuthenticationRequest)
+  # yamllint enable rule:line-length
+  requestBody:
+    $ref: '../requests/authentication.yaml#/create_body'
+  responses:
+    $ref: '../responses/authentication.yaml#/success'
+
+# Classical delete actions do not have requestBody, thus gives a semantic error
+delete:
+  summary: Cancel authentication
+  # yamllint enable rule:line-length
+  tags:
+    - Authentication requests
+  # yamllint disable rule:line-length
+  description: |
+    Closes an on-going authentication request for a specific visitor.
+  #  yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/authentication.yaml#/parameters/authentication_request_id'
+  requestBody:
+    $ref: '../requests/authentication.yaml#/delete_body'
+  responses:
+    $ref: '../responses/authentication.yaml#/success_simple'

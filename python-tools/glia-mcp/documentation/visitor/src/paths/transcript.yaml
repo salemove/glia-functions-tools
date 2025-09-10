@@ -1,0 +1,54 @@
+---
+fetch:
+  summary: Fetch visitor transcript
+  tags:
+    - Transcript
+  # yamllint disable rule:line-length
+  description: |
+    Fetches a transcript by the visitor ID.
+
+    The results are sorted in ascending order first by the start time of the engagement leg and then by messages' timestamp.
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens) - The messages returned depend on whether the requester has engaged with the visitor.
+
+    * If the requester has engaged with the visitor at least once, then the response returns messages of the engagement legs that took place on any site in the [group of transferable sites](https://docs.glia.com/glia-dev/docs/glossary#group-of-transferable-sites) to which the site with `site_id` belongs.
+    Requires:
+      * Base of the user's role, one of:
+        * `operator`
+        * `manager`
+        * `super_manager`
+    * If the requester has never engaged with the visitor but is assigned to the site with `site_id`, then the response returns messages of the engagement legs that occurred on any of the sites the requester is assigned to.
+    Requires:
+      * Base of the user's role, one of:
+        * `manager`
+        * `super_manager`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+
+
+    ### Interpreting the Output
+
+    #### Pagination
+
+    The response payload includes `next_page` and `prev_page` links which can be used to get the next or previous batch of messages. If the `next_page` is `null` then there are no more future messages. If the `prev_page` is `null` then there are no more past messages.
+
+    The `next_page` and `prev_page` links must **not** be parsed as they are automatically generated and can change at any time.
+
+    For more information, see [Pagination](ref:pagination).
+
+
+    ### Messages when Store Engagement Transcript is Off
+
+    When the <a href="https://docs.glia.com/glia-support/docs/storing-engagement-data#store-engagement-transcript" target="store-engagement-transcript">Store Engagement Transcript</a> setting is **Off**, the messages are stored for a short period of time in the temporary database, during which they may be returned via this endpoint.
+    Once a message has been deleted, only the `engagement_leg_id` and `id` of the message will be returned in `messages`, all other data is deleted. It is possible that both deleted and persistent messages may be returned on one page of messages when the transcript spans multiple sites with different <a href="https://docs.glia.com/glia-support/docs/storing-engagement-data#store-engagement-transcript" target="store-engagement-transcript">Store Engagement Transcript</a> settings.
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/site_visitors.yaml#/parameters/visitor_id'
+    - $ref: '../parameters/transcript.yaml#/site_id'
+    - $ref: '../parameters/transcript.yaml#/engagement_id'
+    - $ref: '../../../common_components/parameters.yaml#/query/per_page'
+
+  responses:
+    $ref: '../responses/transcript.yaml#/fetch'

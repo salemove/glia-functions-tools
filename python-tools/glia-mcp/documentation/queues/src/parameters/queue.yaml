@@ -1,0 +1,52 @@
+---
+queue_id:
+  name: queue_id
+  in: path
+  required: true
+  description: Queue ID.
+  schema:
+    type: string
+    example: d8ef4095-b002-4b80-9e70-4c132eaa2df2
+site_ids:
+  name: site_ids[]
+  in: query
+  required: true
+  description: List of site ID's.
+  schema:
+    type: array
+    items:
+      type: string
+      example: def34343-e888-43ae-99e0-07a676e9a111
+team_ids:
+  name: team_ids[]
+  in: query
+  # yamllint disable rule:line-length
+  description: |
+    An optional list of team IDs, that is used to fetch only those queues that have specified teams assigned to them.
+  # yamllint enable rule:line-length
+  schema:
+    type: array
+    items:
+      type: string
+      example: 5db50064-8bf8-4c4a-98fc-79cd04a089c5
+include_without_teams:
+  name: include_without_teams
+  in: query
+  required: false
+  # yamllint disable rule:line-length
+  description: |
+    Optional filter, which is usable in conjunction with the `team_ids` filter, when applied it will include queues that do not have any teams assigned to them.
+  # yamllint enable rule:line-length
+  schema:
+    type: boolean
+    enum:
+      - true
+      - false
+partition_id:
+  name: partition_id
+  in: query
+  required: false
+  description: An optional filter, when applied it will include queues with matching partition ID.
+  schema:
+    type: string
+    example: c3d4e5f6-a7b8-9c0d-1e2f-3a4b5c6d7e8f

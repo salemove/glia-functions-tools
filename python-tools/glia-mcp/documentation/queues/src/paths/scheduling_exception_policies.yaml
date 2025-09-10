@@ -1,0 +1,157 @@
+---
+create:
+  summary: Create exception policy
+  tags:
+    - Queue scheduling exceptions
+  # yamllint disable rule:line-length
+  description: |
+    Creates a queue scheduling exception policy with the provided values.
+
+    Note that the `site_id` can only be set when creating a queue scheduling exception policy. Later, the policy cannot be associated with another site.
+
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * Access permissions: `scheduling_exception_policies:create`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  requestBody:
+    required: true
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          $ref: '../schemas/create_scheduling_exception_policy.yaml'
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../responses/scheduling_exception_policy.yaml'
+          example:
+            $ref: '../examples/scheduling_exception_policies.yaml#/DefaultExceptionPolicy'
+
+list:
+  summary: List exception policies
+  tags:
+    - Queue scheduling exceptions
+  # yamllint disable rule:line-length
+  description: |
+    Fetches queue scheduling exception policies by their site IDs.
+
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens)
+
+    * To list scheduling exception policies with their full set of properties, requires:
+      * Access permissions: `scheduling_exception_policies:read`
+
+    * To list scheduling exception policies' IDs and names, requires:
+      * Access permissions: `list:scheduling_exception_policies`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/queue.yaml#/site_ids'
+      description: A list of `site_id`-s for which the queue scheduling exception policies are requested.
+    - $ref: '../parameters/scheduling_exception_policy.yaml#/view'
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            oneOf:
+              - $ref: '../responses/scheduling_exception_policies.yaml#/list_response'
+              - $ref: '../responses/scheduling_exception_policies.yaml#/limited_list_response'
+          example:
+            $ref: '../examples/scheduling_exception_policies.yaml#/ExceptionPoliciesList'
+
+show:
+  summary: Fetch exception policy
+  tags:
+    - Queue scheduling exceptions
+  # yamllint disable rule:line-length
+  description: |
+    Fetches a queue scheduling exception policy by its ID.
+
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * Access permissions: `scheduling_exception_policies:read`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/scheduling_exception_policy.yaml#/scheduling_exception_policy_id'
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../responses/scheduling_exception_policy.yaml'
+          example:
+            $ref: '../examples/scheduling_exception_policies.yaml#/DefaultExceptionPolicy'
+
+update:
+  summary: Update exception policy
+  tags:
+    - Queue scheduling exceptions
+  # yamllint disable rule:line-length
+  description: |
+    Updates a specified queue scheduling exception policy.
+
+    Note that the `site_id` of a queue scheduling exception policy cannot be changed.
+
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * Access permissions: `scheduling_exception_policies:update`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/scheduling_exception_policy.yaml#/scheduling_exception_policy_id'
+  requestBody:
+    required: true
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          $ref: '../schemas/update_scheduling_exception_policy.yaml'
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../responses/scheduling_exception_policy.yaml'
+          example:
+            $ref: '../examples/scheduling_exception_policies.yaml#/DefaultExceptionPolicy'
+
+delete:
+  summary: Delete exception policy
+  tags:
+    - Queue scheduling exceptions
+  # yamllint disable rule:line-length
+  description: |
+    Deletes a specified queue scheduling exception policy if there are no queues using it.
+
+
+     ### Authorization and Permissions
+
+     [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+     * Access permissions: `scheduling_exception_policies:delete`
+
+     For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/scheduling_exception_policy.yaml#/scheduling_exception_policy_id'
+  responses:
+    '204':
+      description: Scheduling exception policy was deleted.

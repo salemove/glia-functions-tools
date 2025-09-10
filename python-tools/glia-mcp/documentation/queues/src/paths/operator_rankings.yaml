@@ -1,0 +1,67 @@
+---
+list:
+  summary: List positions
+  tags:
+    - Operator ordering
+  # yamllint disable rule:line-length
+  description: |
+    Fetches operators with their positions in the queue by the queue ID.
+
+    The operator collection includes only the operators that have been assigned a position in the queue at some point in time. This means that the collection might not include all of the operators that are associated with the queue and it might include operators that are no longer associated with the queue.
+
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * Access permissions: `queues:read`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/queue.yaml#/queue_id'
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/operator_rankings.yaml'
+          example:
+            $ref: '../examples/operator_rankings.yaml#/RankingsList'
+update:
+  summary: Update positions
+  tags:
+    - Operator ordering
+  # yamllint disable rule:line-length
+  description: |
+    Updates a specified operators' positions in the queue.
+
+    Operators must be assigned to the site that the queue is defined for.
+
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * Access permissions: `queues:update`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/queue.yaml#/queue_id'
+  requestBody:
+    required: true
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          $ref: '../schemas/operator_rankings.yaml'
+        example:
+          $ref: '../examples/operator_rankings.yaml#/RankingsList'
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/operator_rankings.yaml'
+          example:
+            $ref: '../examples/operator_rankings.yaml#/RankingsList'

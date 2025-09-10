@@ -1,0 +1,57 @@
+---
+type: object
+properties:
+  name:
+    $ref: '../properties/queue.yaml#/name'
+  description:
+    $ref: '../properties/queue.yaml#/description'
+  is_default:
+    $ref: '../properties/queue.yaml#/is_default'
+  priority:
+    $ref: '../properties/queue.yaml#/priority'
+  capacity_policy:
+    $ref: '../properties/queue.yaml#/capacity_policy'
+  routing_policy:
+    $ref: '../properties/queue.yaml#/routing_policy'
+  when_unstaffed:
+    $ref: '../properties/queue.yaml#/when_unstaffed'
+  display_phone_number:
+    $ref: '../properties/queue.yaml#/display_phone_number'
+  operator_ranking_enabled:
+    $ref: '../properties/queue.yaml#/operator_ranking_enabled'
+  welcome_message:
+    $ref: '../properties/queue.yaml#/welcome_message'
+  scheduling_policy_id:
+    $ref: '../properties/queue.yaml#/scheduling_policy_id'
+  scheduling_exception_policy_id:
+    $ref: '../properties/queue.yaml#/scheduling_exception_policy_id'
+  fallback_queue_id:
+    $ref: '../properties/queue.yaml#/fallback_queue_id'
+  operator_affinity:
+    $ref: '../properties/queue.yaml#/operator_affinity'
+  partition_id:
+    $ref: '../properties/queue.yaml#/partition_id'
+example:
+  name: Technical support queue (text)
+  description: Text queue for technical support team
+  is_default: false
+  priority: 0
+  capacity_policy:
+    type: variable
+    multiplier: 1.5
+  routing_policy:
+    media:
+      - text
+    team_ids:
+      - ca98bb0c-187e-4db9-9662-b33e7f2326c0
+  display_phone_number:
+    type: no_number
+  when_unstaffed: reject
+  operator_ranking_enabled: true
+  welcome_message: Welcome to our company
+  scheduling_policy_id: db46cede-0927-46a2-ae02-3d93dbb6648d
+  scheduling_exception_policy_id: a7319a39-e888-4659-8a39-d2515d323824
+  fallback_queue_id: 7a5ba173-3f6e-432e-96fc-1a45b3eba3b1
+  operator_affinity:
+    time_window_sec: 600
+  partition_id: c3d4e5f6-a7b8-9c0d-1e2f-3a4b5c6d7e8f

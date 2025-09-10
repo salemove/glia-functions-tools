@@ -1,0 +1,57 @@
+---
+title: 'SSML'
+type: object
+properties:
+  type:
+    type: string
+    description: >
+      Type of an attachment.
+
+
+      To have the attachment's `content` synthesized to speech for the visitor
+
+      * Attachment type must be `ssml`.
+
+      * Sender must be an operator with audio source `tts_stt`.
+
+
+      Note that if a chat message contains an attachment of this type, then the `content` parameter of the chat message
+      is replaced by the `content` of the attachment with markup tags removed. This will be contained in chat history.
+    enum:
+      - ssml
+    # Example defined so that single dropdown value is selected by default.
+    example: ssml
+
+  content:
+    type: string
+    description: >
+      Message in SSML format. A valid SSML message starts with a `<speak>` tag and ends with `</speak>`.
+
+
+      Supported SSML tags are
+
+      * `<break>`
+
+      * `<emphasis>`
+
+      * `<lang>`
+
+      * `<p>`
+
+      * `<phoneme>`
+
+      * `<prosody>`
+
+      * `<s>`
+
+      * `<say-as>`
+
+      * `<sub>`
+
+      * `<w>`
+    example:
+      content: <speak><prosody pitch="+5%">Hello<break>How may I help you with the application?</prosody></speak>
+
+required:
+  - type
+  - content

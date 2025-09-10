@@ -1,0 +1,32 @@
+---
+title: 'Transfer AI suggestion usage'
+type: object
+properties:
+  type:
+    type: string
+    description: >
+      Type of an attachment.
+
+      Only used in transfer note messages (when metadata contains `"message_code" : "system_message.transfer_note"`).
+
+      To indicate the usage of AI suggestion in transfer message, type must be `transfer_ai_suggestion_usage`.
+    enum:
+      - transfer_ai_suggestion_usage
+    # Example defined so that single dropdown value is selected by default.
+    example: transfer_ai_suggestion_usage
+
+  value:
+    type: string
+    description: >
+      Usage of AI suggestion in transfer message.
+      If the Transfer Summary feature is not enabled the value is always `none`.
+      If the feature is enabled and the suggestion was not modified after generation, value is `as-is`. Otherwise `modified`.
+    enum:
+      - none
+      - as-is
+      - modified
+    example: none
+
+required:
+  - type
+  - value

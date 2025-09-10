@@ -1,0 +1,64 @@
+---
+create:
+  summary: Transfer to queue
+  tags:
+    - Transfer
+  # yamllint disable rule:line-length
+  description: |
+    Transfers an engagement to a specified queue.
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * The user is the host operator of the engagement.
+    * Base of the user's role, one of:
+      * `operator`
+      * `manager`
+      * `super_manager`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  requestBody:
+    description: Parameters for creating the transfer request.
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            engagement_id:
+              $ref: '../properties/transfer_request.yaml#/properties/engagement_id'
+            queue_id:
+              $ref: '../properties/transfer_ticket.yaml#/properties/queue_id'
+            media:
+              $ref: '../properties/transfer_request.yaml#/properties/media'
+            message:
+              $ref: '../properties/transfer_request.yaml#/properties/message'
+            webhooks:
+              $ref: '../properties/transfer_request.yaml#/properties/webhooks'
+            ai_suggestion_usage:
+              $ref: '../properties/transfer_request.yaml#/properties/ai_suggestion_usage'
+          required:
+            - engagement_id
+            - queue_id
+            - media
+
+  responses:
+    '201':
+      description: Engagement was transferred to a queue.
+    '200':
+      description: |
+        The engagement was already transferred to the queue.
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '409':
+      description: |
+        The engagement was already transferred, but not with the same parameters.
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+    '500':
+      $ref: '../../../common_components/responses/errors.yaml#/500_internal_server_error'
+    '503':
+      $ref: '../../../common_components/responses/errors.yaml#/503_service_unavailable'

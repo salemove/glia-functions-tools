@@ -1,0 +1,38 @@
+---
+Accept:
+  type: object
+  description: Transfer request was accepted.
+  properties:
+    id:
+      type: string
+      description: ID of the transfer request.
+
+Decline:
+  type: object
+  description: Transfer request was declined.
+  properties:
+    id:
+      type: string
+      description: ID of the transfer request.
+
+Cancel:
+  type: object
+  description: Transfer request was canceled.
+  properties:
+    id:
+      type: string
+      description: ID of the transfer request.
+
+Confirm:
+  type: object
+  description: Transfer request was confirmed.
+  properties:
+    id:
+      type: string
+      description: ID of the transfer request.
+    engagement_id:
+      type: string
+      description: ID of the engagement.
+    sub_engagement_id:
+      type: string
+      description: ID of the new engagement leg.

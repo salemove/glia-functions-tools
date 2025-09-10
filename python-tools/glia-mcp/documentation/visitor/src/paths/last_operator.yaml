@@ -1,0 +1,47 @@
+---
+fetch:
+  summary: Fetch last operator
+  tags:
+    - Last operator
+  # yamllint disable rule:line-length
+  description: |
+    Fetches the ID and team IDs of the operator that had the latest ended engagement or proactive engagement request with a specific visitor on a specific site.
+
+    ### Authorization and Permissions
+
+    [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens), requires:
+    * Scope: `outbound_sms:create`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../../common_components/parameters.yaml#/path/site_id'
+    - $ref: '../parameters/site_visitors.yaml#/parameters/visitor_id'
+  responses:
+    '200':
+      description: |
+        OK
+
+        The `id` and `team_ids` of the operator that had the latest interaction.
+
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+                description: The unique ID of the operator.
+                example: ec317122-e888-4b43-996d-34a2ed3b76d8
+              team_ids:
+                type: array
+                description: Set of team ID-s the operator belongs to on the site with ID `site_id`.
+                items:
+                  type: string
+                example:
+                  - 4918e73f-e888-45cb-bc69-67cc541849ea
+    '204':
+      description: |
+        No Content
+
+        There is no operator to match the request.

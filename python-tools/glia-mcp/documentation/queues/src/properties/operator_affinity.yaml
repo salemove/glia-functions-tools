@@ -1,0 +1,20 @@
+---
+type: object
+description: >
+  Operator affinity of the queue.
+
+
+  Allows to engage the visitor with the last operator with whom the visitor had an engagement prior to enqueueing.
+properties:
+  time_window_sec:
+    type: integer
+    description: >
+      The number of seconds to wait for the previously engaged operator to become available after the visitor has
+      enqueued.
+
+
+      If the operator does not become available during `time_window_sec`, the visitor will be matched with other
+      operators based on the routing policy.
+    minimum: 0
+    exclusiveMinimum: true
+    maximum: 345600

@@ -1,0 +1,78 @@
+---
+openapi: 3.0.0
+info:
+  title: Functions
+  version: '1.0'
+
+# Base URLs
+servers:
+  - url: 'https://api.glia.com'
+    description: For users worldwide, except Europe
+  - url: 'https://api.glia.eu'
+    description: For users in Europe
+
+# User and site bearer access token by default
+security:
+  - userBearer: []
+  - siteBearer: []
+
+paths:
+  # tag: Functions
+  /functions:
+    post:
+      $ref: './src/paths/functions.yaml#/create'
+    get:
+      $ref: './src/paths/functions.yaml#/list'
+  /functions/stats:
+    post:
+      # Only user bearer access token
+      security:
+        - userBearer: []
+      $ref: './src/paths/functions.yaml#/fetch_stats'
+  /functions/{function_id}:
+    get:
+      $ref: './src/paths/functions.yaml#/fetch'
+    patch:
+      # Only user bearer access token
+      security:
+        - userBearer: []
+      $ref: './src/paths/functions.yaml#/update'
+  /functions/{function_id}/logs:
+    get:
+      $ref: './src/paths/functions.yaml#/logs'
+  /functions/{function_id}/tasks/{task_id}:
+    get:
+      $ref: './src/paths/functions.yaml#/fetch_task'
+  /functions/{function_id}/versions:
+    post:
+      $ref: './src/paths/versions.yaml#/create'
+    get:
+      $ref: './src/paths/versions.yaml#/list'
+  /functions/{function_id}/deployments:
+    post:
+      $ref: './src/paths/functions.yaml#/deployments'
+  /functions/{function_id}/versions/{version_id}:
+    patch:
+      $ref: './src/paths/versions.yaml#/update'
+    get:
+      $ref: './src/paths/versions.yaml#/fetch'
+  /functions/{function_id}/versions/{version_id}/code:
+    get:
+      $ref: './src/paths/versions.yaml#/fetch_code'
+  /integrations/{integration_id}/endpoint:
+    post:
+      $ref: './src/paths/functions.yaml#/invoke'
+
+  # tag: Functions KV Store
+  /api/v2/functions/storage/kv/namespaces/{namespace}:
+    post:
+      $ref: './src/paths/kv_store.yaml#/bulk_operations'
+    get:
+      $ref: './src/paths/kv_store.yaml#/list'
+
+components:
+  securitySchemes:
+    userBearer:
+      $ref: '../common_components/security.yaml#/userBearerAuth'
+    siteBearer:
+      $ref: '../common_components/security.yaml#/siteBearerAuth'

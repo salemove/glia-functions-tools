@@ -1,0 +1,173 @@
+---
+id:
+  type: string
+  description: Queue ticket ID.
+site_id:
+  type: string
+  description: ID of the site that the visitor enqueues on.
+media:
+  type: string
+  description: |
+    The initial engagement media type.
+
+    Can only be `text`, `messaging`, or `phone` if the request is made by a visitor integrator.
+  enum:
+    - text
+    - phone
+    - audio
+    - video
+    - messaging
+media_options:
+  type: object
+  description: Any additional parameters for the desired media type.
+  properties:
+    phone_number:
+      type: string
+      description: >
+        Phone number of the visitor. The supported format is [E.164](doc:glossary#phone-number). Must be set if `audio_source`
+        is `phone`.
+    phone_extension:
+      type: string
+      description: >
+        The phone number extension of the visitor.
+
+
+        A valid extension contains 1-25 digits or hashes and any number of `,` characters.
+
+
+        There is an initial two-second delay time before the first extension character is processed. Each `,` character in
+        the extension adds a two-second wait time before the next character is processed. Maximum length is 25 characters.
+
+
+        Valid only if `phone_number` is also set.
+    one_way:
+      # TODO: This should be validated whether this property has any impact here and maybe should be removed.
+      type: boolean
+      description: >
+        * When set to `true`, the video will start from the operator to the visitor only.
+
+
+        * When set to `false`, the video starts both ways - from the operator to the visitor and from the visitor to the
+        operator.
+      default: true
+team_ids:
+  type: array
+  deprecated: true
+  description: |
+    Set of team IDs to restrict engagement request to.
+
+    An operator must belong to at least one of the specified teams to be able to serve the visitor.
+
+    * This parameter cannot be used together with the parameters `queue_ids` or `queue_id`.
+
+    * Deprecated. Use `queue_ids` instead.
+  items:
+    type: string
+queue_ids:
+  type: array
+  description: |
+    Set of queue IDs, to which queue ticket will be assigned.
+
+    An operator must belong to at least one of the specified queues to be able to serve the visitor.
+
+    * This parameter cannot be used together with the (deprecated) parameter `team_ids`.
+    * Specifying `queue_id` or `queue_ids` is required.
+  items:
+    type: string
+queue_id:
+  type: string
+  deprecated: true
+  description: |
+    Queue ID, to which queue ticket will be assigned.
+
+    This parameter cannot be used together with the parameter `team_ids`.
+
+    * Use `queue_ids` instead.
+    * Specifying `queue_id` or `queue_ids` is required.
+input_source:
+  type: string
+  description: |-
+    One of the engagement/transfer request sources:
+    * `button_embed` - (_reactive_) Engagement started via **Contact Operator** button.
+    * `callout` - (_reactive_) Engagement started via business rules. E.g. a business rule triggered a media selector which was then used to start the engagement.
+    * `facebook` - (_reactive_) Visitor sent message from Facebook Messenger.
+    * `hotlink` - (_reactive_) Engagement started via hotlink.
+    * `sdk` - (_reactive_) Engagement started using the JS SDK, Android SDK or iOS SDK.
+    * `slack` - (_reactive_) Engagement started via Slack.
+    * `sms` - (_reactive_) Visitor sent SMS message.
+    * `tab` - (_reactive_) Engagement started in the browser tab (via the bubble).
+    * `visitor_integrator` - (_reactive_) Engagement started by REST API call.
+    * `whatsapp` - (_reactive_) Visitor sent message from WhatsApp.
+    * `<empty>` - (_proactive_) Engagement was requested by the operator.
+  enum:
+    - button_embed
+    - callout
+    - facebook
+    - hotlink
+    - sdk
+    - slack
+    - sms
+    - tab
+    - visitor_integrator
+    - whatsapp
+    - <empty>
+output_source:
+  type: string
+  description: |-
+    One of the engagement/transfer request sources:
+    * `button_embed` - (_reactive_) Engagement started via **Contact Operator** button.
+    * `callout` - (_reactive_) Engagement started via business rules. E.g. a business rule triggered a media selector which was then used to start the engagement.
+    * `external_call` - (_reactive_) **Deprecated**
+    * `facebook` - (_reactive_) Visitor sent message from Facebook Messenger.
+    * `hotlink` - (_reactive_) Engagement started via hotlink.
+    * `offline_phone` - (_reactive_) Visitor called a phone number.
+    * `outbound_call` - (_proactive_) Operator called visitor's phone.
+    * `outbound_text` - (_proactive_) SMS message was sent to visitor's phone.
+    * `sdk` - (_reactive_) Engagement started using the JS SDK, Android SDK or iOS SDK.
+    * `slack` - (_reactive_) Engagement started via Slack.
+    * `sms` - (_reactive_) Visitor sent SMS message.
+    * `tab` - (_reactive_) Engagement started in the browser tab (via the bubble).
+    * `visitor_integrator` - (_reactive_) Engagement started by REST API call.
+    * `whatsapp` - (_reactive_) Visitor sent message from WhatsApp.
+    * `<empty>` - (_proactive_) Engagement was requested by the operator.
+  enum:
+    - button_embed
+    - callout
+    - external_call
+    - facebook
+    - hotlink
+    - offline_phone
+    - outbound_call
+    - outbound_text
+    - sdk
+    - slack
+    - sms
+    - tab
+    - visitor_integrator
+    - whatsapp
+    - <empty>
+webhooks:
+  $ref: '../../../common_components/properties.yaml#/webhooks'
+  maxItems: 10
+visitor_authentication:
+  type: object
+  description: |
+    Headers which are required to make subsequent requests that modify the queue ticket and an eventual engagement.
+state:
+  type: string
+  description: |-
+    The current state of the queue ticket.
+
+    * `enqueued` and `request_sent` - active states.
+    * `paused` - non active state.
+    * `finished`, `canceled`, and `failed` - terminal states.
+  enum:
+    - finished
+    - canceled
+    - failed
+    - enqueued
+    - request_sent
+    - paused
+engagement_id:
+  type: string
+  description: ID of the engagement that the queue ticket is associated to.

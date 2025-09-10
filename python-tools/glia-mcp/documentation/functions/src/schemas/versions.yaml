@@ -1,0 +1,43 @@
+---
+create_version_request:
+  properties:
+    compatibility_date:
+      $ref: '../properties/versions.yaml#/compatibility_date'
+    code:
+      $ref: '../properties/versions.yaml#/code'
+    environment_variables:
+      $ref: '../properties/versions.yaml#/environment_variables'
+  required:
+    - code
+version_task_response:
+  properties:
+    self:
+      $ref: '../properties/functions.yaml#/task_self'
+    status:
+      $ref: '../properties/functions.yaml#/task_status'
+
+list_response:
+  properties:
+    next_page:
+      $ref: '../properties/versions.yaml#/next_page'
+    function_versions:
+      type: array
+      description: List of function versions.
+      items:
+        $ref: '../properties/versions.yaml#/function_version'
+
+update_request:
+  properties:
+    compatibility_date:
+      $ref: '../properties/versions.yaml#/update_compatibility_date'
+    code:
+      $ref: '../properties/versions.yaml#/code'
+    environment_variables:
+      $ref: '../properties/versions.yaml#/update_environment_variables'
+
+fetch_response:
+  $ref: '../properties/versions.yaml#/function_version_item'
+
+fetch_code_response:
+  type: string
+  example: "export function onInvoke(request, env) {return Response.JSON({ msg: 'Hello world' });}"

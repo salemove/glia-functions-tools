@@ -1,0 +1,64 @@
+---
+display_phone_number:
+  description: >
+    Specifies which phone number is shown to the visitor when they get a phone call on behalf of a queue.
+    The following options are supported:
+
+    * Incoming phone number - The phone number inside the `display_phone_number` object is used for outbound calls on behalf of the queue.
+
+    * Default display number - The site's default display number is used for outbound calls on behalf of the queue. This number is defined with site setting `default_display_phone_number`.
+
+    * No number - The outbound calls on behalf of the queue are disabled.
+
+  oneOf:
+    - $ref: '#/types/default_display_phone_number'
+    - $ref: '#/types/incoming_phone_number'
+    - $ref: '#/types/no_number'
+
+types:
+  no_number:
+    title: No number
+    type: object
+    description: >
+      The outbound calls on behalf of the queue are disabled.
+    properties:
+      type:
+        type: string
+        description: Must be `no_number`.
+        enum:
+          - no_number
+    required:
+      - type
+  default_display_phone_number:
+    title: Default display number
+    type: object
+    description: >
+      Site's default display number will be used for outbound calls on behalf of the queue.
+
+      The number is defined with the site setting `default_display_phone_number`.
+    properties:
+      type:
+        type: string
+        description: Must be `default_display_phone_number`.
+        enum:
+          - default_display_phone_number
+    required:
+      - type
+  incoming_phone_number:
+    title: Incoming phone number
+    type: object
+    description: >
+      The number defined in this object's `phone_number` property will be shown as the caller to the visitors who get a phone call from this queue.
+    properties:
+      type:
+        type: string
+        description: Must be `incoming_phone_number`.
+        enum:
+          - incoming_phone_number
+      phone_number:
+        type: string
+        description: >
+          This phone number will be used for outbound calls on behalf of queue.
+    required:
+      - type
+      - phone_number

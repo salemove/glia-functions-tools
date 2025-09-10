@@ -1,0 +1,28 @@
+---
+scheduling_exception_policy_id:
+  name: scheduling_exception_policy_id
+  in: path
+  required: true
+  description: ID of the scheduling exception policy.
+  schema:
+    type: string
+    example: a7319a39-e888-4659-8a39-d2515d323824
+
+view:
+  name: view
+  in: query
+  required: false
+  # yamllint disable rule:line-length
+  description: |
+    Specifies the amount of data that will be returned.
+
+    * `full` - Returns all of the data about the scheduling exception policy. Requires the `scheduling_exception_policies:read` permission.
+    * `list` - Returns only the ID, name and the site ID of the scheduling exception policy. Requires the `list:scheduling_exception_policies` permission.
+  # yamllint enable rule:line-length
+  schema:
+    type: string
+    enum:
+      - full
+      - list
+    example: list
+    default: full

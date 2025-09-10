@@ -1,0 +1,33 @@
+---
+type: object
+properties:
+  id:
+    $ref: '../properties/queue_ticket.yaml#/id'
+  site_id:
+    $ref: '../properties/queue_ticket.yaml#/site_id'
+  source:
+    $ref: '../properties/queue_ticket.yaml#/output_source'
+  media:
+    $ref: '../properties/queue_ticket.yaml#/media'
+  team_ids:
+    $ref: '../properties/queue_ticket.yaml#/team_ids'
+  created_at:
+    $ref: '../../../common_components/properties.yaml#/created_at'
+  visitor_authentication:
+    $ref: '../properties/queue_ticket.yaml#/visitor_authentication'
+  webhooks:
+    $ref: '../properties/queue_ticket.yaml#/webhooks'
+  state:
+    $ref: '../properties/queue_ticket.yaml#/state'
+  engagement_id:
+    $ref: '../properties/queue_ticket.yaml#/engagement_id'
+required:
+  - id
+  - site_id
+  - source
+  - media
+  - team_ids
+  - created_at
+  - visitor_authentication
+  - webhooks
+  - state

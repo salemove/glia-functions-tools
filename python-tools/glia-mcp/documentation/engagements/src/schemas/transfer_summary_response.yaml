@@ -1,0 +1,31 @@
+getTransferSummaryResponseExample:
+  success:
+    summary: Success Response
+    value:
+      success: true
+      summary:
+        response:
+          $ref: '../properties/transfer_summary.yaml#/summary/properties/response/example'
+  failure:
+    summary: Failure Response
+    value:
+      success: false
+      failure_cause:
+        $ref: '../properties/transfer_summary.yaml#/failure_cause/example'
+
+getTransferSummarySuccessResponse:
+  title: Success
+  properties:
+    success:
+      $ref: '../properties/transfer_summary.yaml#/success'
+    summary:
+      $ref: '../properties/transfer_summary.yaml#/summary'
+
+getTransferSummaryFailureResponse:
+  title: Failure
+  properties:
+    success:
+      $ref: '../properties/transfer_summary.yaml#/success'
+      example: false
+    failure_cause:
+      $ref: '../properties/transfer_summary.yaml#/failure_cause'

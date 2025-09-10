@@ -1,0 +1,81 @@
+---
+id:
+  type: string
+  description: Policy ID.
+site_id:
+  type: string
+  description: >
+    ID of the site to where the queue scheduling policy belongs.
+name:
+  type: string
+  description: Name of the queue queue scheduling policy.
+description:
+  type: string
+  description: Description of the queue scheduling policy.
+timezone:
+  type: string
+  description: >
+    The timezone of queue scheduling policy business hours.
+
+
+    Must be a valid timezone name in
+    [Olson](https://developer.ibm.com/articles/au-aix-posix/#9Olsonformatspecificationoutline) format.
+  example: America/New_York
+business_hours:
+  type: object
+  description:
+    A collection of rules determining the days of week and daily time intervals during which all the queues with the
+    current scheduling policy must be open.
+  properties:
+    opens_at:
+      type: string
+      description: >
+        Start of the interval.
+
+
+        Must be in the format `HH:MM:SS`, where `HH` represents the hours on a 24-hour clock (`00 - 24`), `MM` represents the
+        minutes (`00 - 59`), and `SS` represents the seconds (`00 - 59`).
+
+
+        The interval is closed-open type - i.e. inclusive lower bound, exclusive upper bound.
+      example: '15:30:00'
+    closes_at:
+      type: string
+      description: |
+        End of the interval.
+
+        Must be in the same format as `opens_at`.
+      example: '19:45:00'
+    days_of_week:
+      type: array
+      minItems: 1
+      description: |
+        List of weekdays which current rule applies to.
+
+        Weekdays must be in format of 3-letter weekday case-insensitive abbreviations.
+
+        Duplicate elements are ignored.
+      items:
+        type: string
+        enum:
+          - mon
+          - tue
+          - wed
+          - thu
+          - fri
+          - sat
+          - sun
+  required:
+    - opens_at
+    - closes_at
+    - days_of_week
+created_at:
+  $ref: '../../../common_components/properties.yaml#/created_at'
+updated_at:
+  $ref: '../../../common_components/properties.yaml#/updated_at'
+created_by:
+  type: string
+  description: ID of the user who created the policy.
+updated_by:
+  type: string
+  description: ID of the user who most recently updated the policy.

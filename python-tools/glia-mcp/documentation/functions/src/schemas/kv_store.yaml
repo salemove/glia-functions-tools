@@ -1,0 +1,118 @@
+---
+bulk_operations_request:
+  properties:
+    operations:
+      type: array
+      description: A list of operations to perform. Maximum of 10 operations per request.
+      items:
+        type: object
+        required:
+          - op
+          - key
+        properties:
+          op:
+            type: string
+            description: The type of the operation.
+            enum:
+              - set
+              - get
+              - delete
+              - testAndSet
+          key:
+            type: string
+            description: The key for the operation. Maximum length is 512 bytes. Can only contain alphanumeric characters (a-z, A-Z, 0-9), underscores (`_`), and hyphens (`-`).
+            pattern: '^[0-9a-zA-Z_-]+$'
+            maxLength: 512
+            example: 'user_profile_name'
+          value:
+            type: string
+            description: The value associated with the key. Maximum length is 16,000 bytes. Required for the `set` operation and not allowed for others.
+            maxLength: 16000
+            example: 'John Doe'
+          old_value:
+            type: string
+            description: The expected current value. Maximum length is 16,000 bytes. Used only for the `testAndSet` operation. Should be `null` when creating a new key-value pair.
+            maxLength: 16000
+            nullable: true
+            example: 'John Doe'
+          new_value:
+            type: string
+            description: The new value to set. Maximum length is 16,000 bytes. Used only for the `testAndSet` operation. Should be `null` when deleting a key-value pair.
+            maxLength: 16000
+            nullable: true
+            example: 'John Apple'
+      maxItems: 10
+
+bulk_operations_response:
+  type: object
+  properties:
+    items:
+      type: array
+      description: A list of results for all the performed operations.
+      items:
+        type: object
+        required:
+          - op
+          - key
+        properties:
+          op:
+            type: string
+            description: The type of the operation.
+            enum:
+              - set
+              - get
+              - delete
+              - testAndSet
+          key:
+            type: string
+            description: The key for the operation.
+            example: 'user_profile_name'
+          value:
+            type: string
+            description: |
+              The value associated with the key.
+              - For successful `set` and `get` operations, and when creating or updating with `testAndSet` operations - the value after the operation.
+              - For successful `delete` operations and when deleting with `testAndSet` operations - the value that was deleted.
+              - For failed operations - `null`.
+            example: 'John Doe'
+          expires:
+            type: string
+            format: date-time
+            description: |
+              The ISO8601 timestamp indicating when the item expires (TTL).
+              - For successful `set` and `get` operations, and when creating or updating with `testAndSet` operations - the Time-To-Live (TTL) expiration timestamp.
+              - For failed operations - `null`.
+            example: '2023-10-01T12:00:00Z'
+
+list_response:
+  type: object
+  properties:
+    items:
+      type: array
+      description: A list of key-value pairs in the specified namespace.
+      items:
+        type: object
+        required:
+          - key
+        properties:
+          key:
+            type: string
+            description: The key of the item.
+            example: 'user_profile_name'
+          value:
+            type: string
+            description: The value associated with the key.
+            example: 'John Doe'
+          expires:
+            type: string
+            format: date-time
+            description: The ISO8601 timestamp indicating when the item expires (TTL).
+            example: '2023-10-01T12:00:00Z'
+    self:
+      type: string
+      description: The URL of the current page of results.
+      example: '/api/v2/functions/storage/kv/namespaces/f1e885f2-b9aa-4ffc-9fdc-d256a2b0c0bd?p=e30='
+    next:
+      type: string
+      description: The URL of the next page of results, if available.
+      example: '/api/v2/functions/storage/kv/namespaces/f1e885f2-b9aa-4ffc-9fdc-d256a2b0c0bd?p=eyJtYXhwYWdlc2l6ZSI6MTAsInN0YXJ0X2tleSI6eyJwa2FjY291bnRfaWQiLCJpZCI6IjEyMyJ9fQ=='

@@ -1,0 +1,4 @@
+---
+type: object
+properties:
+  $ref: '../properties/scheduling_exception_policy.yaml'

@@ -1,0 +1,132 @@
+---
+function:
+  type: object
+  description: Function data.
+  properties:
+    current_version:
+      $ref: '#/current_version'
+    description:
+      $ref: '#/description'
+    id:
+      $ref: '#/id'
+    invocation_uri:
+      $ref: '#/invocation_uri'
+    name:
+      $ref: '#/name'
+    site_id:
+      $ref: '#/site_id'
+
+function_list:
+  type: object
+  description: Function data.
+  properties:
+    description:
+      $ref: '#/description'
+    id:
+      $ref: '#/id'
+    invocation_uri:
+      $ref: '#/invocation_uri'
+    name:
+      $ref: '#/name'
+    site_id:
+      $ref: '#/site_id'
+
+current_version:
+  type: object
+  description: |
+    Current version data.
+
+    If no current version is set, then the value is `null`.
+  properties:
+    href:
+      type: string
+      description: URI of the current version.
+      example: '/functions/32d64c96-22d3-47e2-816e-76795a155600/versions/79532874-5e68-4617-a775-aec46e7a716e'
+    id:
+      type: string
+      description: ID of the current version.
+      example: '79532874-5e68-4617-a775-aec46e7a716e'
+
+log:
+  type: object
+  description: Log data.
+  properties:
+    message:
+      $ref: '#/log_message'
+    timestamp:
+      $ref: '#/log_timestamp'
+
+version_entity:
+  type: object
+  description: Created function version.
+  properties:
+    id:
+      type: string
+      description: ID of the created function version.
+      example: '79532874-5e68-4617-a775-aec46e7a716e'
+    self:
+      type: string
+      description: URI of the created function version.
+      example: '/functions/32d64c96-22d3-47e2-816e-76795a155600/versions/79532874-5e68-4617-a775-aec46e7a716e'
+date:
+  type: string
+  description: A date in ISO 8601 format when the function was invoked.
+  example: '2023-10-19'
+description:
+  type: string
+  description: Description of the function.
+  example: 'This function can be used with AI Engines.'
+id:
+  type: string
+  description: ID of the function.
+  example: '32d64c96-22d3-47e2-816e-76795a155600'
+function_ids:
+  type: array
+  description: A list of function IDs.
+  items:
+    type: string
+    example: '32d64c96-22d3-47e2-816e-76795a155600'
+invocation_uri:
+  type: string
+  description: URI for invoking the function.
+  example: '/integrations/bf5ab8d1-f14e-4205-b8af-bb517f910101/endpoint'
+invocation_count:
+  type: number
+  description: The count of Glia function invocations on a given day. The invocations are included based on UTC/GMT time zone.
+  example: '10'
+name:
+  type: string
+  description: Name of the function.
+  example: 'AI Engine function'
+site_id:
+  type: string
+  description: ID of the site to which the function belongs.
+  example: 'def34343-e888-43ae-99e0-07a676e9a111'
+next_page:
+  type: string
+  description: |
+    URL for fetching next patch of logs. The value is null when the current page is the last page.
+  example: 'https://api.glia.com/functions/32d64c96-22d3-47e2-816e-76795a155600/logs?page_token=eyJmaWx0ZXJfcGFyYW1zIjp7InBlcl9wYWdlIj' #gitleaks:allow
+log_message:
+  type: string
+  description: String-formatted log message.
+  example: 'START function invoke'
+log_timestamp:
+  type: string
+  description: Timestamp in the ISO-8601 format of when the log message was created.
+  example: '2023-10-19T12:10:53.908Z'
+task_status:
+  type: string
+  description: Current status of the function version creation task.
+  enum:
+    - processing
+    - completed
+    - failed
+task_self:
+  type: string
+  description: URI of the function version creation task that can be polled from.
+  example: '/functions/32d64c96-22d3-47e2-816e-76795a155600/tasks/3c4e06be-8c0d-41ca-9df7-ab88c1b88833'
+deployments_version_id:
+  type: string
+  description: ID of the function version that will be the new current version of the function.
+  example: 'b91991b8-e89d-4988-9a43-8d926a6dbbbe'

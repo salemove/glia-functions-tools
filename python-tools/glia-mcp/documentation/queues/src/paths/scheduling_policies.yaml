@@ -1,0 +1,151 @@
+---
+create:
+  summary: Create scheduling policy
+  tags:
+    - Queue scheduling
+  # yamllint disable rule:line-length
+  description: |
+    Creates a queue scheduling policy with the provided values.
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * Access permissions: `scheduling_policies:create`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  requestBody:
+    required: true
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          $ref: '../schemas/create_scheduling_policy.yaml'
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../responses/scheduling_policy.yaml'
+          example:
+            $ref: '../examples/scheduling_policies.yaml#/DefaultPolicy'
+
+list:
+  summary: List scheduling policies
+  tags:
+    - Queue scheduling
+  # yamllint disable rule:line-length
+  description: |
+    Fetches queue scheduling policies by their site IDs.
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens)
+
+    * To list scheduling policies with their full set of properties, requires:
+      * Access permissions: `scheduling_policies:read`
+
+    * To list scheduling policies' IDs and names, requires:
+      * Access permissions: `list:scheduling_policies`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/queue.yaml#/site_ids'
+      description: A list of site IDs whose queue scheduling policies are requested.
+    - $ref: '../parameters/scheduling_policy.yaml#/view'
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            oneOf:
+              - $ref: '../responses/scheduling_policies.yaml#/list_response'
+              - $ref: '../responses/scheduling_policies.yaml#/limited_list_response'
+          example:
+            $ref: '../examples/scheduling_policies.yaml#/PoliciesList'
+
+show:
+  summary: Fetch scheduling policy
+  tags:
+    - Queue scheduling
+  # yamllint disable rule:line-length
+  description: |
+    Fetches the queue scheduling policy by its ID.
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * Access permissions: `scheduling_policies:read`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/scheduling_policy.yaml#/scheduling_policy_id'
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../responses/scheduling_policy.yaml'
+          example:
+            $ref: '../examples/scheduling_policies.yaml#/DefaultPolicy'
+
+update:
+  summary: Update scheduling policy
+  tags:
+    - Queue scheduling
+  # yamllint disable rule:line-length
+  description: |
+    Updates a specified queue scheduling policy.
+
+    Note that the site ID of a queue scheduling policy can not be changed.
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * Access permissions: `scheduling_policies:update`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/scheduling_policy.yaml#/scheduling_policy_id'
+  requestBody:
+    required: true
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          $ref: '../schemas/update_scheduling_policy.yaml'
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../responses/scheduling_policy.yaml'
+          example:
+            $ref: '../examples/scheduling_policies.yaml#/DefaultPolicy'
+
+delete:
+  summary: Delete scheduling policy
+  tags:
+    - Queue scheduling
+  # yamllint disable rule:line-length
+  description: |
+    Deletes a specified queue scheduling policy if there are no queues using it.
+
+    #### Authorization: and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * Access permissions: `scheduling_policies:delete`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/scheduling_policy.yaml#/scheduling_policy_id'
+  responses:
+    '204':
+      description: Scheduling policy was deleted.

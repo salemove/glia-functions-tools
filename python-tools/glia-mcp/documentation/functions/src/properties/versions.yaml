@@ -1,0 +1,81 @@
+---
+function_version:
+  type: object
+  description: Function version data.
+  properties:
+    id:
+      $ref: '#/id'
+    created_at:
+      $ref: '../../../common_components/properties.yaml#/created_at'
+
+function_version_item:
+  type: object
+  description: A single function version data.
+  properties:
+    id:
+      $ref: '#/id'
+    created_at:
+      $ref: '../../../common_components/properties.yaml#/created_at'
+    defined_environment_variables:
+      $ref: '#/defined_environment_variables'
+
+id:
+  type: string
+  description: ID of the function version.
+  example: 'b91991b8-e89d-4988-9a43-8d926a6dbbbe'
+compatibility_date:
+  type: string
+  description: |
+    A date that ensures compatibility with the <a href="https://github.com/cloudflare/workerd" target="workerd">workerd</a> runtime environment version, which is used to execute the code.
+    By default, the maximum compatibility date supported by workerd is used.
+  example: '2023-10-30'
+update_compatibility_date:
+  type: string
+  description: |
+    A date that ensures compatibility with the <a href="https://github.com/cloudflare/workerd" target="workerd">workerd</a> runtime environment version, which is used to execute the code.
+    By default, the compatibility date of the base function version (specified by `version_id` in request path parameters) is used.
+  example: '2023-10-30'
+code:
+  type: string
+  description: |
+    A JavaScript code that will be executed on function invocation.
+
+    A Glia function requires a single JavaScript function `onInvoke()` that accepts the passed parameters - the `Request` object and the environment variables - and returns a `Response` object that must be valid JSON. The maximum size of code can be 512,000 bytes.
+    ```
+    export function onInvoke: (req, env) => new Response()
+    ```
+  example: "export function onInvoke(request, env) {return Response.json({ msg: 'Hello world' });}"
+environment_variables:
+  type: object
+  description: A set of key-value pairs for storing secret and non-secret variables that can be used together with the source code on function invocation. The total maximum size of all environment variables is 4000 bytes.
+  properties:
+    key:
+      type: string
+    value:
+      type: string
+  example: {'my_api_key': 'my_api_key_value'}
+update_environment_variables:
+  type: object
+  description: |
+    A set of key-value pairs for storing secret and non-secret variables that can be used together with the source code on function invocation.
+    Setting the value of an environment variable to `null` deletes it. The total maximum size of all environment variables is 4000 bytes.
+
+
+    Note that you can omit the variables that you do not want to update. The environment variables, for which you do not specify a new value, will use the values form the version provided by `version_id` in request path parameters.
+  properties:
+    key:
+      type: string
+    value:
+      type: string
+  example: {'my_api_key': 'my_api_key_value', 'key_to_be_deleted': null}
+defined_environment_variables:
+  type: array
+  description: A list of environment variables' keys that have been defined for this function version.
+  items:
+    type: string
+  example: ['my_api_key']
+next_page:
+  type: string
+  description: |
+    URL for fetching next patch of function versions. The value is null when the current page is the last page.
+  example: 'https://api.glia.com/functions/32d64c96-22d3-47e2-816e-76795a155600/versions?page_token=eyJjdXJzb3IiOltbImNyZWF0ZWRfYXQiLCIyMDIz' #gitleaks:allow

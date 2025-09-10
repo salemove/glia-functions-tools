@@ -1,0 +1,231 @@
+---
+Engagement1: &engagement1
+  id: abc12121-e888-43ae-99e0-07a676e9a111
+  engagement_type: reactive
+  callback_used: false
+  created_at: 2023-05-30T09:46:28Z
+  visitor_name: 'John Smith'
+  visitor_browser: Chrome
+  visitor_device_type: mobile
+  visitor_engagement_phone_number: '+1555123454'
+  glia_engagement_phone_number: '+1555123456'
+  visitor_id: c2c9106e-v888-47b2-8db3-089fb49dc9a5
+  duration: 268
+  queue_wait_time: 42
+  ended_at: 2023-05-30T09:51:28Z
+  end_reason: visitor_left
+  audio_recording_urls:
+    - 'https://api.glia.com/sub_engagements/1234567/conference_recordings/ar56789s-20df-4513-b8d4-b1aff1aa99c9.mp3'
+  audio_recordings:
+    - create_download_url: 'https://api.glia.com/sub_engagements/1234567/conference_recordings/ar56789s-20df-4513-b8d4-b1aff1aa99c9.mp3'
+      leg_id: 'cde12121-c207-45ec-8e0f-5bf4d5e16a2e'
+      source: 'visitor'
+      started_at: 2023-05-30T09:46:28Z
+    - create_download_url: 'https://api.glia.com/sub_engagements/8910112/conference_recordings/b0a94b2f-6e6c-4b68-96ef-f7b745941e6a.mp3'
+      leg_id: 'bcd12121-c106-45ec-8e0f-5bf4d5e16a2e'
+      source: 'all'
+      started_at: 2023-05-30T09:46:28Z
+  flagged: false
+  crm_forwarded: false
+  summary_forwarded: false
+  platform: omnicore
+  visitor:
+    href: 'https://api.glia.com/sites/def34343-s888-43ae-99e0-07a676e9a111/visitors/c2c9106e-v888-47b2-8db3-089fb49dc9a5'
+  chat_transcript:
+    href: 'https://api.glia.com/engagements/abc12121-e888-43ae-99e0-07a676e9a111/chat_transcript'
+  operators:
+    - href: 'https://api.glia.com/operators/ec317122-o888-4b43-996d-34a2ed3b76d8'
+      picture: 'https://uploads.salemove.com/user_assets/ec317122-o888-4b43-996d-34a2ed3b76d8.png'
+      name: 'Emma MacMillan'
+      type: 'human'
+      email: 'emma.macmillan@example.com'
+    - href: 'https://api.glia.com/operators/ec317122-o777-4b43-996d-34a2ed3b76d8'
+      picture: 'https://uploads.salemove.com/user_assets/ec317122-o777-4b43-996d-34a2ed3b76d8.png'
+      name: 'Elsie Blake'
+      type: 'human'
+      email: 'elsie.blake@example.com'
+  source: null
+  queues:
+    - id: f58d4671-q888-4e87-96dc-1d41027bebc5
+      name: 'Queue 1'
+  display_phone_numbers: ['+1555123456']
+  legs:
+    - id: cde12121-c207-45ec-8e0f-5bf4d5e16a2e
+      operator:
+        id: ec317122-o777-4b43-996d-34a2ed3b76d8
+      guests:
+        - id: 9beacfd3-fb36-4a40-827b-6c7c26d34022
+          type: operator
+          joined_at: 2023-05-30T09:46:28Z
+          left_at: 2023-05-30T09:50:10Z
+      site:
+        id: def34343-s888-43ae-99e0-07a676e9a111
+      accepted_at: 2023-05-30T09:48:57Z
+      duration: 158
+      used_cobrowsing: true
+      ended_at: 2023-05-30T09:51:28Z
+      end_reason: visitor_left
+      requested_at: 2023-05-30T09:48:50Z
+      request_type: transfer
+      offered_media_type: text
+      accepted_media_type: text
+      request_queues: null
+      queue_wait_time: null
+      request_source: null
+      highest_visitor_media_type: video
+      highest_operator_media_type: audio
+      transfer_request:
+        id: g5eacfd3-fb36-4230-827b-6c7c26d34022
+        message: Could you please talk to this visitor about the edge case we discussed yesterday?
+        created_at: 2023-05-30T09:49:50Z
+    - id: bcd12121-c106-45ec-8e0f-5bf4d5e16a2e
+      operator:
+        id: ec317122-o888-4b43-996d-34a2ed3b76d8
+      site:
+        id: def34343-s888-43ae-99e0-07a676e9a111
+      accepted_at: 2023-05-30T09:47:01Z
+      duration: 109
+      used_cobrowsing: false
+      ended_at: 2023-05-30T09:48:50Z
+      end_reason: transfer
+      requested_at: 2023-05-30T09:46:28Z
+      request_type: reactive
+      offered_media_type: video
+      accepted_media_type: text
+      request_queues:
+        - id: f58d4671-q777-4e87-96dc-1d41027bebc5
+          name: 'Queue 2'
+      queue_wait_time: 3
+      request_source: tab
+      highest_visitor_media_type: text
+      highest_operator_media_type: text
+      transfer_request: null
+  cobrowsing_used: true
+  video_used: true
+  audio_used: true
+  visitor_survey_configured: true
+  operator_survey_configured: true
+  manager_survey_configured: true
+  operator_surveys:
+    - status: answered
+      wrapped_up_at: 2023-05-30T09:52:28Z
+      leg_id: 'bcd12121-c106-45ec-8e0f-5bf4d5e16a2e'
+  heads_up_for_agents: 'This visitor has been interested in various products and services.'
+
+Engagement2: &engagement2
+  id: abc12121-e777-43ae-99e0-07a676e9a111
+  engagement_type: reactive
+  callback_used: false
+  created_at: 2023-05-07T13:47:21Z
+  visitor_name: 'Mary Hawkins'
+  visitor_browser: Chrome
+  visitor_device_type: mobile
+  visitor_engagement_phone_number: '+1555123454'
+  glia_engagement_phone_number: '+1555123456'
+  visitor_id: c2c9106e-v777-47b2-8db3-089fb49dc9a5
+  duration: 65
+  queue_wait_time: 10
+  ended_at: 2023-05-07T13:48:30Z
+  audio_recording_urls:
+    - 'https://api.glia.com/sub_engagements/1234567/conference_recordings/ar56789s-15df-4513-b8d4-b1aff1aa99c9.mp3'
+  audio_recordings:
+    - create_download_url: 'https://api.glia.com/sub_engagements/1234567/participant_recordings/ar56789s-20df-4513-b8d4-b1aff1aa99c9.mp3'
+      leg_id: 'abc12121-c995-45ec-8e0f-5bf4d5e16a2e'
+      source: 'visitor'
+      started_at: 2023-05-07T13:47:21Z
+    - create_download_url: 'https://api.glia.com/sub_engagements/8910112/conference_recordings/b0a94b2f-6e6c-4b68-96ef-f7b745941e6a.mp3'
+      leg_id: 'abc12121-c995-45ec-8e0f-5bf4d5e16a2e'
+      source: 'all'
+      started_at: 2023-05-07T13:47:21Z
+  flagged: false
+  crm_forwarded: false
+  summary_forwarded: false
+  platform: omnicore
+  visitor:
+    href: 'https://api.glia.com/site/def34343-s888-43ae-99e0-07a676e9a111/visitors/c2c9106e-v777-47b2-8db3-089fb49dc9a5'
+  chat_transcript:
+    href: 'https://api.glia.com/engagements/abc12121-e777-43ae-99e0-07a676e9a111/chat_transcript'
+  operators:
+    - href: 'https://api.glia.com/operators/ec317122-o666-4b43-996d-34a2ed3b76d8'
+      picture: 'https://uploads.salemove.com/user_assets/ec317122-o666-4b43-996d-34a2ed3b76d8.png'
+      name: 'Jordan Green'
+      type: 'human'
+      email: 'jordan.green@example.com'
+  source: null
+  queues:
+    - id: f58d4671-q888-4e87-96dc-1d41027bebc5
+      name: 'Queue 1'
+  display_phone_numbers: ['+1555123456']
+  legs:
+    - id: abc12121-c995-45ec-8e0f-5bf4d5e16a2e
+      operator:
+        id: ec317122-o666-4b43-996d-34a2ed3b76d8
+      guests: []
+      site:
+        id: def34343-s888-43ae-99e0-07a676e9a111
+      accepted_at: 2023-05-07T13:47:35Z
+      duration: 55
+      used_cobrowsing: false
+      ended_at: 2023-05-07T13:48:30Z
+      end_reason: visitor_left
+      requested_at: 2023-05-07T13:47:21Z
+      request_type: reactive
+      offered_media_type: audio
+      accepted_media_type: text
+      request_queues:
+        - id: f58d4671-q888-4e87-96dc-1d41027bebc5
+          name: 'Queue 1'
+      queue_wait_time: 10
+      request_source: tab
+      highest_visitor_media_type: audio
+      highest_operator_media_type: audio
+      transfer_request: null
+  cobrowsing_used: false
+  video_used: false
+  audio_used: true
+  visitor_survey_configured: false
+  operator_survey_configured: false
+  manager_survey_configured: false
+  operator_surveys:
+    - status: answered
+      wrapped_up_at: 2023-05-07T13:49:30Z
+      leg_id: 'abc12121-c995-45ec-8e0f-5bf4d5e16a2e'
+  heads_up_for_agents: null
+
+EngagementList:
+  engagements:
+    - $ref: '#/Engagement1'
+    - $ref: '#/Engagement2'
+  next_page: 'https://api.glia.com/engagements?per_page=30&cursor=45629133'
+
+EngagementSearch:
+  engagements:
+    - <<: *engagement1
+      interaction_id: '0df26d40-0fbe-474d-a051-702cd687c3c8'
+    - <<: *engagement2
+      interaction_id: '5330f1d0-558c-441c-bc95-07f59cfa88d8'
+  next_page_token: 'YXNkZmdoamtsc2RmZ2hqa2FzZGZnaGprc2RmZ2hqa2FzZGZnaGprbHNkZmdoamthc2RmZ2hqa3NkZmdoamthc2RmZ2hqa2xzZGZnaGprYXNkZmdoamtzZGZnaGprYXNkZmdoamtsc2RmZ2hqa2FzZGZnaGprc2RmZ2hqaw=='
+
+UpdateEngagement:
+  'Ending the engagement':
+    value:
+      action: end
+      reason: visitor_hung_up
+  'Transferring to a guest':
+    value:
+      action: transfer_to_guest
+      guest_id: 'ec317122-o777-4b43-996d-34a2ed3b76d8'
+      stay_as_guest: true
+  'Transferring to an external phone number':
+    value:
+      action: transfer_out
+      phone_number: '+12057543010'
+      phone_extension: '12,,,3,4'
+      name: 'Jordan Green'
+  'Reporting a technical issue':
+    value:
+      action: mark_flagged
+      description: 'Video quality was low.'
+
+ExportEngagementSuccess:
+  success: true

@@ -1,0 +1,41 @@
+---
+schemas:
+  JWKSResponse:
+    properties:
+      keys:
+        description: An array containing the public key in JSON Web Key format. Only one public key will be returned.
+        type: array
+        items:
+          type: object
+          properties:
+            'n':
+              type: string
+              description: The modulus for the RSA public key.
+              example: yeNlzlub94YgerT030codqEztjfU_S6X4DbDA_iVKkjAWtYfPHDzz_sPCT1Axz6isZdf3lHpq_gYX4Sz
+            e:
+              type: string
+              description: The exponent for the RSA public key.
+              example: AQAB
+            kty:
+              type: string
+              description: The family of cryptographic algorithms used with the key.
+              example: RSA
+            use:
+              type: string
+              description: The intended use of the public key. `enc` stands for encryption. The value will always be `enc`.
+              example: enc
+            key_ops:
+              type: array
+              description: The operation(s) for which the key is intended to be used. The value will always be `['encrypt']`.
+              items:
+                type: string
+              example:
+                - encrypt
+            alg:
+              type: string
+              description: The specific cryptographic algorithm used with the key.
+              example: RSA-OAEP-256
+            kid:
+              type: string
+              description: The unique identifier for the key.
+              example: NjVBRjY5MDlCMUIwNzU4RTA2QzZFMDQ4QzQ2MDAyQjVDNjk1RTM2Qg

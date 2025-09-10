@@ -1,0 +1,1090 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Functions",
+        "version": "1.0"
+    },
+    "servers": [
+        {
+            "url": "https://api.glia.com",
+            "description": "For users worldwide, except Europe"
+        },
+        {
+            "url": "https://api.glia.eu",
+            "description": "For users in Europe"
+        }
+    ],
+    "security": [
+        {
+            "userBearer": []
+        },
+        {
+            "siteBearer": []
+        }
+    ],
+    "paths": {
+        "/functions": {
+            "post": {
+                "summary": "Create function",
+                "tags": [
+                    "Functions"
+                ],
+                "description": "Creates a Glia function with provided values.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "site_id": {
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "site_id",
+                                    "name"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Glia function was created.",
+                        "content": {
+                            "application/vnd.salemove.v1+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "current_version": {
+                                            "type": "object",
+                                            "properties": {
+                                                "href": {
+                                                    "type": "string"
+                                                },
+                                                "id": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        },
+                                        "description": {
+                                            "type": "string"
+                                        },
+                                        "id": {
+                                            "type": "string"
+                                        },
+                                        "invocation_uri": {
+                                            "type": "string"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "site_id": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "summary": "List functions",
+                "tags": [
+                    "Functions"
+                ],
+                "description": "Fetches Glia functions by their site IDs.",
+                "parameters": [
+                    {
+                        "name": "site_ids[]",
+                        "in": "query",
+                        "description": "Required filter to fetch functions for the sites with the specified site IDs.",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Functions were fetched.",
+                        "content": {
+                            "application/vnd.salemove.v1+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "functions": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "description": {
+                                                        "type": "string"
+                                                    },
+                                                    "id": {
+                                                        "type": "string"
+                                                    },
+                                                    "invocation_uri": {
+                                                        "type": "string"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "site_id": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/functions/stats": {
+            "post": {
+                "summary": "Function invocation statistics",
+                "tags": [
+                    "Functions"
+                ],
+                "description": "Returns Glia function's invocation statistics for the current month.",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "function_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Functions statistics were fetched.",
+                        "content": {
+                            "application/vnd.salemove.v1+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "invocations": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "function_id": {
+                                                        "type": "string"
+                                                    },
+                                                    "statistics": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "date": {
+                                                                "type": "string"
+                                                            },
+                                                            "count": {
+                                                                "type": "number"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/functions/{function_id}": {
+            "get": {
+                "summary": "Fetch function",
+                "tags": [
+                    "Functions"
+                ],
+                "description": "Fetches a Glia function by its ID.",
+                "parameters": [
+                    {
+                        "name": "function_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Function was fetched.",
+                        "content": {
+                            "application/vnd.salemove.v1+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "current_version": {
+                                            "type": "object",
+                                            "properties": {
+                                                "href": {
+                                                    "type": "string"
+                                                },
+                                                "id": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        },
+                                        "description": {
+                                            "type": "string"
+                                        },
+                                        "id": {
+                                            "type": "string"
+                                        },
+                                        "invocation_uri": {
+                                            "type": "string"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "site_id": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "summary": "Update function",
+                "tags": [
+                    "Functions"
+                ],
+                "description": "Updates a specified Glia function.",
+                "parameters": [
+                    {
+                        "name": "function_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "name"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Function was updated.",
+                        "content": {
+                            "application/vnd.salemove.v1+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "current_version": {
+                                            "type": "object",
+                                            "properties": {
+                                                "href": {
+                                                    "type": "string"
+                                                },
+                                                "id": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        },
+                                        "description": {
+                                            "type": "string"
+                                        },
+                                        "id": {
+                                            "type": "string"
+                                        },
+                                        "invocation_uri": {
+                                            "type": "string"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "site_id": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/functions/{function_id}/logs": {
+            "get": {
+                "summary": "List function logs",
+                "tags": [
+                    "Functions"
+                ],
+                "description": "Fetches log messages generated by the specified Glia function.",
+                "parameters": [
+                    {
+                        "name": "function_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1000
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Function logs were fetched.",
+                        "content": {
+                            "application/vnd.salemove.v1+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "logs": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "message": {
+                                                        "type": "string"
+                                                    },
+                                                    "timestamp": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "next_page": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/functions/{function_id}/tasks/{task_id}": {
+            "get": {
+                "summary": "Fetch function version creation task",
+                "tags": [
+                    "Functions"
+                ],
+                "description": "Fetches the status of a Glia function version creation task.",
+                "parameters": [
+                    {
+                        "name": "function_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Function version creation is still in progress.",
+                        "content": {
+                            "application/vnd.salemove.v1+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "processing"
+                                            ]
+                                        },
+                                        "self": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "303": {
+                        "description": "Function version creation has successfully completed.",
+                        "content": {
+                            "application/vnd.salemove.v1+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "completed"
+                                            ]
+                                        },
+                                        "self": {
+                                            "type": "string"
+                                        },
+                                        "entity": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string"
+                                                },
+                                                "self": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/functions/{function_id}/versions": {
+            "post": {
+                "summary": "Create function version",
+                "tags": [
+                    "Functions"
+                ],
+                "description": "Creates a new Glia function version.",
+                "parameters": [
+                    {
+                        "name": "function_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "compatibility_date": {
+                                        "type": "string"
+                                    },
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "environment_variables": {
+                                        "type": "object",
+                                        "additionalProperties": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "code"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "Function version creation task was created.",
+                        "content": {
+                            "application/vnd.salemove.v1+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "self": {
+                                            "type": "string"
+                                        },
+                                        "status": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "summary": "List function versions",
+                "tags": [
+                    "Functions"
+                ],
+                "description": "Fetches Glia function versions by the function's ID.",
+                "parameters": [
+                    {
+                        "name": "function_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "order",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "order_by",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "created_at"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Glia function versions were fetched.",
+                        "content": {
+                            "application/vnd.salemove.v1+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "next_page": {
+                                            "type": "string"
+                                        },
+                                        "function_versions": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string"
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/functions/{function_id}/deployments": {
+            "post": {
+                "summary": "Change current version of the function",
+                "tags": [
+                    "Functions"
+                ],
+                "description": "Changes the version ID of a specified Glia function.",
+                "parameters": [
+                    {
+                        "name": "function_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "version_id": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "version_id"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Current version of the function was updated.",
+                        "content": {
+                            "application/vnd.salemove.v1+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "invocation_uri": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/functions/{function_id}/versions/{version_id}": {
+            "patch": {
+                "summary": "Update function version",
+                "tags": [
+                    "Functions"
+                ],
+                "description": "Creates a new Glia function version based on an already existing one.",
+                "parameters": [
+                    {
+                        "name": "function_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "version_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "compatibility_date": {
+                                        "type": "string"
+                                    },
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "environment_variables": {
+                                        "type": "object",
+                                        "additionalProperties": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "New function version creation task was created.",
+                        "content": {
+                            "application/vnd.salemove.v1+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "self": {
+                                            "type": "string"
+                                        },
+                                        "status": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "summary": "Fetch function version",
+                "tags": [
+                    "Functions"
+                ],
+                "description": "Fetches a version of a specified Glia function by the version ID.",
+                "parameters": [
+                    {
+                        "name": "function_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "version_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Glia function version was fetched.",
+                        "content": {
+                            "application/vnd.salemove.v1+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "string"
+                                        },
+                                        "created_at": {
+                                            "type": "string"
+                                        },
+                                        "defined_environment_variables": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/functions/{function_id}/versions/{version_id}/code": {
+            "get": {
+                "summary": "Fetch function version code",
+                "tags": [
+                    "Functions"
+                ],
+                "description": "Fetches the code of a specified version of a specified Glia function.",
+                "parameters": [
+                    {
+                        "name": "function_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "version_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Glia function version's code was fetched.",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/integrations/{integration_id}/endpoint": {
+            "post": {
+                "summary": "Invoke function",
+                "tags": [
+                    "Functions"
+                ],
+                "description": "Invokes the function code.",
+                "parameters": [
+                    {
+                        "name": "integration_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "500": {
+                        "description": "Internal server error."
+                    }
+                }
+            }
+        },
+        "/api/v2/functions/storage/kv/namespaces/{namespace}": {
+            "post": {
+                "summary": "Bulk key-value operations",
+                "tags": [
+                    "Functions KV Store"
+                ],
+                "description": "Performs data manipulation operations on key-value pairs in a Functions KV Store namespace.",
+                "parameters": [
+                    {
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "operations": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "required": [
+                                                "op",
+                                                "key"
+                                            ],
+                                            "properties": {
+                                                "op": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "set",
+                                                        "get",
+                                                        "delete",
+                                                        "testAndSet"
+                                                    ]
+                                                },
+                                                "key": {
+                                                    "type": "string"
+                                                },
+                                                "value": {
+                                                    "type": "string"
+                                                },
+                                                "old_value": {
+                                                    "type": "string"
+                                                },
+                                                "new_value": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Operations on key-value pairs were performed.",
+                        "content": {
+                            "application/vnd.salemove.v1+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "items": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "required": [
+                                                    "op",
+                                                    "key"
+                                                ],
+                                                "properties": {
+                                                    "op": {
+                                                        "type": "string"
+                                                    },
+                                                    "key": {
+                                                        "type": "string"
+                                                    },
+                                                    "value": {
+                                                        "type": "string"
+                                                    },
+                                                    "expires": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "summary": "List key-value pairs",
+                "tags": [
+                    "Functions KV Store"
+                ],
+                "description": "Fetches all key-value pairs from a specified Functions KV Store namespace.",
+                "parameters": [
+                    {
+                        "name": "namespace",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "maxpagesize",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1000,
+                            "default": 100
+                        }
+                    },
+                    {
+                        "name": "p",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Key-value pairs were fetched.",
+                        "content": {
+                            "application/vnd.salemove.v1+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "items": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "required": [
+                                                    "key"
+                                                ],
+                                                "properties": {
+                                                    "key": {
+                                                        "type": "string"
+                                                    },
+                                                    "value": {
+                                                        "type": "string"
+                                                    },
+                                                    "expires": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "self": {
+                                            "type": "string"
+                                        },
+                                        "next": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "userBearer": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": "User bearer access token."
+            },
+            "siteBearer": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": "Site bearer access token."
+            }
+        }
+    }
+}

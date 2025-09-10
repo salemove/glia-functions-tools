@@ -1,0 +1,36 @@
+---
+get_wait_duration:
+  summary: Fetch queue wait time
+  tags:
+    - Queue wait time
+  # yamllint disable rule:line-length
+  description: |
+    Fetches the average duration that other visitors on the same site have had to wait in the queue.
+
+    The endpoint is used by the Visitor App to give an estimate of the waiting time for the current visitor who has entered the queue.
+
+    The average value is calculated from all wait times observed between now and some time in the past, where how far back it goes is configurable per site.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a [visitor's bearer access token](https://docs.glia.com/glia-dev/reference/post_visitors) is needed in the `Authorization` request header.
+  # yamllint enable rule:line-length
+  responses:
+    '200':
+      description: |
+        Average queue wait time was fetched.
+
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            type: object
+            properties:
+              average_duration_in_seconds:
+                type: integer
+                description: |
+                  The average duration that the visitors have been waiting in the queue before engagement on this site.
+            required:
+              - average_duration_in_seconds
+            example:
+              average_duration_in_seconds: 122

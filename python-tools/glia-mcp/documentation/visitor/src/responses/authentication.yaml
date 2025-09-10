@@ -1,0 +1,12 @@
+---
+success:
+  '200':
+    description: OK
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          $ref: '../schemas/authentication.yaml#/schemas/AuthResponse'
+
+success_simple:
+  '200':
+    description: OK

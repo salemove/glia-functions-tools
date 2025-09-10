@@ -1,0 +1,20 @@
+---
+temporary_link:
+  type: object
+  properties:
+    file_url:
+      type: string
+      format: URL
+      description: URL of the temporary file link. The link will expire after 10 minutes.
+      example: 'https://example.com'
+
+temporary_link_example:
+  temporary_link:
+    summary: Temporary link response
+    value:
+      file_url: https://example.com/files/image.png
+
+file:
+  type: string
+  format: binary
+  description: Downloaded file.

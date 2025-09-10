@@ -1,0 +1,33 @@
+---
+Accept:
+  title: Accepted
+  type: object
+  description: Engagement request was accepted.
+  properties:
+    id:
+      type: string
+      description: ID of the engagement request.
+    engagement_id:
+      type: string
+      description: ID of the engagement.
+    sub_engagement_id:
+      type: string
+      description: ID of the first engagement leg.
+
+Decline:
+  title: Declined
+  type: object
+  description: Engagement request was declined.
+  properties:
+    id:
+      type: string
+      description: ID of the engagement request.
+
+Cancel:
+  title: Canceled
+  type: object
+  description: Engagement request was canceled.
+  properties:
+    id:
+      type: string
+      description: ID of the engagement request.
