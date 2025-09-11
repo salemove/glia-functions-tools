@@ -23,7 +23,7 @@ Input:
       "visitor_attributes": {
         "policy_number": "P123456789",
         "customer_number": "C00000123",
-        "id_token": "eyJhbGciOiJub25lIn0.eyJuYW1lIjoiSm9obiBEb2UiLCJnaXZlbl9uYW1lIjoiSm9obiIsImZhbWlseV9uYW1lIjoiRG9lIiwiZW1haWwiOiJqb2huLmRvZUBleGFtcGxlLmNvbSIsInN1YiI6ImpvaG4uZG9lIiwiZXhwIjoxNjcxNDYzNDk4LCJpYXQiOjE2NzEwMzE0OTh9.",
+        "id_token": "",
         "access_token": null
       },
       "message_metadata": {
