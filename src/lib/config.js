@@ -32,7 +32,7 @@ const DEFAULT_CONFIG = {
 const GLOBAL_CONFIG_DIR = path.join(os.homedir(), '.glia-cli');
 const GLOBAL_CONFIG_FILE = path.join(GLOBAL_CONFIG_DIR, 'config.env');
 const PROFILES_DIR = path.join(GLOBAL_CONFIG_DIR, 'profiles');
-const LOCAL_CONFIG_FILE = './.env';
+export const LOCAL_CONFIG_FILE = './.env';
 
 // Ensure global config and profiles directories exist
 try {
@@ -49,10 +49,10 @@ try {
 
 /**
  * Gets the current active profile name from the global config
- * 
+ *
  * @returns {string} Current profile name or 'default'
  */
-function getCurrentProfileName() {
+export function getCurrentProfileName() {
   try {
     if (process.env.GLIA_PROFILE) {
       return process.env.GLIA_PROFILE;

@@ -1863,6 +1863,9 @@ const CLIChangeSite = async () => {
         });
       }
       
+      // Import the LOCAL_CONFIG_FILE constant from config.js
+      const { LOCAL_CONFIG_FILE } = await import('../lib/config.js');
+
       // Important: Use a direct file write to local .env to avoid conflicts
       // This ensures the local .env won't override the profile setting
       if (fs.existsSync(LOCAL_CONFIG_FILE)) {
