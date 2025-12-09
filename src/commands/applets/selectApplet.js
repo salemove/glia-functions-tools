@@ -7,7 +7,7 @@
 import { selectApplet, selectAppletOperation, executeAppletOperation } from '../../cli/applet-selector.js';
 import BaseCommand from '../../cli/base-command.js';
 import { routeCommand } from '../../cli/command-router.js';
-import { confirm } from '@inquirer/prompts';
+import { confirm, select } from '@inquirer/prompts';
 
 /**
  * Select an applet interactively and perform operations on it
@@ -46,24 +46,51 @@ export async function selectAppletCommand(options = {}) {
     
     // Execute the selected operation
     const success = await executeAppletOperation(operation, applet, routeCommand);
-    
-    // Ask if user wants to perform another operation on this applet
+
+    // Ask what user wants to do next with clear options
     if (success && !options.noRepeat) {
-      const continueOperations = await confirm({
-        message: 'Would you like to perform another operation on this applet?',
-        default: true
+      const nextAction = await select({
+        message: 'What would you like to do next?',
+        choices: [
+          {
+            name: 'Perform another operation on this applet',
+            value: 'same-applet',
+            description: `Continue working with "${applet.name}"`
+          },
+          {
+            name: 'Select a different applet',
+            value: 'different-applet',
+            description: 'Choose another applet to manage'
+          },
+          {
+            name: 'Return to applet menu',
+            value: 'applet-menu',
+            description: 'Go back to applet management menu'
+          },
+          {
+            name: 'Return to main menu',
+            value: 'main-menu',
+            description: 'Exit applet management'
+          }
+        ]
       });
-      
-      if (continueOperations) {
+
+      if (nextAction === 'same-applet') {
         // Recurse to get another operation for the same applet
-        return selectAppletCommand({ 
+        return selectAppletCommand({
           ...options,
-          preselectedApplet: applet 
+          preselectedApplet: applet
         });
+      } else if (nextAction === 'different-applet') {
+        // Recurse to select a different applet
+        return selectAppletCommand(options);
       }
+
+      // Return with the action indicator for parent to handle
+      return { applet, operation, success, nextAction };
     }
-    
-    return { applet, operation, success };
+
+    return { applet, operation, success, nextAction: 'done' };
   } catch (error) {
     console.error('Error during applet selection:', error);
     throw error;

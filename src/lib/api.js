@@ -1087,24 +1087,37 @@ export default class GliaApiClient {
   
   /**
    * Create a new function
-   * 
+   *
    * @param {string} name - Function name
    * @param {string} description - Function description
+   * @param {Object} options - Additional options
+   * @param {number} [options.warmInstances] - Number of warm instances (0-5)
    * @returns {Promise<Object>} - Created function details
    */
-  async createFunction(name, description = '') {
+  async createFunction(name, description = '', options = {}) {
     try {
       validateFunctionName(name);
-      
+
+      const payload = {
+        name,
+        description,
+        site_id: this.siteId
+      };
+
+      // Add warm_instances if provided and valid
+      if (options.warmInstances !== undefined) {
+        const warmInstances = parseInt(options.warmInstances, 10);
+        if (isNaN(warmInstances) || warmInstances < 0 || warmInstances > 5) {
+          throw new ValidationError('warm_instances must be a number between 0 and 5');
+        }
+        payload.warm_instances = warmInstances;
+      }
+
       // Using the correct endpoint from the OpenAPI spec
       const endpoint = `/functions`;
       return await this.makeRequest(endpoint, {
         method: 'POST',
-        body: JSON.stringify({ 
-          name, 
-          description, 
-          site_id: this.siteId // Include site_id in the request body
-        })
+        body: JSON.stringify(payload)
       });
     } catch (error) {
       const errorContext = {
@@ -1607,15 +1620,24 @@ export default class GliaApiClient {
       const taskId = updateTask.self.split('/').pop();
       let taskStatus = null;
       let attempts = 0;
-      const maxAttempts = 30; // Maximum polling attempts
-      
+      const maxAttempts = 120; // Maximum polling attempts (120 seconds = 2 minutes)
+      const pollInterval = 1000; // Poll every 1 second
+
+      // Show progress indicator
+      process.stdout.write('Creating new version');
+
       while (attempts < maxAttempts) {
         taskStatus = await this.getVersionCreationTask(functionId, taskId);
-        
+
         if (taskStatus.status === 'completed') {
+          // Clear progress dots and show success
+          process.stdout.write(' ✓\n');
+
           // Deploy the new version
+          process.stdout.write('Deploying new version');
           await this.deployVersion(functionId, taskStatus.entity.id);
-          
+          process.stdout.write(' ✓\n');
+
           // Return the full task status including the newly created version ID
           return {
             ...taskStatus,
@@ -1623,15 +1645,22 @@ export default class GliaApiClient {
             message: 'Environment variables updated and new version deployed successfully'
           };
         } else if (taskStatus.status === 'failed') {
+          process.stdout.write(' ✗\n');
           throw new Error('Version creation failed: ' + (taskStatus.error || 'Unknown error'));
         }
-        
+
+        // Show progress dot every 2 seconds
+        if (attempts % 2 === 0) {
+          process.stdout.write('.');
+        }
+
         // Wait before polling again
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
         attempts++;
       }
-      
-      throw new Error('Timed out waiting for version creation to complete');
+
+      process.stdout.write(' ✗\n');
+      throw new Error(`Timed out waiting for version creation to complete after ${maxAttempts} seconds`);
     } catch (error) {
       const errorContext = {
         operation: 'updateEnvVars',
@@ -1870,76 +1899,52 @@ export default class GliaApiClient {
       
       // Use current site ID if not specified
       const siteId = options.siteId || this.siteId;
-      
-      // Debug site ID selection
-      console.log(`[DEBUG] listApplets using siteId: ${siteId}, from options: ${options.siteId}, class property: ${this.siteId}`);
-      
+
       if (!siteId) {
-        console.log(`[DEBUG] No site ID available! This will likely cause a permissions error.`);
         throw new Error('Missing site ID. Please set a site ID using the CLI or specify it in the request options.');
       }
       
       // Try site-specific endpoint first (requires applets:read permission)
       try {
-        console.log(`[DEBUG] Checking API docs structure - expected to return { axons: [] }`);
         // Use site-specific endpoint to fetch applets
         const endpoint = `/sites/${siteId}/axons`;
-        
+
         // Add scope as query param if specified
         if (options.scope) {
           queryParams.push(`scope=${options.scope}`);
         }
-        
-        const fullEndpoint = `${endpoint}${queryParams.length > 0 ? '?' + queryParams.join('&') : ''}`;
-        console.log(`[DEBUG] Trying primary endpoint: ${fullEndpoint}`);
+
+        const fullEndpoint = `${queryParams.length > 0 ? `${endpoint}?${queryParams.join('&')}` : endpoint}`;
         const result = await this.makeRequest(fullEndpoint);
-        console.log(`[DEBUG] Primary endpoint response format: ${Object.prototype.toString.call(result)}`);
-        console.log(`[DEBUG] Primary endpoint response keys: ${result ? Object.keys(result).join(', ') : 'none'}`);
-        console.log(`[DEBUG] Primary endpoint response size: ${JSON.stringify(result).length}`);
-        console.log(`[DEBUG] Primary endpoint response sample: ${JSON.stringify(result).substring(0, 500)}...`);
-        
+
         // Normalize response to expected format
         if (result && !result.axons && Array.isArray(result.items)) {
-          console.log(`[DEBUG] Normalizing response structure from items[] to axons[]`);
           return { axons: result.items };
         }
-        
+
         return result;
       } catch (firstError) {
-        // Log error details
-        console.log(`[DEBUG] Error from primary endpoint: ${firstError.message}`);
-        console.log(`[DEBUG] Status code: ${firstError.statusCode || 'N/A'}`);
-        console.log(`[DEBUG] Error details: ${JSON.stringify(firstError)}`);
-        
         // If we get a 403, try the alternative endpoint
         if (firstError.statusCode === 403) {
           // Try alternative endpoint (requires list:applets permission)
-          console.log(`[DEBUG] Falling back to alternative endpoint with list:applets permission`);
-          console.log(`[DEBUG] Alternative endpoint may return different structure`);
           const altQueryParams = [];
-          
+
           // Add site_id as query param
           altQueryParams.push(`site_id=${siteId}`);
-          
+
           // Add scope if specified
           if (options.scope) {
             altQueryParams.push(`scope=${options.scope}`);
           }
-          
+
           const altEndpoint = `/axons?${altQueryParams.join('&')}`;
-          console.log(`[DEBUG] Trying alternative endpoint: ${altEndpoint}`);
           const result = await this.makeRequest(altEndpoint);
-          console.log(`[DEBUG] Alternative endpoint response format: ${Object.prototype.toString.call(result)}`);
-          console.log(`[DEBUG] Alternative endpoint response keys: ${result ? Object.keys(result).join(', ') : 'none'}`);
-          console.log(`[DEBUG] Alternative endpoint response size: ${JSON.stringify(result).length}`);
-          console.log(`[DEBUG] Alternative endpoint response sample: ${JSON.stringify(result).substring(0, 500)}...`);
-          
+
           // Normalize response to expected format
           if (result && !result.axons && Array.isArray(result.items)) {
-            console.log(`[DEBUG] Normalizing alternative response structure from items[] to axons[]`);
             return { axons: result.items };
           }
-          
+
           return result;
         } else {
           throw firstError;
@@ -2843,27 +2848,37 @@ export default class GliaApiClient {
   
   /**
    * Update function details
-   * 
+   *
    * @param {string} functionId - Function ID
    * @param {Object} updates - Fields to update
    * @param {string} [updates.name] - New function name
    * @param {string} [updates.description] - New function description
+   * @param {number} [updates.warmInstances] - Number of warm instances (0-5)
    * @returns {Promise<Object>} - Updated function details
    */
   async updateFunction(functionId, updates = {}) {
     try {
       validateFunctionId(functionId);
-      
+
       // Validate name if provided
       if (updates.name !== undefined) {
         validateFunctionName(updates.name);
       }
-      
+
+      // Validate warm instances if provided
+      if (updates.warmInstances !== undefined) {
+        const warmInstances = parseInt(updates.warmInstances, 10);
+        if (isNaN(warmInstances) || warmInstances < 0 || warmInstances > 5) {
+          throw new ValidationError('warm_instances must be a number between 0 and 5');
+        }
+      }
+
       // Create the update payload
       const payload = {};
       if (updates.name !== undefined) payload.name = updates.name;
       if (updates.description !== undefined) payload.description = updates.description;
-      
+      if (updates.warmInstances !== undefined) payload.warm_instances = parseInt(updates.warmInstances, 10);
+
       // Using the correct endpoint from the OpenAPI spec
       const endpoint = `/functions/${functionId}`;
       return await this.makeRequest(endpoint, {
@@ -2896,6 +2911,231 @@ export default class GliaApiClient {
       } else {
         throw new FunctionError(`Failed to update function: ${error.message}`, errorContext);
       }
+    }
+  }
+
+  /**
+   * Delete a function
+   *
+   * @param {string} functionId - Function ID to delete
+   * @returns {Promise<void>}
+   */
+  async deleteFunction(functionId) {
+    try {
+      validateFunctionId(functionId);
+
+      const endpoint = `/functions/${functionId}`;
+      await this.makeRequest(endpoint, {
+        method: 'DELETE',
+        headers: this._prepareHeaders()
+      });
+    } catch (error) {
+      const errorContext = {
+        operation: 'deleteFunction',
+        siteId: this.siteId,
+        functionId
+      };
+
+      if (error instanceof GliaError) {
+        throw new FunctionError(
+          `Failed to delete function: ${error.message}`,
+          { ...errorContext, originalError: error },
+          {
+            cause: error,
+            endpoint: error.endpoint,
+            method: error.method,
+            statusCode: error.statusCode,
+            requestId: error.requestId
+          }
+        );
+      } else {
+        throw new FunctionError(`Failed to delete function: ${error.message}`, errorContext);
+      }
+    }
+  }
+
+  /**
+   * Create a scheduled trigger
+   *
+   * @param {Object} options - Trigger options
+   * @param {string} options.name - Trigger name
+   * @param {string} options.description - Trigger description
+   * @param {string} options.functionId - Function ID to trigger
+   * @param {string} options.schedulePattern - Cron expression
+   * @returns {Promise<Object>} Created trigger details
+   */
+  async createScheduledTrigger(options) {
+    try {
+      const { name, description, functionId, schedulePattern } = options;
+
+      if (!name) {
+        throw new ValidationError('Trigger name is required');
+      }
+      if (!functionId) {
+        throw new ValidationError('Function ID is required');
+      }
+      if (!schedulePattern) {
+        throw new ValidationError('Schedule pattern is required');
+      }
+
+      const payload = {
+        name,
+        description: description || '',
+        trigger_type: 'function',
+        trigger_id: functionId,
+        schedule_pattern: schedulePattern
+      };
+
+      const endpoint = `/api/v2/scheduled-triggers`;
+      return await this.makeRequest(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+    } catch (error) {
+      if (error instanceof GliaError) {
+        throw error;
+      }
+      throw new GliaError(`Failed to create scheduled trigger: ${error.message}`);
+    }
+  }
+
+  /**
+   * List all scheduled triggers
+   *
+   * @returns {Promise<Object>} List of scheduled triggers
+   */
+  async listScheduledTriggers() {
+    try {
+      const endpoint = `/api/v2/scheduled-triggers`;
+      return await this.makeRequest(endpoint, {
+        method: 'GET'
+      });
+    } catch (error) {
+      if (error instanceof GliaError) {
+        throw error;
+      }
+      throw new GliaError(`Failed to list scheduled triggers: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get a scheduled trigger by ID
+   *
+   * @param {string} triggerId - Trigger ID
+   * @returns {Promise<Object>} Trigger details
+   */
+  async getScheduledTrigger(triggerId) {
+    try {
+      if (!triggerId) {
+        throw new ValidationError('Trigger ID is required');
+      }
+
+      const endpoint = `/api/v2/scheduled-triggers/${triggerId}`;
+      return await this.makeRequest(endpoint, {
+        method: 'GET'
+      });
+    } catch (error) {
+      if (error instanceof GliaError) {
+        throw error;
+      }
+      throw new GliaError(`Failed to get scheduled trigger: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update a scheduled trigger
+   *
+   * @param {string} triggerId - Trigger ID
+   * @param {Object} updates - Fields to update
+   * @param {string} [updates.name] - New name
+   * @param {string} [updates.description] - New description
+   * @param {string} [updates.schedulePattern] - New schedule pattern
+   * @param {boolean} [updates.enabled] - Enable/disable trigger
+   * @returns {Promise<Object>} Updated trigger details
+   */
+  async updateScheduledTrigger(triggerId, updates) {
+    try {
+      if (!triggerId) {
+        throw new ValidationError('Trigger ID is required');
+      }
+
+      if (!updates || Object.keys(updates).length === 0) {
+        throw new ValidationError('At least one field to update is required');
+      }
+
+      // Build JSON Patch operations
+      const operations = [];
+
+      if (updates.name !== undefined) {
+        operations.push({
+          op: 'replace',
+          path: '/name',
+          value: updates.name
+        });
+      }
+
+      if (updates.description !== undefined) {
+        operations.push({
+          op: 'replace',
+          path: '/description',
+          value: updates.description
+        });
+      }
+
+      if (updates.schedulePattern !== undefined) {
+        operations.push({
+          op: 'replace',
+          path: '/schedule_pattern',
+          value: updates.schedulePattern
+        });
+      }
+
+      if (updates.enabled !== undefined) {
+        operations.push({
+          op: 'replace',
+          path: '/enabled',
+          value: updates.enabled
+        });
+      }
+
+      const endpoint = `/api/v2/scheduled-triggers/${triggerId}`;
+      return await this.makeRequest(endpoint, {
+        method: 'PATCH',
+        headers: {
+          ...this._prepareHeaders(),
+          'Content-Type': 'application/json-patch+json'
+        },
+        body: JSON.stringify({ operations })
+      });
+    } catch (error) {
+      if (error instanceof GliaError) {
+        throw error;
+      }
+      throw new GliaError(`Failed to update scheduled trigger: ${error.message}`);
+    }
+  }
+
+  /**
+   * Delete a scheduled trigger
+   *
+   * @param {string} triggerId - Trigger ID to delete
+   * @returns {Promise<void>}
+   */
+  async deleteScheduledTrigger(triggerId) {
+    try {
+      if (!triggerId) {
+        throw new ValidationError('Trigger ID is required');
+      }
+
+      const endpoint = `/api/v2/scheduled-triggers/${triggerId}`;
+      await this.makeRequest(endpoint, {
+        method: 'DELETE'
+      });
+    } catch (error) {
+      if (error instanceof GliaError) {
+        throw error;
+      }
+      throw new GliaError(`Failed to delete scheduled trigger: ${error.message}`);
     }
   }
 }

@@ -1146,6 +1146,40 @@ program
     }
   });
 
+// MCP server command
+program
+  .command('mcp')
+  .description('Start the MCP (Model Context Protocol) server for AI assistant integration')
+  .action(async () => {
+    try {
+      // Import the start MCP server command
+      const { startMcpServer } = await import('../src/commands/startMcpServer.js');
+
+      // Start the server (this will run indefinitely)
+      await startMcpServer();
+    } catch (error) {
+      console.error(colorizer.red(`Error starting MCP server: ${error.message}`));
+      process.exit(1);
+    }
+  });
+
+// Alias commands for MCP server
+program
+  .command('start-mcp')
+  .description('Alias for "mcp" command')
+  .action(async () => {
+    const { startMcpServer } = await import('../src/commands/startMcpServer.js');
+    await startMcpServer();
+  });
+
+program
+  .command('mcp-server')
+  .description('Alias for "mcp" command')
+  .action(async () => {
+    const { startMcpServer } = await import('../src/commands/startMcpServer.js');
+    await startMcpServer();
+  });
+
 // Continue with init command action
 program.commands.find(cmd => cmd.name() === 'init').action(async (options) => {
     try {

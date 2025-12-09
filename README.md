@@ -11,6 +11,8 @@ Helper functions, tools, and examples for building and managing Glia Functions -
 - **Multi-environment support** with named profiles and site switching
 - **Robust API client** with retry, caching, and offline capabilities
 - **Interactive and command-driven interfaces** for both guided and automated workflows
+- **MCP Server integration** - 24 tools for AI assistants to manage functions programmatically
+- **Scheduled function triggers** with cron expressions for automated invocations
 - **Create and manage** serverless JavaScript functions
 - **Function templates** for common use cases and patterns
 - **Project scaffolding** with complete project templates and template inheritance
@@ -19,6 +21,7 @@ Helper functions, tools, and examples for building and managing Glia Functions -
 - **Local development server** for testing functions without deployment
 - **View function logs** and details
 - **Bundle dependencies** using esbuild
+- **KV Store operations** for persistent key-value storage
 - **Comprehensive documentation** with architecture guides and command references
 - **Extensive examples** for common integration patterns
 
@@ -116,7 +119,25 @@ Required environment variables for authentication:
 * `GLIA_API_URL` - Glia API URL (defaults to https://api.glia.com)
 * `GLIA_BEARER_TOKEN` - Bearer token generated from your credentials (automatically set by the CLI)
 
+Optional environment variables:
+
+* `DEBUG_MODE` - Set to `true` to enable debug logging (defaults to `false`)
+
 These can be set in a `.env` file in the project root or configured via the CLI setup wizard.
+
+### Debug Mode
+
+To enable detailed debug logging, set the `DEBUG_MODE` environment variable:
+
+```bash
+# In your .env file
+DEBUG_MODE=true
+
+# Or when running commands
+DEBUG_MODE=true npm run cli
+```
+
+Debug mode shows additional information about API calls, configuration loading, and internal operations. It's useful for troubleshooting issues but should be disabled in normal usage for cleaner output.
 
 ## Building Your Function
 
@@ -295,6 +316,96 @@ node ./src/commands/fetchLogs.js --id=$FUNCTION_ID
 ```
 
 For detailed CLI usage information, see the [CLI Usage Documentation](./docs/cli-usage.md).
+
+## MCP Server for AI Assistants
+
+The Glia Functions MCP (Model Context Protocol) Server enables AI assistants like Claude to programmatically manage Glia Functions through 25 specialized tools. This allows you to interact with the platform using natural language while the AI assistant handles the technical implementation.
+
+### Key Capabilities
+
+- **Code Validation**: Validate function code before deployment to catch errors early
+- **Function Management**: Create, update, delete, and list functions
+- **Version Control**: Create and deploy function versions
+- **Environment Variables**: Manage secure configuration for functions
+- **Scheduled Triggers**: Set up automated function invocations with cron expressions
+- **KV Store**: Persistent key-value storage operations
+- **Monitoring**: Fetch logs and invoke functions for testing
+
+### Quick Start
+
+#### 1. Start the MCP Server
+
+The CLI provides a simple command to start the MCP server:
+
+```bash
+# Start the MCP server
+glia-functions mcp
+```
+
+#### 2. Configure Claude Desktop
+
+Edit your Claude Desktop config file:
+
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+**Recommended Configuration (using CLI command):**
+
+```json
+{
+  "mcpServers": {
+    "glia-functions": {
+      "command": "/absolute/path/to/glia-functions",
+      "args": ["mcp"],
+      "env": {
+        "GLIA_KEY_ID": "your-key-id",
+        "GLIA_KEY_SECRET": "your-key-secret",
+        "GLIA_SITE_ID": "your-site-id"
+      }
+    }
+  }
+}
+```
+
+**Finding the path:**
+```bash
+# If installed globally
+which glia-functions
+
+# If using git clone
+cd /path/to/glia-functions-tools
+pwd  # Add /bin/glia-functions.js to this path
+```
+
+#### 3. Use with Claude
+
+After restarting Claude Desktop, ask Claude to help you manage Glia Functions:
+
+- "Create a new function called 'api-handler' that integrates with an external API"
+- "Set up a scheduled trigger to run my data-sync function every weekday at 9 AM UTC"
+- "Update the environment variables for my function to use the new API key"
+- "List all my functions and their deployment status"
+
+### Transport Details
+
+The MCP server uses STDIO transport for communication:
+
+**Stdio Transport**
+- Simple integration with Claude Desktop
+- No network configuration required
+- Perfect for development and production use
+
+### Available Tool Categories
+
+- **1 Code Validation Tool**: Validate function code before deployment
+- **5 Function Operations**: Create, read, update, delete, and list functions
+- **4 Version Operations**: Create, deploy, and manage function versions
+- **2 Execution Tools**: Invoke functions and fetch logs
+- **2 Environment Variable Tools**: List and update environment variables
+- **7 Scheduled Trigger Tools**: Full lifecycle management for scheduled invocations
+- **4 KV Store Tools**: Persistent key-value storage operations
+
+For complete documentation, examples, and troubleshooting, see the [MCP Server Documentation](./docs/mcp-server.md).
 
 ## Examples
 

@@ -13,11 +13,11 @@
     "cli": "node bin/glia-functions.js",
     "build": "./node_modules/esbuild/bin/esbuild --bundle --platform=browser --define:global=window --inject:config/esbuild.inject.js --format=esm --outfile=function-out.js --log-level=silent --target=es2020",
     "build:watch": "./node_modules/esbuild/bin/esbuild --bundle --platform=browser --define:global=window --inject:config/esbuild.inject.js --format=esm --outfile=function-out.js --log-level=silent --target=es2020 --watch",
-    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
-    "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --watch",
-    "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage",
-    "test:unit": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/unit",
-    "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --no-coverage",
+    "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --watch --no-coverage",
+    "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --no-coverage",
+    "test:unit": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/unit --no-coverage",
+    "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration --no-coverage",
     "docs": "jsdoc -c jsdoc.json",
     "docs:dev": "jsdoc -c jsdoc.json && serve docs/api",
     "generate:commands": "node scripts/generate-command-docs.js",
@@ -29,9 +29,10 @@
     "@babel/plugin-transform-modules-commonjs": "^7.26.3",
     "@babel/preset-env": "^7.26.9",
     "@types/jest": "^29.5.14",
+    "@types/node": "^20.19.25",
     "babel-jest": "^29.7.0",
     "cross-env": "^7.0.3",
-    "esbuild": "^0.19.2",
+    "esbuild": "^0.25.12",
     "jest": "^29.7.0",
     "jest-fetch-mock": "^3.0.3",
     "jsdoc": "^4.0.2",
@@ -39,17 +40,22 @@
   },
   "dependencies": {
     "@inquirer/prompts": "^3.2.0",
+    "@modelcontextprotocol/sdk": "^1.24.3",
     "ajv": "^8.17.1",
     "buffer": "^6.0.3",
     "cli-table3": "^0.6.5",
     "commander": "^11.1.0",
     "dotenv": "^16.3.1",
+    "eventsource": "^4.1.0",
+    "express": "^5.2.1",
     "form-data": "^4.0.4",
     "handlebars": "^4.7.8",
     "inquirer": "^8.2.4",
     "miniflare": "^4.0.0",
     "node-fetch": "^2.7.0",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "uuid": "^13.0.0",
+    "zod": "^4.1.12"
   },
   "engines": {
     "node": ">=16.0.0"
@@ -71,11 +77,12 @@
     "url": "https://github.com/salemove/glia-functions-tools/issues"
   },
   "overrides": {
-    "jest": {
-      "glob": "^8.1.0"
-    },
-    "babel-jest": {
-      "inflight": "npm:@isaacs/inflight@^1.0.6"
-    }
+    "glob": "^10.0.0",
+    "inflight": "npm:@humanwhocodes/inflight@^1.0.1",
+    "rimraf": "^5.0.0",
+    "tmp": "^0.2.4",
+    "@babel/core": "^7.26.9",
+    "@babel/plugin-syntax-jsx": "^7.25.9",
+    "@babel/plugin-syntax-typescript": "^7.25.9"
   }
 }

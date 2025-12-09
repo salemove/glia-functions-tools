@@ -9,16 +9,17 @@ import { input, select, confirm, editor } from '@inquirer/prompts';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
 
-import { 
-  getCliVersion, 
-  loadConfig, 
-  updateEnvFile, 
-  updateGlobalConfig, 
-  getAuthConfig, 
-  getApiConfig, 
-  hasValidBearerToken, 
+import {
+  getCliVersion,
+  loadConfig,
+  updateEnvFile,
+  updateGlobalConfig,
+  getAuthConfig,
+  getApiConfig,
+  hasValidBearerToken,
   validateToken,
   listProfiles,
+  getProfileConfig,
   createProfile,
   updateProfile,
   switchProfile,
@@ -34,14 +35,13 @@ import { CLISetupExportHandler } from './setup-export-handler.js';
 // ASCII art banner with version
 const separator = '============================='
 const CLIIntro = () => {
-  console.log(colorizer.hex('#7C19DE').bold(` #####                     #######                                                   
-#     # #      #   ##      #       #    # #    #  ####  ##### #  ####  #    #  ####  
-#       #      #  #  #     #       #    # ##   # #    #   #   # #    # ##   # #      
-#  #### #      # #    #    #####   #    # # #  # #        #   # #    # # #  #  ####  
-#     # #      # ######    #       #    # #  # # #        #   # #    # #  # #      # 
-#     # #      # #    #    #       #    # #   ## #    #   #   # #    # #   ## #    # 
- #####  ###### # #    #    #        ####  #    #  ####    #   #  ####  #    #  ####  `))
-  console.log(colorizer.italic(`v${getCliVersion()}`))
+  console.log(colorizer.hex('#7C19DE').bold(`
+   ____ _ _        _____                 _   _
+  / ___| (_) __ _ |  ___|   _ _ __   ___| |_(_) ___  _ __  ___
+ | |  _| | |/ _\` || |_ | | | | '_ \\ / __| __| |/ _ \\| '_ \\/ __|
+ | |_| | | | (_| ||  _|| |_| | | | | (__| |_| | (_) | | | \\__ \\
+  \\____|_|_|\\__,_||_|   \\__,_|_| |_|\\___|\\__|_|\\___/|_| |_|___/`))
+  console.log(colorizer.italic(`  v${getCliVersion()}`))
   console.log(separator)
 }
 
@@ -49,8 +49,44 @@ const CLIIntro = () => {
  * Main menu for the CLI
  */
 const CLIMainMenu = async () => {
+  // Display current profile and site information
+  const currentProfile = process.env.GLIA_PROFILE || 'default';
+  const currentSiteId = process.env.GLIA_SITE_ID || 'Not configured';
+
+  // Fetch site name if we have credentials
+  let siteName = null;
+  if (process.env.GLIA_BEARER_TOKEN && process.env.GLIA_SITE_ID) {
+    try {
+      const apiConfig = await getApiConfig();
+      const response = await fetch(`${apiConfig.apiUrl}/sites/${apiConfig.siteId}`, {
+        headers: {
+          'Authorization': `Bearer ${apiConfig.bearerToken}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/vnd.salemove.v1+json'
+        }
+      });
+
+      if (response.ok) {
+        const siteData = await response.json();
+        siteName = siteData.name || null;
+      }
+    } catch (error) {
+      // Silently fail - site name is optional display information
+    }
+  }
+
+  console.log('');
+  console.log(colorizer.blue('Active Profile: '), colorizer.bold(currentProfile));
+  if (siteName) {
+    console.log(colorizer.blue('Site:           '), colorizer.bold(`${siteName} (${currentSiteId})`));
+  } else {
+    console.log(colorizer.blue('Site ID:        '), colorizer.bold(currentSiteId));
+  }
+  console.log(separator);
+  console.log('');
+
   let choices = [];
-  
+
   // If we have a bearer token, prioritize the build functions option
   if (process.env.GLIA_BEARER_TOKEN && process.env.GLIA_SITE_ID) {
     choices.push({
@@ -59,12 +95,12 @@ const CLIMainMenu = async () => {
       description: 'Build or update a function',
     });
   }
-  
-  // Always offer setup, but it's not the first option when we have a token
+
+  // Profile management - includes setup wizard
   choices.push({
-    name: 'Setup project',
-    value: 'setup',
-    description: 'Setup the environment for further requests and generate a bearer token',
+    name: 'Manage profiles',
+    value: 'profiles',
+    description: 'Setup and manage configuration profiles (credentials, API keys, sites)',
   });
 
   if (process.env.GLIA_SITE_ID) {
@@ -73,7 +109,7 @@ const CLIMainMenu = async () => {
       value: 'auth',
       description: '(Re)Generate a new bearer token',
     });
-    
+
     // Add the change site option when we have credentials
     choices.push({
       name: 'Change active site',
@@ -81,13 +117,6 @@ const CLIMainMenu = async () => {
       description: 'Switch to a different site within the current profile',
     });
   }
-  
-  // Profile management
-  choices.push({
-    name: 'Manage profiles',
-    value: 'profiles',
-    description: 'Create, switch between, and manage configuration profiles',
-  });
 
   choices.push({
     name: '(Exit)',
@@ -99,14 +128,13 @@ const CLIMainMenu = async () => {
       message: 'Select action:',
       choices
     });
-    
+
     switch(answer) {
-      case 'setup': await CLISetup(); return false;
       case 'auth': await CLIAuth();  return false;
       case 'build': await CLIBuildMenu(); return false;
       case 'profiles': await CLIProfileMenu(); return false;
       case 'changeSite': await CLIChangeSite(); return false;
-      case 'exit': 
+      case 'exit':
         console.log(colorizer.green('Exiting Glia Functions CLI. Goodbye!'));
         process.exit(0); // Explicitly exit with success code
     }
@@ -274,14 +302,14 @@ const CLISetup = async () => {
         
         showInfo('Settings also written to .env file for local project use.');
 
-        await CLIMainMenu();
+        await CLIProfileMenu();
         return false;
       } catch (error) {
         handleError(error);
       }
     } else {
       showInfo('Setup canceled.');
-      await CLIMainMenu();
+      await CLIProfileMenu();
       return false;
     }
   } catch (error) {
@@ -625,11 +653,25 @@ const CLINewFunction = async () => {
       message: 'Function name:'
     });
 
-    const functionDescription = await input({  
+    const functionDescription = await input({
       name: 'functionDescription',
       message: 'Function description:'
     });
-    
+
+    // Ask about warm instances
+    const warmInstancesStr = await input({
+      message: 'Number of warm instances (0-5, default 0 for cold start):',
+      default: '0',
+      validate: (input) => {
+        const num = parseInt(input, 10);
+        if (isNaN(num) || num < 0 || num > 5) {
+          return 'Please enter a number between 0 and 5';
+        }
+        return true;
+      }
+    });
+    const warmInstances = parseInt(warmInstancesStr, 10);
+
     // Offer to use a template
     const useTemplate = await confirm({
       message: 'Would you like to use a template for this function?',
@@ -680,11 +722,18 @@ const CLINewFunction = async () => {
       
       // Create API client
       const api = new GliaApiClient(apiConfig);
-      
+
       // Create function
-      const newGliaFunction = await api.createFunction(functionName, functionDescription);
-      
+      const createOptions = {};
+      if (warmInstances > 0) {
+        createOptions.warmInstances = warmInstances;
+      }
+      const newGliaFunction = await api.createFunction(functionName, functionDescription, createOptions);
+
       showSuccess('New Glia Function successfully created');
+      if (warmInstances > 0) {
+        showInfo(`Warm instances: ${warmInstances} requested`);
+      }
       console.log(newGliaFunction);
       
       // Create from template if selected
@@ -1056,13 +1105,39 @@ const CLIFunctionDetailsMenu = async (functionId) => {
     
     // Get function details
     const functionDetails = await api.getFunction(functionId);
-    
-    console.log(functionDetails);
+
+    // Display function details in a formatted way
+    console.log('');
+    console.log(colorizer.cyan('ID:                  '), functionDetails.id);
+    console.log(colorizer.cyan('Name:                '), functionDetails.name);
+    console.log(colorizer.cyan('Description:         '), functionDetails.description || '(none)');
+    console.log(colorizer.cyan('Site ID:             '), functionDetails.site_id);
+
+    // Display warm instances information
+    if (functionDetails.requested_warm_instances !== undefined) {
+      const requested = functionDetails.requested_warm_instances;
+      const allocated = functionDetails.allocated_warm_instances || 0;
+      const warmStatus = requested > 0
+        ? colorizer.green(`${requested} requested, ${allocated} allocated`)
+        : colorizer.dim('None (cold start)');
+      console.log(colorizer.cyan('Warm Instances:      '), warmStatus);
+    }
+
+    // Display invocation URI
+    if (functionDetails.invocation_uri) {
+      console.log(colorizer.cyan('Invocation URI:      '), functionDetails.invocation_uri);
+    }
+
+    // Display current version if available
+    if (functionDetails.current_version) {
+      console.log(colorizer.cyan('Current Version ID:  '), functionDetails.current_version.id || 'None');
+    }
+
     console.log(separator);
     
     const answer = await select({
       message: 'Select action:',
-      choices: [  
+      choices: [
         {
           name: 'Create new function version',
           value: 'newVersion',
@@ -1076,12 +1151,17 @@ const CLIFunctionDetailsMenu = async (functionId) => {
         {
           name: 'Update function details',
           value: 'updateFunction',
-          description: 'Update function name and description.',
+          description: 'Update function name, description, and warm instances.',
         },
         {
           name: 'Manage existing function versions',
           value: 'functionVersions',
           description: 'Retrieve function versions.',
+        },
+        {
+          name: 'Manage schedules',
+          value: 'manageSchedules',
+          description: 'Create, view, update, and delete scheduled function invocations.',
         },
         {
           name: 'Invoke function',
@@ -1094,19 +1174,26 @@ const CLIFunctionDetailsMenu = async (functionId) => {
           description: 'Retrieve runtime logs for this function.',
         },
         {
+          name: 'Delete function',
+          value: 'deleteFunction',
+          description: 'Permanently delete this function and all its versions.',
+        },
+        {
           name: '(Back)',
           value: 'back'
         }
       ]
     });
-    
+
     switch(answer) {
       case 'functionLogs': await CLIFunctionLogs(functionId); return false;
       case 'newVersion': await CLINewVersion(functionId); return false;
       case 'updateFunction': await CLIUpdateFunction(functionId, functionDetails); return false;
       case 'functionVersions': await CLIFunctionVersions(functionId, functionDetails.current_version); return false;
+      case 'manageSchedules': await CLIScheduleMenu(functionId, functionDetails); return false;
       case 'functionInvoke': await CLIFunctionInvoke(functionId, functionDetails.invocation_uri); return false;
-      case 'manageEnvVars': await routeCommand('update-env-vars', { id: functionId, interactive: true }); return false;
+      case 'manageEnvVars': await CLIManageEnvVarsWrapper(functionId, functionDetails); return false;
+      case 'deleteFunction': await CLIDeleteFunction(functionId, functionDetails); return false;
       case 'back': await CLIBuildMenu(); return false;
     }
   } catch (error) {
@@ -1256,7 +1343,7 @@ const CLIFunctionVersions = async (functionId, currentVersion) => {
       return false;
     }
 
-    await CLIFunctionVersion(functionId, versionSelect);
+    await CLIFunctionVersion(functionId, versionSelect, currentVersion);
     return false;
   } catch (error) {
     handleError(error);
@@ -1265,11 +1352,12 @@ const CLIFunctionVersions = async (functionId, currentVersion) => {
 
 /**
  * Show function version details
- * 
+ *
  * @param {string} functionId - Function ID
  * @param {string} versionId - Version ID
+ * @param {string} currentVersion - Current deployed version ID (for navigation context)
  */
-const CLIFunctionVersion = async (functionId, versionId) => {
+const CLIFunctionVersion = async (functionId, versionId, currentVersion = null) => {
   try {
     console.log(separator);
     console.log(colorizer.bold('Function version details:'));
@@ -1292,17 +1380,12 @@ const CLIFunctionVersion = async (functionId, versionId) => {
         {
           name: 'Deploy function version',
           value: 'deployFunction',
-          description: 'Mark this function version as main.',
+          description: 'Mark this function version as the active version',
         },
         {
-          name: 'Update environment variables (CLI method)',
-          value: 'updateEnvironment',
-          description: 'Create a new version based on this one with updated environment variables',
-        },
-        {
-          name: 'Manage environment variables (interactive)',
+          name: 'Manage environment variables',
           value: 'manageEnvVars',
-          description: 'Interactive UI for adding/updating/removing environment variables',
+          description: 'Add, update, delete, or bulk edit environment variables',
         },
         {
           name: '(Back)',
@@ -1313,8 +1396,10 @@ const CLIFunctionVersion = async (functionId, versionId) => {
     
     switch(answer) {
       case 'deployFunction': await CLIDeployFunction(functionId, versionId); return false;
-      case 'updateEnvironment': await CLIUpdateEnvironment(functionId, versionId, version); return false;
-      case 'manageEnvVars': await routeCommand('update-env-vars', { id: functionId, interactive: true }); return false;
+      case 'manageEnvVars':
+        // Manage env vars for this specific version
+        await CLIManageEnvVarsForVersion(functionId, versionId, currentVersion);
+        return false;
       case 'back': await CLIFunctionDetailsMenu(functionId); return false;
     }
   } catch (error) {
@@ -1323,8 +1408,64 @@ const CLIFunctionVersion = async (functionId, versionId) => {
 }
 
 /**
+ * Manage environment variables for a specific version
+ *
+ * @param {string} functionId - Function ID
+ * @param {string} versionId - Version ID to manage env vars for
+ * @param {string} currentVersion - Current deployed version ID (for navigation)
+ */
+const CLIManageEnvVarsForVersion = async (functionId, versionId, currentVersion = null) => {
+  try {
+    // Import the interactiveEnvVars function
+    const { interactiveEnvVarsForVersion } = await import('../commands/updateEnvVars.js');
+
+    // Get API configuration
+    const apiConfig = await getApiConfig();
+    const api = new GliaApiClient(apiConfig);
+
+    // Get function details for display
+    const functionData = await api.getFunction(functionId);
+
+    console.log('');
+    console.log(colorizer.blue(`Managing environment variables for:`));
+    console.log(colorizer.blue(`Function: ${colorizer.bold(functionData.name)} (${functionId})`));
+    console.log(colorizer.blue(`Version:  ${colorizer.bold(versionId)}`));
+    console.log('');
+
+    // Call the interactive env vars management with the specific version
+    const result = await interactiveEnvVarsForVersion({
+      id: functionId,
+      versionId: versionId,
+      deploy: true
+    });
+
+    if (result.message) {
+      showInfo(result.message);
+    }
+
+    if (result.deployed) {
+      showSuccess('Environment variables updated and deployed successfully.');
+      if (result.newVersionId) {
+        showInfo(`New version: ${result.newVersionId}`);
+      }
+    } else if (result.newVersionId) {
+      showSuccess('Environment variables updated but not deployed.');
+      showInfo(`New version created: ${result.newVersionId}`);
+    }
+
+    // Return to version details
+    await CLIFunctionVersion(functionId, versionId, currentVersion);
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIFunctionVersion(functionId, versionId, currentVersion);
+    return false;
+  }
+};
+
+/**
  * Deploy a function version
- * 
+ *
  * @param {string} functionId - Function ID
  * @param {string} versionId - Version ID
  */
@@ -1438,21 +1579,24 @@ const CLIUpdateEnvironment = async (functionId, versionId, version) => {
     if (autoDeploy) {
       // Poll the task endpoint until the version is ready
       showInfo('Waiting for version to be created...');
-      
+
       let taskCompleted = false;
       let newVersionId = null;
-      
+      let attempts = 0;
+      const maxAttempts = 60; // 60 attempts × 2 seconds = 2 minutes timeout
+
       // Extract task ID from the response
       const taskPath = result.self;
       const taskId = taskPath.split('/').pop();
-      
+
       // Poll every 2 seconds until task completes or fails
-      while (!taskCompleted) {
+      while (!taskCompleted && attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 2000)); // 2-second delay
-        
+        attempts++;
+
         try {
           const taskResult = await api.getVersionCreationTask(functionId, taskId);
-          
+
           if (taskResult.status === 'completed') {
             taskCompleted = true;
             newVersionId = taskResult.entity?.id;
@@ -1467,6 +1611,11 @@ const CLIUpdateEnvironment = async (functionId, versionId, version) => {
           showWarning(`Error checking task status: ${error.message}`);
           break;
         }
+      }
+
+      // Check if we timed out
+      if (!taskCompleted && attempts >= maxAttempts) {
+        showWarning(`Version creation timed out after ${maxAttempts * 2} seconds`);
       }
       
       // Deploy if we have a new version ID
@@ -1677,6 +1826,678 @@ const CLIFunctionInvoke = async (functionId, invocationUri) => {
 }
 
 /**
+ * Wrapper for managing environment variables that handles missing versions gracefully
+ *
+ * @param {string} functionId - Function ID
+ * @param {object} functionDetails - Function details
+ */
+const CLIManageEnvVarsWrapper = async (functionId, functionDetails) => {
+  try {
+    // Check if function has a current version deployed
+    if (!functionDetails.current_version || !functionDetails.current_version.id) {
+      console.log('');
+      console.log(colorizer.yellow('⚠️  This function has no deployed version yet.'));
+      console.log('');
+      console.log('Environment variables are associated with function versions.');
+      console.log('You need to create and deploy a version first before you can manage environment variables.');
+      console.log('');
+
+      const action = await select({
+        message: 'What would you like to do?',
+        choices: [
+          {
+            name: 'Create a new function version now',
+            value: 'create',
+            description: 'Bundle and deploy a function version with environment variables'
+          },
+          {
+            name: 'Go back to function menu',
+            value: 'back',
+            description: 'Return to the function details menu'
+          }
+        ]
+      });
+
+      if (action === 'create') {
+        await CLINewVersion(functionId);
+        return false;
+      } else {
+        await CLIFunctionDetailsMenu(functionId);
+        return false;
+      }
+    }
+
+    // Function has a version, proceed with environment variable management
+    await routeCommand('update-env-vars', { id: functionId, interactive: true });
+
+    // Return to function details menu after managing env vars
+    await CLIFunctionDetailsMenu(functionId);
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIFunctionDetailsMenu(functionId);
+    return false;
+  }
+};
+
+/**
+ * Delete a function
+ *
+ * @param {string} functionId - Function ID
+ * @param {object} functionDetails - Function details
+ */
+const CLIDeleteFunction = async (functionId, functionDetails) => {
+  try {
+    console.log(separator);
+    console.log(colorizer.bold('Delete Function'));
+    console.log('');
+
+    // Show function details
+    console.log(colorizer.red('You are about to delete the following function:'));
+    console.log(colorizer.cyan('Name:        '), functionDetails.name);
+    console.log(colorizer.cyan('Description: '), functionDetails.description || '(none)');
+    console.log(colorizer.cyan('ID:          '), functionId);
+    console.log('');
+    console.log(colorizer.red('WARNING: This action cannot be undone!'));
+    console.log(colorizer.red('All function versions and configurations will be permanently deleted.'));
+    console.log('');
+
+    // Confirmation prompt
+    const confirmDelete = await confirm({
+      message: `Are you sure you want to delete function "${functionDetails.name}"?`,
+      default: false
+    });
+
+    if (!confirmDelete) {
+      showInfo('Function deletion cancelled');
+      await CLIFunctionDetailsMenu(functionId);
+      return false;
+    }
+
+    // Second confirmation for safety
+    const finalConfirm = await confirm({
+      message: 'Please confirm again - this will PERMANENTLY DELETE the function.',
+      default: false
+    });
+
+    if (!finalConfirm) {
+      showInfo('Function deletion cancelled');
+      await CLIFunctionDetailsMenu(functionId);
+      return false;
+    }
+
+    // Get API configuration
+    const apiConfig = await getApiConfig();
+
+    // Create API client
+    const api = new GliaApiClient(apiConfig);
+
+    // Delete the function
+    showInfo(`Deleting function "${functionDetails.name}"...`);
+
+    await api.deleteFunction(functionId);
+
+    showSuccess(`Function "${functionDetails.name}" has been deleted successfully`);
+
+    // Return to build menu (not function details since function is gone)
+    await CLIBuildMenu();
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIFunctionDetailsMenu(functionId);
+    return false;
+  }
+};
+
+/**
+ * Schedule management menu
+ *
+ * @param {string} functionId - Function ID
+ * @param {object} functionDetails - Function details
+ */
+const CLIScheduleMenu = async (functionId, functionDetails) => {
+  try {
+    console.log(separator);
+    console.log(colorizer.bold('Schedule Management'));
+    console.log('');
+    console.log(colorizer.cyan('Function: '), functionDetails.name);
+    console.log(colorizer.cyan('ID:       '), functionId);
+    console.log(separator);
+
+    const answer = await select({
+      message: 'Select action:',
+      choices: [
+        {
+          name: 'Create new schedule for this function',
+          value: 'create',
+          description: 'Create a new scheduled trigger to invoke this function automatically',
+        },
+        {
+          name: 'List all scheduled triggers',
+          value: 'list',
+          description: 'Show all scheduled triggers across all functions',
+        },
+        {
+          name: 'View/edit existing schedule',
+          value: 'viewEdit',
+          description: 'View details and modify an existing scheduled trigger',
+        },
+        {
+          name: '(Back)',
+          value: 'back'
+        }
+      ]
+    });
+
+    switch(answer) {
+      case 'create':
+        await CLICreateSchedule(functionId, functionDetails);
+        return false;
+      case 'list':
+        await CLIListSchedules(functionId, functionDetails);
+        return false;
+      case 'viewEdit':
+        await CLIViewEditSchedule(functionId, functionDetails);
+        return false;
+      case 'back':
+        await CLIFunctionDetailsMenu(functionId);
+        return false;
+    }
+  } catch (error) {
+    handleError(error);
+    await CLIFunctionDetailsMenu(functionId);
+    return false;
+  }
+};
+
+/**
+ * Create a new schedule for a function
+ *
+ * @param {string} functionId - Function ID
+ * @param {object} functionDetails - Function details
+ */
+const CLICreateSchedule = async (functionId, functionDetails) => {
+  try {
+    console.log(separator);
+    console.log(colorizer.bold('Create New Schedule'));
+    console.log('');
+
+    // Import the createSchedule command
+    const { createSchedule } = await import('../commands/schedules/createSchedule.js');
+
+    // Call the command in interactive mode with the pre-selected function
+    await createSchedule({
+      functionId: functionId,
+      interactive: true
+    });
+
+    // Return to schedule menu
+    await CLIScheduleMenu(functionId, functionDetails);
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIScheduleMenu(functionId, functionDetails);
+    return false;
+  }
+};
+
+/**
+ * List all scheduled triggers
+ *
+ * @param {string} functionId - Current function ID (for navigation back)
+ * @param {object} functionDetails - Function details (for navigation back)
+ */
+const CLIListSchedules = async (functionId, functionDetails) => {
+  try {
+    console.log(separator);
+    console.log(colorizer.bold('Scheduled Triggers'));
+    console.log('');
+
+    // Get API configuration
+    const apiConfig = await getApiConfig();
+
+    // Create API client
+    const api = new GliaApiClient(apiConfig);
+
+    // Import cron helper for display
+    const { parseCronExpression, getNextExecutionTime, formatTimeRemaining } = await import('../utils/cron-helper.js');
+
+    // Fetch scheduled triggers
+    showInfo('Fetching scheduled triggers...');
+    const result = await api.listScheduledTriggers();
+
+    if (!result.items || result.items.length === 0) {
+      showInfo('No scheduled triggers found');
+      console.log('');
+
+      const createNow = await confirm({
+        message: 'Would you like to create a schedule now?',
+        default: true
+      });
+
+      if (createNow) {
+        await CLICreateSchedule(functionId, functionDetails);
+        return false;
+      }
+
+      await CLIScheduleMenu(functionId, functionDetails);
+      return false;
+    }
+
+    showSuccess(`Found ${result.items.length} scheduled trigger(s)`);
+    console.log('');
+
+    // Display all triggers
+    result.items.forEach((trigger, index) => {
+      console.log(`${colorizer.bold(`${index + 1}. ${trigger.name}`)} ${colorizer.dim(`(${trigger.enabled ? 'Enabled' : 'Disabled'}`)}`);
+      console.log(`   ${colorizer.cyan('ID:')}       ${trigger.id}`);
+      console.log(`   ${colorizer.cyan('Function:')} ${trigger.trigger_id}`);
+      console.log(`   ${colorizer.cyan('Pattern:')}  ${trigger.schedule_pattern}`);
+      console.log(`   ${colorizer.cyan('Runs:')}     ${parseCronExpression(trigger.schedule_pattern)}`);
+
+      const nextRun = getNextExecutionTime(trigger.schedule_pattern);
+      if (nextRun && trigger.enabled) {
+        const timeRemaining = formatTimeRemaining(nextRun);
+        console.log(`   ${colorizer.cyan('Next run:')} ${nextRun.toISOString()} ${colorizer.dim(`(in ${timeRemaining})`)}`);
+      } else if (!trigger.enabled) {
+        console.log(`   ${colorizer.dim('Next run: Disabled')}`);
+      }
+
+      if (trigger.description) {
+        console.log(`   ${colorizer.cyan('Notes:')}    ${trigger.description}`);
+      }
+      console.log('');
+    });
+
+    // Return to schedule menu
+    await CLIScheduleMenu(functionId, functionDetails);
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIScheduleMenu(functionId, functionDetails);
+    return false;
+  }
+};
+
+/**
+ * View and edit an existing schedule
+ *
+ * @param {string} functionId - Current function ID (for navigation back)
+ * @param {object} functionDetails - Function details (for navigation back)
+ */
+const CLIViewEditSchedule = async (functionId, functionDetails) => {
+  try {
+    console.log(separator);
+    console.log(colorizer.bold('View/Edit Schedule'));
+    console.log('');
+
+    // Get API configuration
+    const apiConfig = await getApiConfig();
+
+    // Create API client
+    const api = new GliaApiClient(apiConfig);
+
+    // Import cron helper for display
+    const { parseCronExpression, getNextExecutionTime, formatTimeRemaining } = await import('../utils/cron-helper.js');
+
+    // Fetch scheduled triggers
+    showInfo('Fetching scheduled triggers...');
+    const result = await api.listScheduledTriggers();
+
+    if (!result.items || result.items.length === 0) {
+      showInfo('No scheduled triggers found');
+      await CLIScheduleMenu(functionId, functionDetails);
+      return false;
+    }
+
+    // Create choices from triggers
+    const choices = result.items.map(trigger => ({
+      name: `${trigger.name} - ${parseCronExpression(trigger.schedule_pattern)} ${trigger.enabled ? '' : '(Disabled)'}`,
+      value: trigger.id,
+      description: trigger.description || `Trigger ID: ${trigger.id}`
+    }));
+
+    choices.push({
+      name: '(Back)',
+      value: 'back'
+    });
+
+    const selectedTriggerId = await select({
+      message: 'Select schedule to view/edit:',
+      choices
+    });
+
+    if (selectedTriggerId === 'back') {
+      await CLIScheduleMenu(functionId, functionDetails);
+      return false;
+    }
+
+    // Get full trigger details
+    const trigger = result.items.find(t => t.id === selectedTriggerId);
+
+    // Display trigger details
+    console.log('');
+    console.log(separator);
+    console.log(colorizer.bold('Schedule Details'));
+    console.log('');
+    console.log(colorizer.cyan('Name:        '), trigger.name);
+    console.log(colorizer.cyan('ID:          '), trigger.id);
+    console.log(colorizer.cyan('Function ID: '), trigger.trigger_id);
+    console.log(colorizer.cyan('Pattern:     '), trigger.schedule_pattern);
+    console.log(colorizer.cyan('Description: '), parseCronExpression(trigger.schedule_pattern));
+    console.log(colorizer.cyan('Status:      '), trigger.enabled ? colorizer.green('Enabled') : colorizer.red('Disabled'));
+
+    const nextRun = getNextExecutionTime(trigger.schedule_pattern);
+    if (nextRun && trigger.enabled) {
+      const timeRemaining = formatTimeRemaining(nextRun);
+      console.log(colorizer.cyan('Next run:    '), `${nextRun.toISOString()} (in ${timeRemaining})`);
+    } else if (!trigger.enabled) {
+      console.log(colorizer.cyan('Next run:    '), colorizer.dim('Disabled'));
+    }
+
+    if (trigger.description) {
+      console.log(colorizer.cyan('Notes:       '), trigger.description);
+    }
+    console.log(separator);
+    console.log('');
+
+    // Action menu for the selected trigger
+    const action = await select({
+      message: 'What would you like to do?',
+      choices: [
+        {
+          name: trigger.enabled ? 'Disable this schedule' : 'Enable this schedule',
+          value: 'toggleEnabled',
+          description: trigger.enabled ? 'Temporarily stop scheduled invocations' : 'Resume scheduled invocations'
+        },
+        {
+          name: 'Update schedule pattern',
+          value: 'updatePattern',
+          description: 'Change the cron expression for this schedule'
+        },
+        {
+          name: 'Update name/description',
+          value: 'updateInfo',
+          description: 'Change the schedule name or description'
+        },
+        {
+          name: 'Delete this schedule',
+          value: 'delete',
+          description: 'Permanently delete this scheduled trigger'
+        },
+        {
+          name: '(Back)',
+          value: 'back'
+        }
+      ]
+    });
+
+    switch(action) {
+      case 'toggleEnabled':
+        await CLIToggleSchedule(trigger, functionId, functionDetails);
+        return false;
+      case 'updatePattern':
+        await CLIUpdateSchedulePattern(trigger, functionId, functionDetails);
+        return false;
+      case 'updateInfo':
+        await CLIUpdateScheduleInfo(trigger, functionId, functionDetails);
+        return false;
+      case 'delete':
+        await CLIDeleteSchedule(trigger, functionId, functionDetails);
+        return false;
+      case 'back':
+        await CLIViewEditSchedule(functionId, functionDetails);
+        return false;
+    }
+  } catch (error) {
+    handleError(error);
+    await CLIScheduleMenu(functionId, functionDetails);
+    return false;
+  }
+};
+
+/**
+ * Toggle schedule enabled/disabled state
+ */
+const CLIToggleSchedule = async (trigger, functionId, functionDetails) => {
+  try {
+    const newState = !trigger.enabled;
+    const action = newState ? 'enable' : 'disable';
+
+    const confirmToggle = await confirm({
+      message: `${action.charAt(0).toUpperCase() + action.slice(1)} schedule "${trigger.name}"?`,
+      default: true
+    });
+
+    if (!confirmToggle) {
+      await CLIViewEditSchedule(functionId, functionDetails);
+      return false;
+    }
+
+    // Get API configuration
+    const apiConfig = await getApiConfig();
+    const api = new GliaApiClient(apiConfig);
+
+    // Import updateSchedule
+    const { updateSchedule } = await import('../commands/schedules/updateSchedule.js');
+
+    showInfo(`${action.charAt(0).toUpperCase() + action.slice(1)}ing schedule...`);
+
+    await updateSchedule({
+      id: trigger.id,
+      enabled: newState
+    });
+
+    showSuccess(`Schedule "${trigger.name}" ${action}d successfully`);
+
+    await CLIViewEditSchedule(functionId, functionDetails);
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIViewEditSchedule(functionId, functionDetails);
+    return false;
+  }
+};
+
+/**
+ * Update schedule pattern (cron expression)
+ */
+const CLIUpdateSchedulePattern = async (trigger, functionId, functionDetails) => {
+  try {
+    console.log('');
+    console.log(colorizer.blue('Current pattern:'), trigger.schedule_pattern);
+
+    // Import cron helper
+    const { parseCronExpression, CRON_PRESETS, buildCronExpression, validateCronExpression } = await import('../utils/cron-helper.js');
+    console.log(colorizer.blue('Current schedule:'), parseCronExpression(trigger.schedule_pattern));
+    console.log('');
+
+    // Ask if they want to use a preset or custom
+    const usePreset = await confirm({
+      message: 'Would you like to use a common schedule preset?',
+      default: true
+    });
+
+    let newPattern;
+
+    if (usePreset) {
+      // Show preset choices
+      const presetChoices = Object.entries(CRON_PRESETS).map(([key, preset]) => ({
+        name: `${preset.description} - ${preset.expression}`,
+        value: preset.expression
+      }));
+
+      presetChoices.push({
+        name: 'Enter custom expression...',
+        value: 'custom'
+      });
+
+      const selected = await select({
+        message: 'Select schedule preset:',
+        choices: presetChoices
+      });
+
+      if (selected === 'custom') {
+        newPattern = await input({
+          message: 'Enter cron expression (Minutes Hours Day Month DayOfWeek Year):',
+          validate: (input) => {
+            const validation = validateCronExpression(input);
+            return validation.valid ? true : validation.error;
+          }
+        });
+      } else {
+        newPattern = selected;
+      }
+    } else {
+      newPattern = await input({
+        message: 'Enter cron expression (Minutes Hours Day Month DayOfWeek Year):',
+        validate: (input) => {
+          const validation = validateCronExpression(input);
+          return validation.valid ? true : validation.error;
+        }
+      });
+    }
+
+    // Show preview
+    console.log('');
+    console.log(colorizer.green('New schedule:'), parseCronExpression(newPattern));
+    console.log('');
+
+    const confirmUpdate = await confirm({
+      message: 'Update schedule with this pattern?',
+      default: true
+    });
+
+    if (!confirmUpdate) {
+      await CLIViewEditSchedule(functionId, functionDetails);
+      return false;
+    }
+
+    // Import updateSchedule
+    const { updateSchedule } = await import('../commands/schedules/updateSchedule.js');
+
+    showInfo('Updating schedule pattern...');
+
+    await updateSchedule({
+      id: trigger.id,
+      schedulePattern: newPattern
+    });
+
+    showSuccess(`Schedule "${trigger.name}" updated successfully`);
+
+    await CLIViewEditSchedule(functionId, functionDetails);
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIViewEditSchedule(functionId, functionDetails);
+    return false;
+  }
+};
+
+/**
+ * Update schedule name/description
+ */
+const CLIUpdateScheduleInfo = async (trigger, functionId, functionDetails) => {
+  try {
+    console.log('');
+    console.log(colorizer.blue('Current name:'), trigger.name);
+    console.log(colorizer.blue('Current description:'), trigger.description || '(none)');
+    console.log('');
+
+    const newName = await input({
+      message: 'New schedule name:',
+      default: trigger.name
+    });
+
+    const newDescription = await input({
+      message: 'New description (optional):',
+      default: trigger.description || ''
+    });
+
+    // Check if anything changed
+    if (newName === trigger.name && newDescription === (trigger.description || '')) {
+      showInfo('No changes detected');
+      await CLIViewEditSchedule(functionId, functionDetails);
+      return false;
+    }
+
+    const confirmUpdate = await confirm({
+      message: 'Update schedule information?',
+      default: true
+    });
+
+    if (!confirmUpdate) {
+      await CLIViewEditSchedule(functionId, functionDetails);
+      return false;
+    }
+
+    // Import updateSchedule
+    const { updateSchedule } = await import('../commands/schedules/updateSchedule.js');
+
+    showInfo('Updating schedule information...');
+
+    const updates = {};
+    if (newName !== trigger.name) updates.name = newName;
+    if (newDescription !== (trigger.description || '')) updates.description = newDescription;
+
+    await updateSchedule({
+      id: trigger.id,
+      ...updates
+    });
+
+    showSuccess(`Schedule "${newName}" updated successfully`);
+
+    await CLIViewEditSchedule(functionId, functionDetails);
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIViewEditSchedule(functionId, functionDetails);
+    return false;
+  }
+};
+
+/**
+ * Delete a schedule
+ */
+const CLIDeleteSchedule = async (trigger, functionId, functionDetails) => {
+  try {
+    console.log('');
+    console.log(colorizer.red('WARNING: This will permanently delete the scheduled trigger.'));
+    console.log(colorizer.red('This action cannot be undone!'));
+    console.log('');
+
+    const confirmDelete = await confirm({
+      message: `Delete schedule "${trigger.name}"?`,
+      default: false
+    });
+
+    if (!confirmDelete) {
+      await CLIViewEditSchedule(functionId, functionDetails);
+      return false;
+    }
+
+    // Import deleteSchedule
+    const { deleteSchedule } = await import('../commands/schedules/deleteSchedule.js');
+
+    showInfo(`Deleting schedule "${trigger.name}"...`);
+
+    await deleteSchedule({
+      id: trigger.id,
+      yes: true // Skip the command's own confirmation since we already confirmed
+    });
+
+    showSuccess(`Schedule "${trigger.name}" deleted successfully`);
+
+    await CLIScheduleMenu(functionId, functionDetails);
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIViewEditSchedule(functionId, functionDetails);
+    return false;
+  }
+};
+
+/**
  * Run the CLI
  */
 export async function runCLI() {
@@ -1700,8 +2521,7 @@ export async function runCLI() {
     // Load full configuration first to ensure site ID is properly loaded
     // This is a critical step to fix the site persistence issue
     const config = await loadConfig();
-    console.log(colorizer.dim(`[DEBUG] Initial config loaded: GLIA_SITE_ID=${config.siteId}, profile=${config.profile}`));
-    
+
     // If there's no site ID after loading, show a warning
     if (!config.siteId) {
       console.log(colorizer.yellow('\n⚠️ Warning: No site ID found in configuration. Some commands may not work properly.'));
@@ -1863,10 +2683,12 @@ const CLIChangeSite = async () => {
         });
       }
       
+      // Import the LOCAL_CONFIG_FILE constant from config.js
+      const { LOCAL_CONFIG_FILE } = await import('../lib/config.js');
+
       // Important: Use a direct file write to local .env to avoid conflicts
       // This ensures the local .env won't override the profile setting
       if (fs.existsSync(LOCAL_CONFIG_FILE)) {
-        console.log(colorizer.dim(`[DEBUG] Updating local .env file with new site ID`));
         await updateEnvFile({
           'GLIA_SITE_ID': selectedSiteId
         });
@@ -1877,11 +2699,10 @@ const CLIChangeSite = async () => {
       
       // Force reload of configuration with new site ID
       await loadConfig();
-      
+
       // Verify the site ID was set properly
       const verifyConfig = await loadConfig();
-      console.log(colorizer.dim(`[DEBUG] Site change verification - new site ID: ${verifyConfig.siteId}`));
-      
+
       // Double check that process.env has the correct site ID
       if (process.env.GLIA_SITE_ID !== selectedSiteId) {
         console.log(colorizer.yellow(`[WARNING] Site ID mismatch after update! Expected: ${selectedSiteId}, Got: ${process.env.GLIA_SITE_ID || 'none'}`));
@@ -1924,19 +2745,39 @@ const CLIProfileMenu = async () => {
     
     console.log(colorizer.blue('Current active profile:'), colorizer.bold(currentProfile));
     console.log(separator);
-    
+
     const answer = await select({
       message: 'Select action:',
       choices: [
+        {
+          name: 'Quick setup wizard',
+          value: 'setup',
+          description: 'Guided setup to configure credentials and create/update profiles',
+        },
+        {
+          name: '─'.repeat(50),
+          value: 'separator',
+          disabled: true
+        },
         {
           name: 'List profiles',
           value: 'list',
           description: 'Show all available profiles',
         },
         {
+          name: 'View profile details',
+          value: 'view',
+          description: 'View configuration for a specific profile',
+        },
+        {
           name: 'Create new profile',
           value: 'create',
           description: 'Create a new configuration profile',
+        },
+        {
+          name: 'Update profile',
+          value: 'update',
+          description: 'Update configuration for an existing profile',
         },
         {
           name: 'Switch profile',
@@ -1954,10 +2795,13 @@ const CLIProfileMenu = async () => {
         }
       ]
     });
-    
+
     switch(answer) {
+      case 'setup': await CLISetup(); return false;
       case 'list': await CLIListProfiles(); return false;
+      case 'view': await CLIViewProfile(); return false;
       case 'create': await CLICreateProfile(); return false;
+      case 'update': await CLIUpdateProfile(); return false;
       case 'switch': await CLISwitchProfile(); return false;
       case 'delete': await CLIDeleteProfile(); return false;
       case 'back': await CLIMainMenu(); return false;
@@ -2245,10 +3089,279 @@ const CLIDeleteProfile = async () => {
     
     // Delete the profile
     await deleteProfile(profileName);
-    
+
     showSuccess(`Profile '${profileName}' deleted successfully`);
-    
+
     await CLIProfileMenu();
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIProfileMenu();
+    return false;
+  }
+}
+
+/**
+ * View profile details
+ */
+const CLIViewProfile = async () => {
+  try {
+    // Get all profiles
+    const profiles = listProfiles();
+
+    // Make sure default is included
+    if (!profiles.includes('default')) {
+      profiles.unshift('default');
+    }
+
+    const profileName = await select({
+      message: 'Select profile to view:',
+      choices: [
+        ...profiles.map(profile => ({
+          name: profile,
+          value: profile,
+        })),
+        {
+          name: '(Cancel)',
+          value: 'cancel'
+        }
+      ]
+    });
+
+    if (profileName === 'cancel') {
+      await CLIProfileMenu();
+      return false;
+    }
+
+    // Get profile configuration
+    const config = getProfileConfig(profileName);
+
+    // Display profile header
+    console.log('');
+    console.log(colorizer.blue(`Profile: ${colorizer.bold(profileName)}`));
+    console.log('='.repeat(50));
+    console.log('');
+
+    // If profile is empty
+    if (Object.keys(config).length === 0) {
+      showWarning(`Profile '${profileName}' has no configuration set`);
+      console.log('');
+      console.log('You can add configuration by updating the profile.');
+      console.log('');
+    } else {
+      // Display configuration
+      const displayKeys = [
+        'GLIA_SITE_ID',
+        'GLIA_KEY_ID',
+        'GLIA_KEY_SECRET',
+        'GLIA_API_URL',
+        'GLIA_BEARER_TOKEN',
+        'GLIA_TOKEN_EXPIRES_AT'
+      ];
+
+      // Function to mask sensitive values
+      const maskValue = (key, value) => {
+        if (!value) return value;
+
+        // Fully mask API key secret
+        if (key === 'GLIA_KEY_SECRET') {
+          if (value.length > 12) {
+            return `${value.substring(0, 4)}${'*'.repeat(value.length - 8)}${value.substring(value.length - 4)}`;
+          }
+          return `${value.substring(0, 2)}${'*'.repeat(Math.max(value.length - 2, 4))}`;
+        }
+
+        // Show first 8 chars of Key ID, mask the rest
+        if (key === 'GLIA_KEY_ID') {
+          const showChars = Math.min(8, value.length);
+          return `${value.substring(0, showChars)}${'*'.repeat(Math.max(value.length - showChars, 4))}`;
+        }
+
+        // Truncate bearer token - just show first 12 chars
+        if (key === 'GLIA_BEARER_TOKEN') {
+          const showChars = Math.min(12, value.length);
+          return `${value.substring(0, showChars)}${'*'.repeat(Math.min(20, Math.max(value.length - showChars, 8)))}`;
+        }
+
+        // Decode and format expiration timestamp
+        if (key === 'GLIA_TOKEN_EXPIRES_AT') {
+          try {
+            const timestamp = parseInt(value, 10);
+            if (!isNaN(timestamp)) {
+              const date = new Date(timestamp * 1000);
+              const utcString = date.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, ' UTC');
+              return `${value} (${utcString})`;
+            }
+          } catch (error) {
+            // If parsing fails, just return the original value
+          }
+          return value;
+        }
+
+        return value;
+      };
+
+      // Show known keys first
+      displayKeys.forEach(key => {
+        if (config[key]) {
+          const value = maskValue(key, config[key]);
+          console.log(`${colorizer.cyan(key.padEnd(25))}: ${value}`);
+        }
+      });
+
+      // Show any other keys that aren't in the standard list
+      Object.keys(config)
+        .filter(key => !displayKeys.includes(key))
+        .forEach(key => {
+          const value = maskValue(key, config[key]);
+          console.log(`${colorizer.cyan(key.padEnd(25))}: ${value}`);
+        });
+
+      console.log('');
+      console.log(colorizer.dim('Note: Sensitive values are masked for security.'));
+      console.log('');
+    }
+
+    await CLIProfileMenu();
+    return false;
+  } catch (error) {
+    handleError(error);
+    await CLIProfileMenu();
+    return false;
+  }
+}
+
+/**
+ * Update profile configuration
+ */
+const CLIUpdateProfile = async () => {
+  try {
+    // Get all profiles
+    const profiles = listProfiles();
+
+    // Make sure default is included
+    if (!profiles.includes('default')) {
+      profiles.unshift('default');
+    }
+
+    const profileName = await select({
+      message: 'Select profile to update:',
+      choices: [
+        ...profiles.map(profile => ({
+          name: profile,
+          value: profile,
+        })),
+        {
+          name: '(Cancel)',
+          value: 'cancel'
+        }
+      ]
+    });
+
+    if (profileName === 'cancel') {
+      await CLIProfileMenu();
+      return false;
+    }
+
+    // Get current configuration
+    let currentConfig = {};
+    try {
+      currentConfig = getProfileConfig(profileName);
+    } catch (error) {
+      // Profile might be empty, that's okay
+    }
+
+    // Show current config
+    console.log('');
+    console.log(colorizer.blue(`Current configuration for: ${colorizer.bold(profileName)}`));
+    console.log('='.repeat(50));
+
+    if (Object.keys(currentConfig).length === 0) {
+      console.log(colorizer.dim('  (No configuration set)'));
+    } else {
+      Object.entries(currentConfig).forEach(([key, value]) => {
+        const displayValue = ['GLIA_KEY_SECRET', 'GLIA_BEARER_TOKEN'].includes(key)
+          ? '***'
+          : value;
+        console.log(`  ${colorizer.cyan(key)}: ${displayValue}`);
+      });
+    }
+    console.log('');
+
+    // Select what to update
+    const fieldToUpdate = await select({
+      message: 'What would you like to update?',
+      choices: [
+        {
+          name: 'Site ID',
+          value: 'GLIA_SITE_ID',
+          description: 'Update the Glia Site ID'
+        },
+        {
+          name: 'API Key ID',
+          value: 'GLIA_KEY_ID',
+          description: 'Update the API Key ID'
+        },
+        {
+          name: 'API Key Secret',
+          value: 'GLIA_KEY_SECRET',
+          description: 'Update the API Key Secret'
+        },
+        {
+          name: 'API URL',
+          value: 'GLIA_API_URL',
+          description: 'Update the API URL'
+        },
+        {
+          name: '(Cancel)',
+          value: 'cancel'
+        }
+      ]
+    });
+
+    if (fieldToUpdate === 'cancel') {
+      await CLIProfileMenu();
+      return false;
+    }
+
+    // Get the friendly field name
+    const fieldNames = {
+      'GLIA_SITE_ID': 'Site ID',
+      'GLIA_KEY_ID': 'API Key ID',
+      'GLIA_KEY_SECRET': 'API Key Secret',
+      'GLIA_API_URL': 'API URL'
+    };
+
+    const friendlyName = fieldNames[fieldToUpdate];
+    const currentValue = currentConfig[fieldToUpdate];
+
+    // Prompt for new value
+    const newValue = await input({
+      message: `Enter new ${friendlyName}:`,
+      default: currentValue || '',
+      validate: (input) => {
+        if (!input) return `${friendlyName} cannot be empty`;
+        return true;
+      }
+    });
+
+    // Update the profile
+    await updateProfile(profileName, { [fieldToUpdate]: newValue });
+
+    showSuccess(`Updated ${friendlyName} for profile '${profileName}'`);
+
+    // Ask if they want to update another field
+    const updateAnother = await confirm({
+      message: 'Update another field?',
+      default: false
+    });
+
+    if (updateAnother) {
+      await CLIUpdateProfile();
+    } else {
+      await CLIProfileMenu();
+    }
+
     return false;
   } catch (error) {
     handleError(error);
@@ -2345,63 +3458,82 @@ const CLIUpdateFunction = async (functionId, functionDetails) => {
   try {
     console.log(separator);
     console.log(colorizer.bold('Update function details:'));
-    
-    // Get current function name and description
+
+    // Get current function name, description, and warm instances
     const currentName = functionDetails.name || '';
     const currentDescription = functionDetails.description || '';
-    
+    const currentWarmInstances = functionDetails.requested_warm_instances || 0;
+
     console.log(colorizer.blue('Current name:'), currentName);
     console.log(colorizer.blue('Current description:'), currentDescription);
+    console.log(colorizer.blue('Current warm instances:'), currentWarmInstances);
     console.log('');
-    
+
     // Ask for new name (default to current)
     const newName = await input({
       message: 'New function name:',
       default: currentName
     });
-    
+
     // Ask for new description (default to current)
     const newDescription = await input({
       message: 'New function description:',
       default: currentDescription
     });
-    
+
+    // Ask for new warm instances (default to current)
+    const newWarmInstancesStr = await input({
+      message: 'Number of warm instances (0-5):',
+      default: currentWarmInstances.toString(),
+      validate: (input) => {
+        const num = parseInt(input, 10);
+        if (isNaN(num) || num < 0 || num > 5) {
+          return 'Please enter a number between 0 and 5';
+        }
+        return true;
+      }
+    });
+    const newWarmInstances = parseInt(newWarmInstancesStr, 10);
+
     // Check if anything changed
-    if (newName === currentName && newDescription === currentDescription) {
+    if (newName === currentName &&
+        newDescription === currentDescription &&
+        newWarmInstances === currentWarmInstances) {
       showInfo('No changes detected. Update cancelled.');
       await CLIFunctionDetailsMenu(functionId);
       return false;
     }
-    
+
     // Confirm update
     const confirmUpdate = await confirm({
       message: 'Update function details with these values?',
       default: true
     });
-    
+
     if (!confirmUpdate) {
       showInfo('Update cancelled.');
       await CLIFunctionDetailsMenu(functionId);
       return false;
     }
-    
+
     // Get API configuration
     const apiConfig = await getApiConfig();
-    
+
     // Create API client
     const api = new GliaApiClient(apiConfig);
-    
+
     // Prepare updates object
     const updates = {};
     if (newName !== currentName) updates.name = newName;
     if (newDescription !== currentDescription) updates.description = newDescription;
-    
+    if (newWarmInstances !== currentWarmInstances) updates.warmInstances = newWarmInstances;
+
     // Update function
     showInfo(`Updating function "${functionId}"...`);
     const updatedFunction = await api.updateFunction(functionId, updates);
-    
+
     showSuccess('Function details updated successfully');
-    
+
     // Show what was updated
     if (newName !== currentName) {
       console.log(colorizer.blue('New name:'), updatedFunction.name);
@@ -2409,7 +3541,10 @@ const CLIUpdateFunction = async (functionId, functionDetails) => {
     if (newDescription !== currentDescription) {
       console.log(colorizer.blue('New description:'), updatedFunction.description);
     }
-    
+    if (newWarmInstances !== currentWarmInstances && updatedFunction.requested_warm_instances !== undefined) {
+      console.log(colorizer.blue('New warm instances:'), `${updatedFunction.requested_warm_instances} requested, ${updatedFunction.allocated_warm_instances || 0} allocated`);
+    }
+
     // Return to function details menu
     await CLIFunctionDetailsMenu(functionId);
     return false;
@@ -2919,7 +4054,7 @@ const CLIManageApplets = async () => {
   try {
     console.log(separator);
     console.log(colorizer.bold('Applet Management'));
-    
+
     const answer = await select({
       message: 'Select action:',
       choices: [
@@ -2954,7 +4089,10 @@ const CLIManageApplets = async () => {
         }
       ]
     });
-    
+
+    // Declare result at function scope so it's accessible outside the switch
+    let result = null;
+
     switch(answer) {
       case 'create':
         await routeCommand('create-applet', { interactive: true });
@@ -2966,7 +4104,24 @@ const CLIManageApplets = async () => {
         await routeCommand('deploy-applet', { interactive: true });
         break;
       case 'select':
-        await routeCommand('select-applet', { interactive: true });
+        result = await routeCommand('select-applet', { interactive: true });
+        // Handle navigation based on user's choice in the select-applet command
+        if (result && result.nextAction) {
+          if (result.nextAction === 'applet-menu') {
+            // User chose to return to applet menu - recurse
+            await CLIManageApplets();
+            return false;
+          } else if (result.nextAction === 'main-menu') {
+            // User chose to return to main menu
+            await CLIBuildMenu();
+            return false;
+          }
+          // If nextAction is 'done', continue to the prompt below
+        } else if (!result || result.canceled) {
+          // User canceled or went back - return to applet menu
+          await CLIManageApplets();
+          return false;
+        }
         break;
       case 'update':
         await routeCommand('update-applet', { interactive: true });
@@ -2975,17 +4130,20 @@ const CLIManageApplets = async () => {
         await CLIBuildMenu();
         return false;
     }
-    
-    // Return to applet management menu after operation completes
-    const continueOperations = await confirm({
-      message: 'Would you like to perform another applet operation?',
-      default: true
-    });
-    
-    if (continueOperations) {
-      await CLIManageApplets();
-    } else {
-      await CLIBuildMenu();
+
+    // Only show this prompt for operations other than 'select' (which handles its own navigation)
+    // or when 'select' returns without a nextAction
+    if (answer !== 'select' || !result || !result.nextAction || result.nextAction === 'done') {
+      const continueOperations = await confirm({
+        message: 'Would you like to perform another applet operation?',
+        default: true
+      });
+
+      if (continueOperations) {
+        await CLIManageApplets();
+      } else {
+        await CLIBuildMenu();
+      }
     }
     return false;
   } catch (error) {

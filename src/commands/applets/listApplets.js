@@ -34,9 +34,8 @@ export async function listApplets(options) {
       return result;
     } catch (error) {
       // Check for authorization error (403) or other errors
-      if (error.statusCode === 403 || 
+      if (error.statusCode === 403 ||
           (error.originalError && error.originalError.statusCode === 403)) {
-        console.log('[DEBUG] Handling 403 error gracefully');
         // Return empty array to handle gracefully - match expected structure
         return { axons: [] };
       }
@@ -60,12 +59,7 @@ async function main() {
       try {
         // List applets
         const result = await listApplets(options);
-        
-        // Enhanced debug logging
-        command.info(`API response format: ${Object.prototype.toString.call(result)}`);
-        command.info(`API response keys: ${result ? Object.keys(result).join(', ') : 'none'}`);
-        command.info(`API response full: ${JSON.stringify(result, null, 2)}`);
-        
+
         // Display results - handle different API response structures
         const applets = result?.axons || result?.items || [];
         

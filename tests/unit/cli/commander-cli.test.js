@@ -1,7 +1,7 @@
 /**
  * Unit tests for the Commander.js-based CLI implementation
  */
-import { jest } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
 import { execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';

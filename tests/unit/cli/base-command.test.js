@@ -1,7 +1,7 @@
 /**
  * Unit tests for the BaseCommand class
  */
-import { jest } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
 import { BaseCommand } from '../../../src/cli/base-command.js';
 import { Command } from 'commander';
 
