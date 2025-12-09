@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
 import { routeCommand } from '../../src/cli/command-router.js';
 import * as commands from '../../src/commands/index.js';
 import { handleError } from '../../src/cli/error-handler.js';

@@ -137,7 +137,14 @@ export async function routeCommand(commandName, options = {}, handleErrors = tru
           result = await commands.deployProject(options);
         }
         break;
-        
+
+      // MCP server commands
+      case 'mcp':
+      case 'start-mcp':
+      case 'mcp-server':
+        result = await commands.startMcpServer(options);
+        break;
+
       default:
         throw new Error(`Unknown command: ${commandName}`);
     }

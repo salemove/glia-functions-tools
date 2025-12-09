@@ -2,7 +2,7 @@
  * Tests for the offline support functionality
  */
 
-import { jest } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';

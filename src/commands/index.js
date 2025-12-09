@@ -8,6 +8,7 @@
 export { default as createAndDeployVersion } from './createAndDeployVersion.js';
 export { default as createFunction } from './createFunction.js';
 export { default as updateFunction } from './updateFunction.js';
+export { default as deleteFunction } from './deleteFunction.js';
 export { default as updateEnvVars } from './updateEnvVars.js';
 export { default as fetchLogs } from './fetchLogs.js';
 export { default as invokeFunction } from './invokeFunction.js';
@@ -15,6 +16,12 @@ export { default as listFunctions } from './listFunctions.js';
 export { default as listTemplates } from './listTemplates.js';
 export { default as init } from './init.js';
 export { default as dev } from './dev.js';
+
+// Scheduled functions commands
+export { default as createSchedule } from './schedules/createSchedule.js';
+export { default as listSchedules } from './schedules/listSchedules.js';
+export { default as updateSchedule } from './schedules/updateSchedule.js';
+export { default as deleteSchedule } from './schedules/deleteSchedule.js';
 
 // Template management commands
 export { default as templates } from './templates.js';
@@ -45,3 +52,6 @@ export { deployProject } from './projects/index.js';
 
 // Export event handler commands
 export { default as setupExportHandler } from './exports/setupExportHandler.js';
+
+// MCP server commands
+export { default as startMcpServer } from './startMcpServer.js';

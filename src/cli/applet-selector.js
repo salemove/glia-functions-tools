@@ -28,10 +28,7 @@ export async function getApplets(options = {}) {
       console.error('No site ID found in configuration or options. Please set an active site first.');
       throw new Error('Missing site ID. Please set an active site first via "Change active site" option.');
     }
-    
-    // Debug info for troubleshooting
-    console.log(`[DEBUG] getApplets using siteId: ${options.siteId || apiConfig.siteId}`);
-    
+
     // Create API client
     const api = new GliaApiClient(apiConfig);
     

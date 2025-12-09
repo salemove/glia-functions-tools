@@ -6,11 +6,7 @@
  */
 import fs from 'fs/promises';
 import path from 'path';
-import glob from 'glob';
-import { promisify } from 'util';
-
-// Convert callback-based glob to Promise-based
-const globAsync = promisify(glob);
+import { glob } from 'glob';
 
 /**
  * Detect if a file is a Glia function
@@ -130,7 +126,7 @@ export async function detectKvNamespaces(filePath) {
 export async function findJavaScriptFiles(directory) {
   try {
     const pattern = path.join(directory, '**/*.js');
-    return await globAsync(pattern, {
+    return await glob(pattern, {
       ignore: ['**/node_modules/**', '**/\\.git/**'],
       nodir: true
     });
@@ -149,7 +145,7 @@ export async function findJavaScriptFiles(directory) {
 export async function findHtmlFiles(directory) {
   try {
     const pattern = path.join(directory, '**/*.html');
-    return await globAsync(pattern, {
+    return await glob(pattern, {
       ignore: ['**/node_modules/**', '**/\\.git/**'],
       nodir: true
     });

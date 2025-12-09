@@ -1,7 +1,7 @@
 /**
  * Tests for the update-function command
  */
-import { jest } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
 import { updateFunction } from '../../../src/commands/updateFunction.js';
 
 // Mock dependencies

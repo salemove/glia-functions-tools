@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
 import { fetchLogs } from '../../../src/commands/fetchLogs.js';
 import GliaApiClient from '../../../src/lib/api.js';
 import * as configModule from '../../../src/lib/config.js';

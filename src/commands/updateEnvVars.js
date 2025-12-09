@@ -398,6 +398,283 @@ export async function interactiveEnvVars(options) {
 }
 
 /**
+ * Interactive environment variable management for a specific version
+ * This version doesn't require a deployed current_version
+ *
+ * @param {Object} options - Command options
+ * @param {string} options.id - Function ID
+ * @param {string} options.versionId - Specific version ID to manage env vars for
+ * @param {boolean} [options.deploy=true] - Whether to deploy immediately
+ * @returns {Promise<Object>} Result of the operation
+ */
+export async function interactiveEnvVarsForVersion(options) {
+  try {
+    const apiConfig = await getApiConfig();
+    const api = new GliaApiClient(apiConfig);
+
+    // Get the function first
+    const functionData = await api.getFunction(options.id);
+
+    // Validate that the versionId is provided
+    if (!options.versionId) {
+      throw new Error('Version ID is required for this operation');
+    }
+
+    // Get environment variables for this specific version
+    const currentEnvVars = await api.getVersionEnvVars(options.id, options.versionId);
+
+    // Get version details for display
+    const versionDetails = await api.getVersion(options.id, options.versionId);
+
+    console.log(colorizer.blue(`\nManaging environment variables for function: ${colorizer.bold(functionData.name)} (${options.id})`));
+    console.log(colorizer.blue(`Version: ${colorizer.bold(options.versionId)}`));
+    console.log(colorizer.blue(`Created at: ${new Date(versionDetails.created_at).toLocaleString()}`));
+    console.log(colorizer.yellow(`\nNote: Changes to environment variables will create a new function version.`));
+    console.log(colorizer.blue(`\nCurrent environment variables:`));
+    console.log(formatEnvVars(currentEnvVars, options.versionId));
+
+    // Ask which operation to perform
+    const operation = await select({
+      message: 'Select operation:',
+      choices: [
+        {
+          name: 'Add or update variables',
+          value: 'add',
+          description: 'Add new or update existing environment variables'
+        },
+        {
+          name: 'Delete variables',
+          value: 'delete',
+          description: 'Remove environment variables'
+        },
+        {
+          name: 'Bulk edit using JSON editor',
+          value: 'bulk',
+          description: 'Edit all environment variables at once in JSON format'
+        },
+        {
+          name: 'Import from file',
+          value: 'import',
+          description: 'Import environment variables from a JSON file'
+        },
+        {
+          name: 'Export to file',
+          value: 'export',
+          description: 'Export current environment variables to a JSON file'
+        },
+        {
+          name: 'Exit',
+          value: 'exit',
+          description: 'Return to previous menu'
+        }
+      ]
+    });
+
+    if (operation === 'exit') {
+      return { message: 'Operation cancelled.' };
+    }
+
+    let updates = {};
+
+    if (operation === 'add') {
+      // Add/update mode
+      let addingVars = true;
+      while (addingVars) {
+        // Get existing variable names as suggestions
+        const existingVars = Object.keys(currentEnvVars);
+
+        // Ask for variable name with autocomplete for existing vars
+        const name = await input({
+          message: 'Variable name (empty to finish):',
+          validate: (input) => {
+            if (input.includes(' ')) return 'Environment variable names cannot contain spaces';
+            return true;
+          }
+        });
+
+        if (!name) {
+          addingVars = false;
+          continue;
+        }
+
+        // Check if variable already exists
+        const isExisting = existingVars.includes(name);
+
+        // If existing, show current value
+        if (isExisting) {
+          console.log(colorizer.yellow(`Current value: ${currentEnvVars[name]}`));
+        }
+
+        // Ask for variable value
+        const value = await input({
+          message: `Enter value for ${name}:`,
+          default: isExisting ? currentEnvVars[name] : ''
+        });
+
+        updates[name] = value;
+        console.log(colorizer.green(`✓ Variable ${colorizer.bold(name)} ${isExisting ? 'updated' : 'added'}`));
+      }
+    } else if (operation === 'delete') {
+      // Delete mode - first check if there are any vars to delete
+      const envVarKeys = Object.keys(currentEnvVars);
+
+      if (envVarKeys.length === 0) {
+        console.log(colorizer.yellow('No environment variables to delete.'));
+        return { message: 'No environment variables to delete.' };
+      }
+
+      // Allow user to select multiple vars to delete
+      const keysToDelete = await checkbox({
+        message: 'Select variables to delete:',
+        choices: envVarKeys.map(key => ({
+          name: key,
+          value: key
+        }))
+      });
+
+      if (keysToDelete.length === 0) {
+        return { message: 'No variables selected for deletion.' };
+      }
+
+      // Mark selected keys for deletion
+      keysToDelete.forEach(key => {
+        updates[key] = null; // Setting to null deletes it
+      });
+
+      console.log(colorizer.yellow(`Selected ${keysToDelete.length} variable(s) for deletion.`));
+    } else if (operation === 'bulk') {
+      // Open JSON editor with current vars
+      let envVarsJson = JSON.stringify(currentEnvVars, null, 2);
+
+      // If it's placeholder values, provide empty values instead
+      if (Object.values(currentEnvVars).every(val => val === '********')) {
+        const emptyVars = {};
+        Object.keys(currentEnvVars).forEach(key => {
+          emptyVars[key] = '';
+        });
+        envVarsJson = JSON.stringify(emptyVars, null, 2);
+      }
+
+      const editedJson = await editor({
+        message: 'Edit environment variables (JSON format):',
+        default: envVarsJson,
+        validate: (input) => {
+          try {
+            JSON.parse(input);
+            return true;
+          } catch (error) {
+            return `Invalid JSON: ${error.message}`;
+          }
+        }
+      });
+
+      try {
+        updates = JSON.parse(editedJson);
+        console.log(colorizer.green(`✓ Successfully parsed environment variables.`));
+      } catch (error) {
+        console.log(colorizer.red(`Error parsing JSON: ${error.message}`));
+        return { message: 'Invalid JSON format. Operation cancelled.' };
+      }
+    } else if (operation === 'import') {
+      // Import from file
+      const filePath = await input({
+        message: 'Enter path to JSON file:',
+        validate: (input) => {
+          if (!fs.existsSync(input)) {
+            return `File not found: ${input}`;
+          }
+          if (!input.endsWith('.json')) {
+            return 'File must have .json extension';
+          }
+          return true;
+        }
+      });
+
+      try {
+        const fileContent = fs.readFileSync(filePath, 'utf8');
+        updates = JSON.parse(fileContent);
+        console.log(colorizer.green(`✓ Successfully imported environment variables from ${filePath}`));
+      } catch (error) {
+        console.log(colorizer.red(`Error reading or parsing file: ${error.message}`));
+        return { message: `Error importing file: ${error.message}` };
+      }
+    } else if (operation === 'export') {
+      // Export to file
+      const filePath = await input({
+        message: 'Enter path to save JSON file:',
+        default: './env-vars.json'
+      });
+
+      try {
+        // Ensure directory exists
+        const dir = path.dirname(filePath);
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+
+        // If values are placeholders, export just the keys
+        if (Object.values(currentEnvVars).every(val => val === '********')) {
+          const exportObj = {};
+          Object.keys(currentEnvVars).forEach(key => {
+            exportObj[key] = ''; // Empty placeholder
+          });
+          fs.writeFileSync(filePath, JSON.stringify(exportObj, null, 2));
+        } else {
+          fs.writeFileSync(filePath, JSON.stringify(currentEnvVars, null, 2));
+        }
+
+        console.log(colorizer.green(`✓ Successfully exported environment variables to ${filePath}`));
+        return { message: `Environment variables exported to ${filePath}` };
+      } catch (error) {
+        console.log(colorizer.red(`Error exporting to file: ${error.message}`));
+        return { message: `Error exporting file: ${error.message}` };
+      }
+    }
+
+    // If no updates or just exporting, return early
+    if (Object.keys(updates).length === 0) {
+      return { message: 'No changes made.' };
+    }
+
+    // Confirm update
+    console.log(colorizer.blue('\nPreparing to update environment variables:'));
+    Object.entries(updates).forEach(([key, value]) => {
+      console.log(`${colorizer.bold(key)}: ${value === null ? colorizer.red('[DELETE]') : value}`);
+    });
+
+    const shouldDeploy = await confirm({
+      message: 'Deploy these changes?',
+      default: true
+    });
+
+    if (!shouldDeploy) {
+      return { message: 'Operation cancelled.' };
+    }
+
+    // Update environment variables using the specific version
+    const result = await api.updateEnvVars(
+      options.id,
+      options.versionId,
+      updates,
+      options.deploy !== false // Deploy by default
+    );
+
+    return {
+      functionId: options.id,
+      functionName: functionData.name,
+      oldVersionId: options.versionId,
+      newVersionId: result.entity?.id,
+      deployed: result.deployed,
+      message: result.message,
+      updates
+    };
+  } catch (error) {
+    // Don't handle errors here - propagate to caller for consistent handling
+    throw error;
+  }
+}
+
+/**
  * Command handler when run directly from CLI
  */
 async function main() {
@@ -529,9 +806,21 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   main();
 }
 
-// Export the default object for compatibility with existing imports
-export default {
-  listEnvVars,
-  updateEnvVars,
-  interactiveEnvVars
-};
+/**
+ * Main handler function that routes to appropriate sub-function based on options
+ * This is the default export used by the command router
+ */
+async function updateEnvVarsHandler(options) {
+  if (options.list) {
+    return await listEnvVars(options);
+  } else if (options.interactive) {
+    return await interactiveEnvVars(options);
+  } else if (options.env) {
+    return await updateEnvVars(options);
+  } else {
+    throw new Error('Please specify an operation: --list, --env, or --interactive');
+  }
+}
+
+// Export the main handler as default for use by command router
+export default updateEnvVarsHandler;

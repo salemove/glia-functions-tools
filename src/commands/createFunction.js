@@ -19,32 +19,37 @@ const __dirname = path.dirname(__filename);
 
 /**
  * Create a new function
- * 
+ *
  * @param {Object} options - Command options
  * @param {string} options.name - Function name
  * @param {string} options.description - Function description
  * @param {string} [options.template] - Template to use for function
  * @param {string} [options.output] - Output path for function file
  * @param {boolean} [options.skipApi] - Skip API function creation
+ * @param {number} [options.warmInstances] - Number of warm instances (0-5)
  * @returns {Promise<Object>} Created function details
  */
 export async function createFunction(options) {
   try {
     let result = {};
-    
+
     // Create function via API if not skipped
     if (!options.skipApi) {
       // Get API configuration
       const apiConfig = await getApiConfig();
-      
+
       // Create API client
       const api = new GliaApiClient(apiConfig);
-      
+
       // Create function
       console.log(`Creating new function "${options.name}"...`);
-      const newFunction = await api.createFunction(options.name, options.description || '');
+      const createOptions = {};
+      if (options.warmInstances !== undefined) {
+        createOptions.warmInstances = options.warmInstances;
+      }
+      const newFunction = await api.createFunction(options.name, options.description || '', createOptions);
       console.log('New function created:', newFunction);
-      
+
       result = newFunction;
     }
     
@@ -89,6 +94,7 @@ async function main() {
   const command = new BaseCommand('create-function', 'Create a new function')
     .requiredOption('--name <name>', 'Function name')
     .option('--description <description>', 'Function description', '')
+    .option('--warm-instances <number>', 'Number of warm instances to keep running (0-5)', parseInt)
     .option('--template <template>', 'Template to use for function')
     .option('--output <path>', 'Output path for function file')
     .option('--list-templates', 'List available templates')
@@ -104,11 +110,12 @@ async function main() {
           });
           return;
         }
-        
+
         // Create the function
         const result = await createFunction({
           name: options.name,
           description: options.description,
+          warmInstances: options.warmInstances,
           template: options.template,
           output: options.output,
           skipApi: options.skipApi

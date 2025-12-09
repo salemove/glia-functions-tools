@@ -557,8 +557,31 @@ export async function createProfile(profileName) {
 }
 
 /**
+ * Gets the configuration for a specific profile
+ *
+ * @param {string} profileName - Name of the profile to retrieve
+ * @returns {Object} Profile configuration object
+ * @throws {ConfigurationError} If the profile doesn't exist
+ */
+export function getProfileConfig(profileName) {
+  if (!profileName || typeof profileName !== 'string') {
+    throw new ConfigurationError('Profile name is required');
+  }
+
+  const profilePath = getProfilePath(profileName);
+
+  // Check if profile exists
+  if (!fs.existsSync(profilePath)) {
+    throw new ConfigurationError(`Profile ${profileName} does not exist`);
+  }
+
+  // Load and return profile configuration
+  return loadEnvFile(profilePath);
+}
+
+/**
  * Updates a named profile with new configuration values
- * 
+ *
  * @param {string} profileName - Name of the profile to update
  * @param {Object} updates - Key-value pairs to update in the profile
  * @returns {Promise<void>}

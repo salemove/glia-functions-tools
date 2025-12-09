@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
 import { dev } from '../../../src/commands/dev.js';
 import * as fs from 'fs';
 import * as http from 'http';
