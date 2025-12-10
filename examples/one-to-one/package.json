@@ -1,0 +1,22 @@
+{
+  "name": "sfdc_export",
+  "version": "1.0.0",
+  "description": "Glia function that can export data to an SFDC activity record.",
+  "main": "function.js",
+  "type": "module",
+  "scripts": {
+    "build": "./node_modules/esbuild/bin/esbuild --bundle --minify --platform=browser --format=esm --outfile=function-out.js --target=es2020 function.js",
+    "test": "node test.js"
+  },
+  "browser": "error",
+  "author": "Scott Hathaway",
+  "license": "ISC",
+  "devDependencies": {
+    "esbuild": "^0.19.8"
+  },
+  "dependencies": {
+    "console": "^0.7.2",
+    "https": "^1.0.0",
+    "jose": "^5.1.3"
+  }
+}
