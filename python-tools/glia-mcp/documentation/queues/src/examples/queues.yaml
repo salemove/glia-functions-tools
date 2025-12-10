@@ -1,0 +1,107 @@
+---
+Queue1:
+  id: 59b0d786-e59a-4c62-a064-05e4f47488a2
+  name: Technical support queue (rich media)
+  site_id: 51138845-3c46-4c21-8bd8-1cf45957f62e
+  description: Technical support queue with AV capabilities.
+  is_default: false
+  priority: 0
+  capacity: 15
+  capacity_policy:
+    type: fixed
+    capacity: 15
+  routing_policy:
+    media:
+      - phone
+      - audio
+      - video
+  available_properties:
+    media: []
+  display_phone_number:
+    type: incoming_phone_number
+    phone_number: '+12057543010'
+  when_unstaffed: reject
+  status: closed
+  self_status: closed
+  operator_ranking_enabled: false
+  welcome_message: Hi, how can we help you?
+  scheduling_policy_id: db46cede-0927-46a2-ae02-3d93dbb6648d
+  scheduling_exception_policy_id: a7319a39-e888-4659-8a39-d2515d323824
+  fallback_queue_id: 7a5ba173-3f6e-432e-96fc-1a45b3eba3b1
+  operator_affinity:
+    time_window_sec: 600
+  created_at: 2017-02-20T00:00:00Z
+  updated_at: 2017-02-20T00:00:00Z
+Queue2:
+  id: 3f82ad26-fada-4f77-a293-9a7a84fb3d1e
+  name: Technical support queue (text)
+  site_id: 51138845-3c46-4c21-8bd8-1cf45957f62e
+  description: Technical support queue with only chat capabilities.
+  is_default: false
+  priority: 5
+  capacity: 15
+  capacity_policy:
+    type: fixed
+    capacity: 15
+  routing_policy:
+    media:
+      - text
+  available_properties:
+    media:
+  display_phone_number:
+    type: no_number
+  when_unstaffed: reject
+  status: closed
+  self_status: closed
+  operator_ranking_enabled: false
+  welcome_message: null
+  scheduling_policy_id: null
+  scheduling_exception_policy_id: null
+  fallback_queue_id: null
+  operator_affinity: null
+  created_at: 2017-02-20T00:00:00Z
+  updated_at: 2017-02-20T00:00:00Z
+UpdatedQueue2:
+  name: Technical support queue (text)
+  site_id: 51138845-3c46-4c21-8bd8-1cf45957f62e
+  description: Text queue for technical support team
+  is_default: false
+  priority: 5
+  capacity: 15
+  capacity_policy:
+    type: variable
+    multiplier: 1.5
+  routing_policy:
+    media:
+      - text
+    team_ids:
+      - ca98bb0c-187e-4db9-9662-b33e7f2326c0
+  available_properties:
+    media:
+  display_phone_number:
+    type: default_display_phone_number
+  when_unstaffed: reject
+  status: closed
+  self_status: closed
+  operator_ranking_enabled: true
+  welcome_message: Welcome to our company
+  scheduling_policy_id: db46cede-0927-46a2-ae02-3d93dbb6648d
+  scheduling_exception_policy_id: a7319a39-e888-4659-8a39-d2515d323824
+  operator_affinity:
+    time_window_sec: 600
+  created_at: 2017-02-20T00:00:00Z
+  updated_at: 2017-02-22T13:52:40Z
+ListOfQueues:
+  queues:
+    - $ref: '#/Queue1'
+      average_wait_time: 34
+      visitors_count: 7
+      available_operators_count: 5
+      temporarily_unavailable_operators_count: 2
+      unavailable_operators_count: 3
+    - $ref: '#/Queue2'
+      average_wait_time: 5
+      visitors_count: 2
+      available_operators_count: 5
+      temporarily_unavailable_operators_count: 2
+      unavailable_operators_count: 3

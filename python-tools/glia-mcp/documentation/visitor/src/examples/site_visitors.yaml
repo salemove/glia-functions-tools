@@ -1,0 +1,33 @@
+CreateVisitorResponse:
+  unauthenticated_visitor:
+    summary: Unauthenticated visitor
+    value:
+      id: 8047d5c3-c57e-41c2-bd9a-f095c497839e
+      access_token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.. truncated #gitleaks:allow
+      secret: WBO2PpcmABDEnuToFCq5LmuPMJcM88 #gitleaks:allow
+  authenticated_visitor:
+    summary: Authenticated visitor
+    value:
+      id: 8047d5c3-c57e-41c2-bd9a-f095c497839e
+      access_token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.. truncated #gitleaks:allow
+      authenticated_externally: true
+  authentication_failed:
+    summary: Visitor authentication failed
+    value:
+      id: 8047d5c3-c57e-41c2-bd9a-f095c497839e
+      access_token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.. truncated #gitleaks:allow
+      authenticated_externally: false
+      authentication_failure_reason: 'invalid_id_token'
+
+RenewVisitorTokenResponse:
+  unauthenticated_visitor:
+    summary: Unauthenticated visitor
+    value:
+      id: 8047d5c3-c57e-41c2-bd9a-f095c497839e
+      access_token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.. truncated #gitleaks:allow
+  authenticated_visitor:
+    summary: Authenticated visitor
+    value:
+      id: 8047d5c3-c57e-41c2-bd9a-f095c497839e
+      access_token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.. truncated #gitleaks:allow
+      authenticated_externally: true

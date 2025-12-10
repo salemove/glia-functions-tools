@@ -1,0 +1,10 @@
+---
+parameters:
+  provider_id:
+    name: provider_id
+    in: path
+    required: true
+    example: 02d7aaf2-966e-4292-9102-4afcc20397f3
+    description: ID of the authentication provider.
+    schema:
+      type: string

@@ -1,0 +1,18 @@
+---
+type: object
+properties:
+  media:
+    type: array
+    description: >
+      Set of currently available engagement media types. Visitors cannot request engagements with media that is not
+      currently available.
+
+
+      Is empty when the queue is closed or unstaffed.
+    items:
+      type: string
+      enum:
+        - text
+        - phone
+        - audio
+        - video

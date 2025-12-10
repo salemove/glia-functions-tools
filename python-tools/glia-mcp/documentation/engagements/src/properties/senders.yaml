@@ -1,0 +1,131 @@
+---
+properties:
+  operator:
+    title: 'Operator'
+    type: object
+    properties:
+      id:
+        type: string
+        description: |
+          The sender's ID.
+        example: 'ec317122-o888-4b43-996d-34a2ed3b76d8'
+
+      type:
+        type: string
+        description: |
+          The sender is either a human operator or a virtual assistant.
+        enum:
+          - operator
+
+      name:
+        type: string
+        description: |
+          The sender's name.
+        example: 'Jordan Green'
+
+      href:
+        type: string
+        description: |
+          The URL for sender's information.
+        example: 'https://api.glia.com/operators/ec317122-o888-4b43-996d-34a2ed3b76d8'
+
+      picture:
+        type: object
+        properties:
+          url:
+            type: string
+            description: |
+              The URL for the operator's picture, `null` if not currently set.
+            example: 'https://example.com/user_assets/jordan_green-c8b52f0b-ad05-4c71-8c98-5056f07c4d1a.jpg'
+
+  visitor:
+    title: 'Visitor'
+    type: object
+    properties:
+      type:
+        type: string
+        description: |
+          The sender is a visitor.
+        enum:
+          - visitor
+
+      name:
+        type: string
+        description: |
+          The sender's name.
+        example: 'John Smith'
+
+      href:
+        type: string
+        description: |
+          The URL for sender's information.
+        example: 'https://api.glia.com/visitors/c2c9106e-e888-47b2-8db3-089fb49dc9a5'
+
+  omniguide:
+    title: 'Operator assistant'
+    type: object
+    properties:
+      type:
+        type: string
+        description: |
+          The sender is an operator assistant, for example sending prompts or suggestions to the operator. These internal messages are visible to the host operator, guest operators, and monitors (the latter cannot accept the operator assistant's suggestions).
+        enum:
+          - omniguide
+
+      name:
+        type: string
+        description: |
+          The sender name for operator assistant messages is always `omniguide`.
+        enum:
+          - omniguide
+
+  system:
+    title: 'Glia system'
+    type: object
+    properties:
+      type:
+        type: string
+        description: |
+          The sender is the Glia system, for example in case there is a notification regarding media upgrade or
+          CoBrowsing.
+        enum:
+          - system
+
+      name:
+        type: string
+        description: |
+          The sender name for system messages is always `system`.
+        enum:
+          - system
+
+  monitor:
+    title: 'Monitoring manager'
+    type: object
+    properties:
+      type:
+        type: string
+        description: |
+          The sender is a manager who is monitoring the engagement, for example sending prompts to the operator. These internal messages are visible to the host operator, guest operators, and monitors.
+        enum:
+          - monitor
+
+      name:
+        type: string
+        description: |
+          The sender's name.
+        example: 'Jordan Green'
+
+      href:
+        type: string
+        description: |
+          The URL for sender's information.
+        example: 'https://api.glia.com/operators/ec317122-e888-4b43-996d-34a2ed3b76d8'
+
+      picture:
+        type: object
+        properties:
+          url:
+            type: string
+            description: |
+              The url for the operator's picture, `null` if not currently set.
+            example: 'https://example.com/user_assets/jordan_green-c8b52f0b-ad05-4c71-8c98-5056f07c4d1a.jpg'

@@ -1,0 +1,8 @@
+---
+success:
+  '200':
+    description: OK
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          $ref: '../schemas/direct_id_keys.yaml#/schemas/JWKSResponse'

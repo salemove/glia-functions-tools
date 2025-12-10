@@ -1,0 +1,8 @@
+---
+queue_ticket_id:
+  name: queue_ticket_id
+  in: path
+  required: true
+  description: Queue ticket ID.
+  schema:
+    type: string

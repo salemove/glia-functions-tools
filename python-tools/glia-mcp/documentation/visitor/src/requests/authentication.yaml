@@ -1,0 +1,22 @@
+---
+create_body:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/authentication.yaml#/schemas/AuthRequest'
+        required:
+          - site_id
+          - visitor_id
+          - authentication_provider_id
+
+delete_body:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/authentication.yaml#/schemas/AuthDeleteRequest'
+        required:
+          - site_id
+          - visitor_id
+          - fail_reason

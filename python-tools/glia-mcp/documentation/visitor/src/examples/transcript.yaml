@@ -1,0 +1,65 @@
+---
+PersistentStorage:
+  messages:
+    - id: 'e27f2e0a-d888-408b-a584-51f68b15f669'
+      engagement_leg_id: 'abc12121-c995-45ec-8e0f-5bf4d5e16a2e'
+      content: 'Hi, may I help you with the application?'
+      created_at: '2020-05-31T09:46:28Z'
+      delivered_at: '2020-05-31T09:46:28Z'
+      target: visitor
+      type: user
+      attachment:
+        type: files
+        files:
+          - id: string
+      metadata:
+        key: value
+      speech_to_text: false
+      speech_to_text_details: null
+      text_to_speech: false
+      sender:
+        id: 'ec317122-e888-4b43-996d-34a2ed3b76d8'
+        type: operator
+        name: 'Elsie Blake'
+        href: 'https://api.glia.com/operators/ec317122-e888-4b43-996d-34a2ed3b76d8'
+        picture:
+          url: 'https://uploads.salemove.com/user_assets/glia_com-salemove_models_operator-ec317122-e888-4b43-996d-34a2ed3b76d8-elsie-blake.png'
+    - id: 'e27f2e0a-d777-408b-a584-51f68b15f669'
+      engagement_leg_id: 'abc12121-c995-45ec-8e0f-5bf4d5e16a2e'
+      content: 'I need some assistance'
+      created_at: '2020-05-31T09:47:28Z'
+      delivered_at: '2020-05-31T09:47:28Z'
+      target: operator
+      type: user
+      attachment:
+        type: files
+        files:
+          - id: string
+      metadata:
+        key: value
+      speech_to_text: true
+      speech_to_text_details:
+        visible_to_visitor: true
+        transcribed_in_tts_stt_conference: true
+        transcribed_while_multiple_operators: false
+      text_to_speech: false
+      sender:
+        type: visitor
+        name: 'John Smith'
+        href: 'https://api.glia.com/sites//visitors/c2c9106e-e888-47b2-8db3-089fb49dc9a5'
+  engagement_legs:
+    - id: 'abc12121-c995-45ec-8e0f-5bf4d5e16a2e'
+      start_time: '2020-05-31T09:46:28Z'
+      operator_name: 'Elsie Blake'
+  next_page: 'http://api.glia.com/visitor/c2c9106e-e888-47b2-8db3-089fb49dc9a5/chat_transcript?page_token=bm8gbmVlZCB0byBsb29rIGluc2lkZSB0aGlz'
+  prev_page: 'http://api.glia.com/visitor/c2c9106e-e888-47b2-8db3-089fb49dc9a5/chat_transcript?page_token=eyJjdXJzb3IiOltbIm5hbWUiLCJKb2huIl0s'
+TemporaryStorage:
+  messages:
+    - id: 'e27f2e0a-d888-408b-a584-51f68b15f669'
+      engagement_leg_id: 'abc12121-c995-45ec-8e0f-5bf4d5e16a2e'
+  engagement_legs:
+    - id: 'abc12121-c995-45ec-8e0f-5bf4d5e16a2e'
+      start_time: '2020-05-31T09:46:28Z'
+      operator_name: 'Elsie Blake'
+  next_page: 'http://api.glia.com/visitor/c2c9106e-e888-47b2-8db3-089fb49dc9a5/chat_transcript?page_token=bm8gbmVlZCB0byBsb29rIGluc2lkZSB0aGlz'
+  prev_page: 'http://api.glia.com/visitor/c2c9106e-e888-47b2-8db3-089fb49dc9a5/chat_transcript?page_token=eyJjdXJzb3IiOltbIm5hbWUiLCJKb2huIl0s'

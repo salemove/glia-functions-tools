@@ -1,0 +1,64 @@
+---
+capacity_policy:
+  description: >
+    Capacity policy dictates how will the queue capacity be regulated. At the moment, three types of capacity policies
+    are supported:
+
+    * Fixed: the queue capacity is set to a fixed number and doesn't change.
+
+    * Variable: the queue capacity changes depending on the number of operators staffing the queue.
+
+    * None: the queue capacity is the number of operators available. In other words, an operator has to be available for
+    a visitor to enqueue.
+  oneOf:
+    - $ref: '#/policies/fixed_capacity'
+    - $ref: '#/policies/variable_capacity'
+    - $ref: '#/policies/none_capacity'
+
+policies:
+  fixed_capacity:
+    title: Fixed Policy
+    type: object
+    properties:
+      type:
+        type: string
+        description: Must be `fixed`.
+        enum:
+          - fixed
+      capacity:
+        type: integer
+        description: |
+          The maximum number of concurrent visitors allowed into the queue.
+    required:
+      - type
+      - capacity
+  variable_capacity:
+    title: Variable Policy
+    type: object
+    properties:
+      type:
+        type: string
+        description: Must be `variable`.
+        enum:
+          - variable
+      multiplier:
+        type: number
+        description: >
+          The number that is multiplied by the number of operators staffing the queue to determine the effective queue
+          capacity (rounded down).
+    required:
+      - type
+      - multiplier
+  none_capacity:
+    title: None Policy
+    type: object
+    description: |
+      None policy can not be used if `when_unstaffed` is `accept`.
+    properties:
+      type:
+        type: string
+        description: Must be `none`.
+        enum:
+          - none
+    required:
+      - type

@@ -1,0 +1,31 @@
+---
+type: object
+properties:
+  site_id:
+    $ref: '../properties/queue_ticket.yaml#/site_id'
+  media:
+    $ref: '../properties/queue_ticket.yaml#/media'
+  media_options:
+    $ref: '../properties/queue_ticket.yaml#/media_options'
+  team_ids:
+    $ref: '../properties/queue_ticket.yaml#/team_ids'
+  queue_id:
+    $ref: '../properties/queue_ticket.yaml#/queue_id'
+  queue_ids:
+    $ref: '../properties/queue_ticket.yaml#/queue_ids'
+  source:
+    $ref: '../properties/queue_ticket.yaml#/input_source'
+  visitor_context_asset_id:
+    $ref: '../../../common_components/properties.yaml#/visitor_context_asset_id'
+  webhooks:
+    $ref: '../properties/queue_ticket.yaml#/webhooks'
+
+required:
+  - site_id
+  - media
+example:
+  site_id: 51138845-3c46-4c21-8bd8-1cf45957f62e
+  source: hotlink
+  media: video
+  queue_ids:
+    - cd564dd0-c8c1-44d2-88a9-074243e029b8

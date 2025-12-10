@@ -1,0 +1,49 @@
+---
+title: 'Files'
+type: object
+properties:
+  type:
+    type: string
+    description: |
+      Type of an attachment.
+
+      If the attachment contains files, the type is `files`.
+    enum:
+      - files
+    # Example defined so that single dropdown value is selected by default.
+    example: files
+
+  files:
+    type: array
+    description: |
+      List of files in the message.
+    items:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The file's ID.
+        name:
+          type: string
+          description: Name of the uploaded file.
+        content_type:
+          type: string
+          description: MIME type of the file.
+        url:
+          type: string
+          description: URL from which the file can be downloaded. If null, then the file cannot be downloaded.
+        size:
+          type: integer
+          description: Size of the uploaded file in bytes.
+        deleted:
+          type: boolean
+          description: Whether the file has been deleted. If true, then the file cannot be downloaded.
+      required:
+        - id
+        - name
+        - content_type
+        - size
+        - deleted
+required:
+  - type
+  - files

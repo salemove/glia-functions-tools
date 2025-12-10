@@ -1,0 +1,24 @@
+---
+type: object
+properties:
+  name:
+    $ref: '../properties/scheduling_exception_policy.yaml#/name'
+  description:
+    $ref: '../properties/scheduling_exception_policy.yaml#/description'
+  exception_rules:
+    $ref: '../properties/scheduling_exception_policy.yaml#/exception_rules'
+example:
+  site_id: def34343-e888-43ae-99e0-07a676e9a111
+  name: Default Exception Policy
+  description: this policy is the default
+  exception_rules:
+    - name: Christmas eve - shortened day
+      type: hours_changed
+      date: '2020-12-24'
+      opens_at: '08:00:00'
+      closes_at: '14:00:00'
+      repeat_yearly: false
+    - name: Christmas day
+      type: queue_closed
+      date: '2020-12-25'
+      repeat_yearly: true

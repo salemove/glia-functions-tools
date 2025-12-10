@@ -1,0 +1,25 @@
+---
+title: 'Single choice response'
+type: object
+properties:
+  type:
+    type: string
+    description: |
+      Type of an attachment.
+
+      To indicates a successful user interaction while passing back also the selection value, type must be
+      `single_choice_response`.
+    enum:
+      - single_choice_response
+    # Example defined so that single dropdown value is selected by default.
+    example: single_choice_response
+
+  selected_option:
+    type: string
+    description: |
+      Selected choice, based on the user interaction.
+    example: choice_2
+
+required:
+  - type
+  - selected_option

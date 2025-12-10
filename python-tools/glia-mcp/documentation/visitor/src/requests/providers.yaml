@@ -1,0 +1,12 @@
+---
+body:
+  required: true
+  content:
+    application/json:
+      schema:
+        oneOf:
+          - $ref: '../schemas/providers.yaml#/schemas/OpenIdConnectProviderParams'
+          - $ref: '../schemas/providers.yaml#/schemas/OAuth2ProviderParams'
+          - $ref: '../schemas/providers.yaml#/schemas/DirectIdTokenProviderParams'
+      examples:
+        $ref: '../schemas/providers.yaml#/examples/Provider'

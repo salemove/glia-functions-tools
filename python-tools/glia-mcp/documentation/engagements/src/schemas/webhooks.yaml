@@ -1,0 +1,95 @@
+---
+http:
+  type: object
+  title: HTTP Webhook
+  description: >
+    See [HTTP Webhook](https://docs.glia.com/glia-dev/reference/webhooks#http-webhooks) section for
+    more information.
+  properties:
+    url:
+      type: string
+      description: >
+        The URL (including protocol) to which the HTTP request will be sent to.
+      example: 'https://example.com'
+    method:
+      type: string
+      description: The HTTP method that will be used for the HTTP request.
+      example: 'POST'
+    headers:
+      type: object
+      description: >
+        An arbitrary object which will be used to set request headers for the HTTP request. The keys of the object
+        will be used as header names and values as header values. This can be used to authenticate incoming HTTP
+        requests in your server.
+      example: {'Authorization': 'value'}
+    events:
+      type: array
+      description: >
+        An array of events (at least one) upon which a HTTP request will be made.
+      items:
+        type: string
+        example: 'engagement.start'
+  required:
+    - url
+    - method
+    - events
+
+apns:
+  type: object
+  title: Apple Push Notification Service Webhook
+  description: >
+    See [APNS Webhook](https://docs.glia.com/glia-dev/reference/webhooks#apple-push-notification-webhook) section for
+    more information.
+  properties:
+    url:
+      type: string
+      description: >
+        The URI in APNs scheme
+      example: 'apns://example.com'
+    headers:
+      type: object
+      description: >
+        An object containing authorization information for the webhook. This object must have exactly one key
+        authorization that holds the visitor's access token that the notification is sent to.
+      example: {'Authorization': 'value'}
+    events:
+      type: array
+      description: >
+        An array of events (at least one) upon which a push notification will be sent.
+      items:
+        type: string
+        example: 'engagement.start'
+  required:
+    - url
+    - events
+    - headers
+
+fcm:
+  type: object
+  title: Firebase Cloud Messaging Webhook
+  description: >
+    See [FCM Webhook](https://docs.glia.com/glia-dev/reference/webhooks#firebase-cloud-messaging-webhook) section for
+    more information.
+  properties:
+    url:
+      type: string
+      description: >
+        The URI in FCM scheme
+      example: 'fcm://example.com'
+    headers:
+      type: object
+      description: >
+        An object containing authorization information for the webhook. This object must have exactly one key
+        authorization that holds the visitor's access token that the notification is sent to.
+      example: {'Authorization': 'value'}
+    events:
+      type: array
+      description: >
+        An array of events (at least one) upon which a push notification will be sent.
+      items:
+        type: string
+        example: 'engagement.start'
+  required:
+    - url
+    - events
+    - headers

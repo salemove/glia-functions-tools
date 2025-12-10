@@ -1,0 +1,91 @@
+---
+properties:
+  id:
+    type: string
+    description: Join request ID.
+    example: 456741b3-bef6-4dc2-837d-b9b1bc5e0489
+  message:
+    type: string
+    description: |
+      The message that is displayed to the guest upon receiving the join request.
+    example: Please join my engagement
+  guest_id:
+    type: string
+    description: ID of the guest to whom the request is sent.
+    example: b5af3b5a-ead3-41b8-a3ff-31bcbd15314b
+  guest_type:
+    type: string
+    description: Type of the guest.
+    enum:
+      - operator
+    example: operator
+  accept_timeout:
+    type: string
+    description: |
+      The time (in seconds) that the guest has to answer a join request.
+    example: 30
+  requested_at:
+    type: string
+    description: |
+      An ISO-8601 timestamp of when the join request was requested.
+    example: '2016-06-21T09:12:33.001Z'
+  accepted_at:
+    type: string
+    description: |
+      An ISO-8601 timestamp of when the join request was accepted.
+    example: '2016-06-21T09:12:33.001Z'
+  failed_at:
+    type: string
+    description: |
+      An ISO-8601 timestamp of when the join request failed to be accepted for any reason.
+    example: '2016-06-21T09:12:33.001Z'
+  fail_reason:
+    type: string
+    description: |
+      Join request failure reason. Only defined when `failed_at` is defined.
+
+      - `rejected` - When request was rejected by the receiving participant.
+      - `operator_cancel` - When requesting operator canceled the request.
+      - `timed_out` - When request was neither accepted, canceled or rejected within `accept_timeout`.
+    enum:
+      - rejected
+      - timed_out
+      - operator_cancel
+  webhooks:
+    $ref: '../../../common_components/properties.yaml#/webhooks'
+    description: |
+      See [Webhooks](ref:webhooks) section for more information.
+
+      * When join request is accepted, `engagement.join_request.accepted` event is fired.
+      * When join request is rejected, canceled or timed out, `engagement.join_request.failure` is fired.
+  action:
+    type: string
+    description: |
+      Action to be performed on the join request.
+
+      - `accept` - Accepts the join request and adds the operator as a guest to the engagement. This action can be
+      performed only by the guest of the join request.
+      - `reject` - Rejects an incoming join request. This action can be performed only by the guest of the join request.
+    enum:
+      - accept
+      - reject
+  external_guest:
+    type: object
+    properties:
+      name:
+        type: string
+        description: |
+          External guest's name.
+
+          In case the name is not provided, the guest's phone number is used instead.
+
+          Privacy during the engagement:
+            * Operators see the guest's name as is.
+            * Visitors see only guest's first name or if the name contains the phone number then the last 4 digits are masked, for example `+1323665****`.
+        example: 'Jared Grey'
+      phone_number:
+        $ref: '../../../common_components/properties.yaml#/phone_number'
+      phone_extension:
+        $ref: '../../../common_components/properties.yaml#/phone_extension'
+    required:
+      - phone_number

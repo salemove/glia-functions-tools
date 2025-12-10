@@ -1,0 +1,42 @@
+---
+properties:
+  action:
+    type: string
+    description: >
+      Action to be performed on the engagement participant.
+
+
+      Available actions:
+
+
+      ** `hold` ** - Puts the participant call on hold.
+
+
+      ** `resume` ** - Resumes the participant call.
+
+
+      ** `remove_audio` ** - Disconnects participant's audio.
+
+
+      This action can only be performed on primary participants of the engagements - the host operator and visitor.
+      Every participant can remove their own audio. In addition, host operator can modify any of the participants.
+
+
+      Host operator can use this action to downgrade engagement to chat when visitor does not answer the call and the
+      call goes to voicemail.
+
+
+      ** `remove_video` ** - Disconnects participant's video.
+
+
+      The same constraints and access restrictions apply as for `remove_audio`.
+    enum:
+      - hold
+      - resume
+      - remove_audio
+      - remove_video
+  participant_id:
+    description: |
+      Engagement participant ID. Can be either host or guest operator ID or visitor ID.
+    type: string
+    example: '16fe454d-ec84-42fc-a294-4ddbcafc2e4d'

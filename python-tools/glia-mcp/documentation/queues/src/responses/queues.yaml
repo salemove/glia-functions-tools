@@ -1,0 +1,10 @@
+---
+type: object
+properties:
+  queues:
+    type: array
+    description: List of queues.
+    items:
+      type: object
+      properties:
+        $ref: '../properties/queue.yaml'

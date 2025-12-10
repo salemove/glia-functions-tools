@@ -1,0 +1,21 @@
+---
+success:
+  '200':
+    description: OK
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          oneOf:
+            - $ref: '../schemas/providers.yaml#/schemas/OpenIdConnectProviderResponse'
+            - $ref: '../schemas/providers.yaml#/schemas/OAuth2ProviderResponse'
+            - $ref: '../schemas/providers.yaml#/schemas/DirectIdTokenProviderResponse'
+        examples:
+          $ref: '../schemas/providers.yaml#/examples/ProviderResponse'
+
+success_array:
+  '200':
+    description: OK
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          $ref: '../schemas/providers.yaml#/schemas/ProviderResponseArray'

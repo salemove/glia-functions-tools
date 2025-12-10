@@ -1,0 +1,22 @@
+---
+fetch:
+  '200':
+    description: Messages were fetched.
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          $ref: '../schemas/transcript.yaml#/schema'
+        examples:
+          Transcript:
+            value:
+              $ref: '../examples/transcript.yaml#/PersistentStorage'
+          Deleted Transcript:
+            value:
+              $ref: '../examples/transcript.yaml#/TemporaryStorage'
+
+  '401':
+    $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+  '403':
+    $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+  '422':
+    $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'

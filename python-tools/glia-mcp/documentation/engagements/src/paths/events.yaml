@@ -1,0 +1,45 @@
+---
+create_event:
+  summary: Create event
+  tags:
+    - Events
+  # yamllint disable rule:line-length
+  description: |
+    Sends event messages which communicate that an action has been performed by the visitor. To be used by integrators.
+
+    See: [Visitor JS API](https://sdk-docs.glia.com/visitor-js-api/current/Engagement.html#recordEvent)
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a [visitor's bearer access token](https://docs.glia.com/glia-dev/reference/post_visitors) is needed in the `Authorization` request header.
+
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/engagements.yaml#/engagement_id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              description: |
+                Utterance depicting the engaged visitor's event.
+          required:
+            - message
+        example:
+          message: 'Visitor navigated to insurance page'
+  responses:
+    '200':
+      description: |
+        OK
+
+        A successful request returns a newly-created event message object as a response.
+    '401':
+      $ref: '../../engagements_in.yaml#/components/responses/401NotAuthorized'
+    '403':
+      description: |
+        You are not a `visitor` in the ongoing engagement.

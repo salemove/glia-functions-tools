@@ -1,0 +1,63 @@
+---
+schema:
+  type: object
+  description: The transcript shown to the operator in the Engagement Console.
+  properties:
+    messages:
+      $ref: '#/messages'
+    engagement_legs:
+      $ref: '#/engagement_legs'
+    next_page:
+      $ref: '../../../common_components/properties.yaml#/pagination/next_page'
+      example: 'http://api.glia.com/visitor/c2c9106e-e888-47b2-8db3-089fb49dc9a5/chat_transcript?page_token=bm8gbmVlZCB0byBsb29rIGluc2lkZSB0aGlz'
+    prev_page:
+      $ref: '../../../common_components/properties.yaml#/pagination/prev_page'
+      example: 'http://api.glia.com/visitor/c2c9106e-e888-47b2-8db3-089fb49dc9a5/chat_transcript?page_token=eyJjdXJzb3IiOltbIm5hbWUiLCJKb2huIl0s'
+
+messages:
+  type: array
+  description: List of messages.
+  items:
+    type: object
+    properties:
+      engagement_leg_id:
+        $ref: '../../../engagements/src/properties/engagement.yaml#/properties/leg_id'
+      id:
+        $ref: '../../../engagements/src/properties/chat.yaml#/properties/id'
+      content:
+        $ref: '../../../engagements/src/properties/chat.yaml#/properties/message'
+      created_at:
+        $ref: '../../../engagements/src/properties/chat.yaml#/properties/created_at'
+      delivered_at:
+        $ref: '../../../engagements/src/properties/chat.yaml#/properties/delivered_at'
+      target:
+        $ref: '../../../engagements/src/properties/chat.yaml#/properties/target'
+      type:
+        $ref: '../../../engagements/src/properties/chat.yaml#/properties/type_in_transcript'
+      attachment:
+        $ref: '../../../engagements/src/properties/chat.yaml#/properties/attachment'
+      metadata:
+        $ref: '../../../engagements/src/properties/chat.yaml#/properties/metadata'
+      speech_to_text:
+        $ref: '../../../engagements/src/properties/chat.yaml#/properties/speech_to_text'
+      speech_to_text_details:
+        $ref: '../../../engagements/src/properties/chat.yaml#/properties/speech_to_text_details'
+      text_to_speech:
+        $ref: '../../../engagements/src/properties/chat.yaml#/properties/text_to_speech'
+      sender:
+        $ref: '../../../engagements/src/properties/sender.yaml'
+
+engagement_legs:
+  type: array
+  description: List of the engagement legs of the messages that are returned in `messages`.
+  items:
+    type: object
+    properties:
+      id:
+        $ref: '../../../engagements/src/properties/engagement.yaml#/properties/leg_id'
+      start_time:
+        $ref: '../../../engagements/src/properties/engagement.yaml#/properties/leg_start_time'
+      operator_name:
+        $ref: '../../../users_and_teams/src/properties/users.yaml#/name'
+      operator_id:
+        $ref: '../../../users_and_teams/src/properties/users.yaml#/id'

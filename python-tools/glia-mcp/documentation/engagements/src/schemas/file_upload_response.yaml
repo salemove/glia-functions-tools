@@ -1,0 +1,19 @@
+---
+title: 'File upload response'
+type: object
+properties:
+  file_id:
+    type: string
+    description: >
+      ID of the file uploaded.
+    example: '53b236ee-f888-45ec-8e0f-5bf4d5e16a2e'
+  security_scanning_required:
+    type: boolean
+    description: >
+      Whether file security scan is required or not.
+
+
+      If the value of this field is `true`, the uploader must wait for the [FileSecurityScanResultEvent](https://docs.glia.com/glia-dev/reference/webhooks#filesecurityscanresultevent)
+      to arrive before they can send the file as a part of a chat message.
+      Additionally, the scan result must be clean in order to send the file.
+    example: true

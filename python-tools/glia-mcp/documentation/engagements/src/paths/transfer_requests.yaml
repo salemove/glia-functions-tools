@@ -1,0 +1,222 @@
+---
+create:
+  summary: Create transfer request
+  tags:
+    - Transfer
+  # yamllint disable rule:line-length
+  description: |
+    Creates a transfer request and notifies the target operator.
+
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * The user is the host operator of the engagement.
+    * Base of the user's role, one of:
+      * `operator`
+      * `manager`
+      * `super_manager`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/engagements.yaml#/engagement_id'
+  requestBody:
+    description: Parameters for creating the transfer request.
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            operator_id:
+              $ref: '../properties/transfer_request.yaml#/properties/operator_id'
+            site_id:
+              $ref: '../properties/transfer_request.yaml#/properties/site_id'
+            media:
+              $ref: '../properties/transfer_request.yaml#/properties/media'
+            message:
+              $ref: '../properties/transfer_request.yaml#/properties/message'
+            webhooks:
+              $ref: '../properties/transfer_request.yaml#/properties/webhooks'
+            skip_confirmation:
+              $ref: '../properties/transfer_request.yaml#/properties/skip_confirmation'
+            ai_suggestion_usage:
+              $ref: '../properties/transfer_request.yaml#/properties/ai_suggestion_usage'
+          required:
+            - operator_id
+            - site_id
+            - media
+
+  responses:
+    '201':
+      description: Transfer request was created.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/transfer_request_response.yaml'
+          example:
+            id: 'defb7236-r888-4fe8-b26c-fc462e286907'
+            timeout: 30
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+    '500':
+      $ref: '../../../common_components/responses/errors.yaml#/500_internal_server_error'
+    '503':
+      $ref: '../../../common_components/responses/errors.yaml#/503_service_unavailable'
+
+fetch_by_id:
+  summary: Fetch transfer request
+  tags:
+    - Transfer
+  # yamllint disable rule:line-length
+  description: |
+    Fetches a transfer request for specified engagement by the request's ID.
+
+    Can be requested by a user who initiated the request to see the state of the transfer request.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, either a user's or site's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens) - Returns the status of the transfer request that the user initiated. Requires:
+
+      * Base of the user's role, one of:
+        * `operator`
+        * `manager`
+        * `super_manager`.
+      * For the base `operator`, the following must be true:
+        * The user has been a participant in the engagement.
+        * The user has access to at least one site where one of the engagement legs took place. Applies to both ongoing and ended engagements.
+    * [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens) - Returns the status of an engagement transfer request made on that site. This authorization method is meant to be used by applications that need the site's engagements' transfer statuses. Requires:
+      * Scope: `engagements:read`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/engagements.yaml#/engagement_id'
+    - $ref: '../../src/parameters/transfer_requests.yaml#/parameters/transfer_request_id'
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../../src/schemas/transfer_request.yaml'
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '404':
+      $ref: '../../../common_components/responses/errors.yaml#/404_not_found'
+    '500':
+      $ref: '../../../common_components/responses/errors.yaml#/500_internal_server_error'
+    '503':
+      $ref: '../../../common_components/responses/errors.yaml#/503_service_unavailable'
+
+update_by_id:
+  summary: Answer transfer request
+  tags:
+    - Transfer
+  # yamllint disable rule:line-length
+  description: |
+    Accepts, declines, cancels, or confirms a pending transfer request. If confirmed (or accepted and confirmation is skipped), completes the transfer.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's bearer access token is needed in the `Authorization` request header.
+    The user whose bearer access token is used, has to be either the originator or recipient of the transfer request, depending on the action.
+
+    * Accept or decline
+      * Only the recipient of the transfer request can accept and decline it.
+        Meaning that, if a transfer request was sent by operator O1 to operator O2, then only operator O2 is authorized to accept or decline the engagement request.
+    * Cancel
+      * Only the originator of the transfer request can cancel it.
+        Meaning that, if a transfer request was sent by operator O1 to operator O2, then only operator O1 is allowed to cancel the transfer request.
+    * Confirm
+      * Only the originator of the transfer request can confirm it. The engagement transfer is completed after confirmation.
+
+    Guidelines for obtaining the bearer access token:
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens)
+
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/engagements.yaml#/engagement_id'
+    - $ref: '../../src/parameters/transfer_requests.yaml#/parameters/transfer_request_id'
+  requestBody:
+    description: Action to be performed on the transfer request.
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            action:
+              type: string
+              description: |
+                Either accept, decline, cancel or confirm the transfer request.
+              enum:
+                - accept
+                - decline
+                - cancel
+                - confirm
+            webhooks:
+              $ref: '../../src/properties/transfer_request.yaml#/properties/webhooks'
+            skip_survey:
+              type: boolean
+              # yamllint disable rule:line-length
+              description: |
+                Only used with the accept action.
+                If set to `true`, a survey will not be presented to the operator to whom the engagement is transferred.
+              # yamllint enable rule:line-length
+          required:
+            - action
+  responses:
+    '200':
+      description: |
+        Transfer request was successfully accepted, declined, canceled, or confirmed.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            oneOf:
+              - $ref: '../schemas/transfer_request_responses.yaml#/Accept'
+              - $ref: '../schemas/transfer_request_responses.yaml#/Decline'
+              - $ref: '../schemas/transfer_request_responses.yaml#/Cancel'
+              - $ref: '../schemas/transfer_request_responses.yaml#/Confirm'
+          examples:
+            accept:
+              summary: The transfer request was accepted
+              value:
+                id: 'defb7236-r888-4fe8-b26c-fc462e286907'
+            decline:
+              summary: The transfer request was declined
+              value:
+                id: 'defb7236-r888-4fe8-b26c-fc462e286907'
+            cancel:
+              summary: The transfer request was canceled
+              value:
+                id: 'defb7236-r888-4fe8-b26c-fc462e286907'
+            confirm:
+              summary: The transfer request was confirmed
+              value:
+                id: 'defb7236-r888-4fe8-b26c-fc462e286907'
+                engagement_id: 'abc12121-e888-43ae-99e0-07a676e9a111'
+                sub_engagement_id: 'def34343-c995-43ae-99e0-07a676e9a111'
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+    '500':
+      $ref: '../../../common_components/responses/errors.yaml#/500_internal_server_error'
+    '503':
+      $ref: '../../../common_components/responses/errors.yaml#/503_service_unavailable'

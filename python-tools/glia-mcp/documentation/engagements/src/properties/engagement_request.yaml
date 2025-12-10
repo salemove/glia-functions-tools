@@ -1,0 +1,480 @@
+---
+properties:
+  id:
+    type: string
+    description: Engagement request ID.
+    example: 'aeb06746-5ebd-441a-89cc-9a5840e6fa2c'
+
+  site_ids:
+    type: array
+    items:
+      type: string
+    description: >
+      A list of site IDs to return only engagement requests that took place on the specified sites.
+
+
+      Currently, this endpoint supports specifying only one site ID at a time.
+    minItems: 1
+    maxItems: 1
+
+  operator_ids:
+    type: array
+    items:
+      type: string
+    maxItems: 1
+    description: >
+      Optional filter to include only these engagement requests that the specified operators received or initiated.
+
+
+      Currently, this endpoint supports specifying only one operator ID at a time.
+
+  sources:
+    type: array
+    items:
+      type: string
+      enum:
+        - button_embed
+        - callout
+        - external_call
+        - facebook
+        - hotlink
+        - offline_phone
+        - call_visualizer
+        - glia_hub
+        - outbound_call
+        - outbound_text
+        - sdk
+        - slack
+        - sms
+        - tab
+        - visitor_integrator
+        - whatsapp
+    description: >
+      Optional filter to include only these engagement requests whose source matches any of the specified sources.
+
+
+      The allowed values are:
+
+      * `button_embed` - (_reactive_) Visitor started an engagement using the **Contact Operator** button.
+
+      * `callout` - (_reactive_) Engagement was started by a business rule. For example, a business rule triggered a
+      media selector, which the visitor then used to start the engagement.
+
+      * `external_call` - (_reactive_) **Deprecated**
+
+      * `facebook` - (_reactive_) Visitor sent a message from Facebook Messenger.
+
+      * `hotlink` - (_reactive_) Visitor started engagement using a hotlink.
+
+      * `offline_phone` - (_reactive_) Visitor made a phone call.
+
+      * `call_visualizer` - (_proactive_) Engagement was started by an operator who used Call Visualizer (embedded or
+      Glia Hub) to connect with the visitor.
+
+      * `glia_hub` - (_proactive_) Engagement was initiated by an operator who selected a visitor from the visitor list
+      in Glia Hub.
+
+      * `outbound_call` - (_proactive_) Operator called visitor's phone number.
+
+      * `outbound_text` - (_proactive_) Operator sent an SMS message to the visitor's phone number.
+
+      * `sdk` - (_reactive_) Engagement started through JS SDK, Android SDK, or iOS SDK.
+
+      * `slack` - (_reactive_) Visitor sent a message from Slack.
+
+      * `sms` - (_reactive_) Visitor sent an SMS message.
+
+      * `tab` - (_reactive_) Visitor started the engagement through a web browser (using Glia Bubble).
+
+      * `visitor_integrator` - (_reactive_) Engagement was started by a REST API call.
+
+      * `whatsapp` - (_reactive_) Visitor sent a message from WhatsApp.
+
+  from_requested_at:
+    type: string
+    description: >
+      Optional filter to only include engagement requests that were initiated after the specified timestamp.
+    example: 2019-06-04T07:55:42Z
+
+  to_requested_at:
+    type: string
+    description: >
+      Optional filter to only include engagement requests that were initiated before the specified timestamp.
+    example: 2019-06-04T07:55:42Z
+
+  include_missed_reactive_requests:
+    type: boolean
+    description: >
+      Whether reactive engagement requests that were not accepted by the receiving operator should be returned.
+
+
+      * If `true`, no additional filtering is done based on the outcome of the request.
+
+      * If `false`, only proactive engagement requests and accepted reactive engagement requests are returned.
+
+
+      Defaults to `true`.
+    example: true
+
+  order:
+    type: string
+    description: >
+      Specifies the ordering of engagement requests in the response. Engagement requests are always ordered based on
+      their initiation time (the `requested_at` property), but the order direction can be modified using this property.
+
+
+      Possible values are `asc` or `desc`. The default value is `desc`.
+
+
+      * `asc` - engagement requests are ordered in ascending order
+
+      * `desc` - engagement requests are ordered in descending order
+    enum:
+      - asc
+      - desc
+    example: desc
+
+  request_id:
+    type: string
+    description: |
+      ID of the engagement request to be accepted, declined, acknowledged, or canceled.
+
+  site_id:
+    type: string
+    description: |
+      The site ID of the visitor who the request will be sent to.
+
+  timeout:
+    type: integer
+    description: |
+      Shows in how many seconds (counting from the moment that Glia servers received the request) the engagement
+      request will automatically time out unless the engagement request is accepted, acknowledged, canceled, or
+      declined.
+
+  platform:
+    type: string
+    description: |
+      Is the request created in Glia Hub or Call Visualizer.
+
+      * `omnicore` - Glia Hub
+      * `omnibrowse` - Call Visualizer
+    enum:
+      - omnicore
+      - omnibrowse
+
+  visitor_id:
+    type: string
+    description: |
+      The ID of the visitor to who the request will be sent, in case the request is made by the operator.
+
+  operator_id:
+    type: string
+    description: |
+      The ID of the operator to who the request will be sent, in case the request is made by the visitor or visitor
+      integrator.
+
+  webhooks:
+    type: array
+    description: |
+      A list of webhooks that will subscribe to the events of the engagement request or engagement.
+
+      Only events regarding this engagement request and the engagement that is created by accepting this engagement
+      request will be sent. Webhooks can have overlapping sets of events. A maximum of 10 webhooks are allowed.
+
+      See also [Webhooks](ref:webhooks).
+    items:
+      type: object
+      properties:
+        url:
+          type: string
+          description: Webhook URL, see [HTTP webhooks](ref:webhooks#registering).
+        method:
+          type: string
+          description: |
+            One of the HTTP methods, see [HTTP webhooks](ref:webhooks#registering).
+        events:
+          type: array
+          description: |
+            Array of events, see see [HTTP webhooks](ref:webhooks#registering).
+          items:
+            type: string
+
+  media:
+    type: string
+    description: |
+      The initial engagement media type.
+
+      Can only be `text` or `phone` if the request is made by a visitor integrator.
+    enum:
+      - text
+      - phone
+      - audio
+      - video
+
+  media_options:
+    type: object
+    description: |
+      Any additional parameters for the desired media type.
+    properties:
+      phone_number:
+        $ref: '../../../users_and_teams/src/properties/users.yaml#/phone_number'
+      phone_extension:
+        $ref: '../../../users_and_teams/src/properties/users.yaml#/phone_extension'
+      one_way:
+        type: boolean
+        description: |
+          * When set to `true`, the video will start from the operator to the visitor only.
+          * When set to `false`, the video starts both ways - from the operator to the visitor and from the visitor
+          to the operator.
+        default: true
+
+search_response:
+  type:
+    type: string
+    description: >
+      Whether the engagement request was initiated by an operator or a visitor.
+
+
+      * `proactive` - Engagement request was initiated by the operator.
+
+      * `reactive` - Engagement request was initiated by the visitor.
+    enum:
+      - proactive
+      - reactive
+
+  source:
+    type: string
+    description: >
+      The method via which the engagement request was initiated.
+
+
+      * `button_embed` - (_reactive_) Visitor started an engagement using the **Contact Operator** button.
+
+      * `callout` - (_reactive_) Engagement was started by a business rule. For example, a business rule triggered a
+      media selector, which the visitor then used to start the engagement.
+
+      * `external_call` - (_reactive_) **Deprecated**
+
+      * `facebook` - (_reactive_) Visitor sent a message from Facebook Messenger.
+
+      * `hotlink` - (_reactive_) Visitor started engagement using a hotlink.
+
+      * `offline_phone` - (_reactive_) Visitor made a phone call.
+
+      * `call_visualizer` - (_proactive_) Engagement was started by an operator who used Call Visualizer (embedded or
+      Glia Hub) to connect with the visitor.
+
+      * `glia_hub` - (_proactive_) Engagement was initiated by an operator who selected a visitor from the visitor list
+      in Glia Hub.
+
+      * `outbound_call` - (_proactive_) Operator called visitor's phone number.
+
+      * `outbound_text` - (_proactive_) Operator sent an SMS message to the visitor's phone number.
+
+      * `sdk` - (_reactive_) Engagement started through JS SDK, Android SDK, or iOS SDK.
+
+      * `slack` - (_reactive_) Visitor sent a message from Slack.
+
+      * `sms` - (_reactive_) Visitor sent an SMS message.
+
+      * `tab` - (_reactive_) Visitor started the engagement through a web browser (using Glia Bubble).
+
+      * `visitor_integrator` - (_reactive_) Engagement was started by a REST API call.
+
+      * `whatsapp` - (_reactive_) Visitor sent a message from WhatsApp.
+
+      * `null` - (_proactive_) Engagement was requested by an operator.
+    enum:
+      - button_embed
+      - callout
+      - external_call
+      - facebook
+      - hotlink
+      - offline_phone
+      - call_visualizer
+      - glia_hub
+      - outbound_call
+      - outbound_text
+      - sdk
+      - slack
+      - sms
+      - tab
+      - visitor_integrator
+      - whatsapp
+    nullable: true
+
+  site_id:
+    type: string
+    description: ID of the site where the engagement request took place.
+    example: 'def34343-s888-43ae-99e0-07a676e9a111'
+
+  requested_at:
+    type: string
+    description: Timestamp of when the engagement request was initiated.
+    example: '2020-05-31T09:55:13Z'
+
+  outcome:
+    type: string
+    description: >
+      The outcome of the engagement request.
+
+
+      * `accepted` - The receiving party accepted the engagement request.
+
+      * `rejected` - The receiving party declined the engagement request.
+
+      * `timed_out` - The receiving party did not accept or decline the engagement request within the required timeout
+      period.
+
+      * `visitor_cancel` - The visitor canceled a reactive engagement request.
+
+      * `operator_cancel` - The operator canceled a proactive engagement request.
+
+      * `error` - The engagement request failed because of an error.
+
+      * `null` - The engagement request is ongoing.
+    enum:
+      - accepted
+      - rejected
+      - timed_out
+      - visitor_cancel
+      - operator_cancel
+      - error
+    nullable: true
+    example: accepted
+
+  outcome_resolved_at:
+    type: string
+    description: >
+      Timestamp of when the engagement request was accepted or failed.
+
+
+      Set to `null` when the engagement request is pending.
+    nullable: true
+    example: '2020-05-31T09:55:25Z'
+
+  operator:
+    type: object
+    properties:
+      id:
+        type: string
+        description: ID of the operator associated with the engagement request.
+        example: 'ec317122-e888-4b43-996d-34a2ed3b76d8'
+    required:
+      - id
+
+  visitor:
+    type: object
+    properties:
+      id:
+        type: string
+        description: ID of the visitor associated with the engagement request.
+        example: 'c2c9106e-e888-47b2-8db3-089fb49dc9a5'
+      href:
+        type: string
+        description: URL of the visitor information.
+        example: 'https://api.glia.com/sites/def34343-s888-43ae-99e0-07a676e9a111/visitors/c2c9106e-e888-47b2-8db3-089fb49dc9a5'
+      name:
+        type: string
+        description: Visitor name.
+        nullable: true
+        example: 'John Smith'
+      phone:
+        type: string
+        description: Visitor phone number.
+        nullable: true
+        example: '+15555555555'
+      email:
+        type: string
+        description: Visitor email.
+        nullable: true
+        example: 'john.smith@example.com'
+      external_contact_id:
+        type: string
+        description: >
+          ID of the external contact to whom the outbound call was made.
+
+
+          This property is set when an operator dials an external contact from Engagement Launcher.
+        nullable: true
+        example: 'c615a080-e888-42ef-b3b1-2e044795bcb1'
+    required:
+      - id
+      - href
+
+  queues:
+    type: array
+    items:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID of the queue.
+      required:
+        - id
+    description: >
+      A list of queues to which the visitor was enqueued when an engagement request was made,
+      or from which an outbound call was made.
+    nullable: true
+    example:
+      - id: f58d4671-e888-4e87-96dc-1d41027bebc5
+      - id: f58d4671-e777-4e87-96dc-1d41027bebc5
+
+  offered_media:
+    type: string
+    description: >
+      The media requested by the operator (in case of proactive engagement requests) or visitor (in case of reactive
+      engagement requests).
+
+
+      * `text` - The initiator requested to use text.
+
+      * `phone` - The visitor requested to use audio, with them using the phone audio.
+
+      * `audio` - The initiator requested to use audio.
+
+      * `video` - The initiator requested to use video.
+    enum:
+      - text
+      - phone
+      - audio
+      - video
+    example: video
+
+  accepted_media:
+    type: string
+    description: >
+      The media accepted by the visitor (in case of proactive engagement requests) or operator (in case of reactive
+      engagement requests).
+
+
+      Set to `null` when the engagement request is pending or was not accepted by the receiving party.
+
+
+      * `text` - The receiver accepted to use text.
+
+      * `phone` - The receiver accepted to use audio, with the visitor using the phone audio.
+
+      * `audio` - The receiver accepted to use audio.
+
+      * `video` - The receiver accepted to use video.
+    enum:
+      - text
+      - phone
+      - audio
+      - video
+    nullable: true
+    example: audio
+
+  interaction_id:
+    type: string
+    description: Interaction ID.
+    example: '0df26d40-0fbe-474d-a051-702cd687c3c8'
+required:
+  - id
+  - type
+  - site_id
+  - requested_at
+  - operator
+  - visitor
+  - offered_media

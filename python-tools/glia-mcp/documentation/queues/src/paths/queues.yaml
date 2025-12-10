@@ -1,0 +1,173 @@
+---
+create:
+  summary: Create queue
+  tags:
+    - Queues
+  # yamllint disable rule:line-length
+  description: |
+    Creates a queue with the provided values.
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens)
+
+    * To create a queue and associate it with an in-queue flow via `in_queue_flow_id` parameter, requires:
+      * Access permissions, all of:
+        * `queues:create`
+        * `in_queue_flows:update`
+    * To create a queue without in-queue flow associations, requires:
+      * Access permissions: `queues:create`
+
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  requestBody:
+    required: true
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          $ref: '../schemas/create_queue.yaml'
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../responses/queue.yaml'
+          example:
+            $ref: '../examples/queues.yaml#/Queue1'
+
+list:
+  summary: List queues
+  tags:
+    - Queues
+  # yamllint disable rule:line-length
+  description: |
+    Fetches queues by their site IDs.
+
+    The request can be made either by the visitor or the Glia user (operator).
+
+    * Fetching queues can be filtered using the team IDs. When applied, this filter will fetch only those queues which have specified teams assigned to them.
+    * Additionally, in conjunction with the team IDs filter, the `include_without_teams` filter can be applied, which will include queues that do not have any teams assigned to them.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or visitor's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens) - Returns the collection of queues for the sites specified in the request. The user must be authorized to access the requested sites. Requires:
+      * Base of the user's role, one of:
+        * `operator`
+        * `manager`
+        * `super_manager`
+    * [Visitor's bearer access token](https://docs.glia.com/glia-dev/reference/post_visitors) - Returns the collection of queues for the site the visitor is currently on.
+
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/queue.yaml#/site_ids'
+      description: A list of site IDs whose queues are requested.
+    - $ref: '../parameters/queue.yaml#/team_ids'
+    - $ref: '../parameters/queue.yaml#/include_without_teams'
+    - $ref: '../parameters/queue.yaml#/partition_id'
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../responses/queues.yaml'
+          example:
+            $ref: '../examples/queues.yaml#/ListOfQueues'
+
+show:
+  summary: Fetch queue
+  tags:
+    - Queues
+  # yamllint disable rule:line-length
+  description: |
+    Fetches a queue by its ID.
+
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * Access permissions: `queues:read`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/queue.yaml#/queue_id'
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../responses/queue.yaml'
+          example:
+            $ref: '../examples/queues.yaml#/Queue1'
+update:
+  summary: Update queue
+  tags:
+    - Queues
+  # yamllint disable rule:line-length
+  description: |
+    Updates specified properties of a queue.
+
+    * If the specified fallback queue creates a fallback cycle with the updated queue then a `409 Conflict` response is returned.
+    * Note that the site ID of a queue can not be changed.
+
+
+     ### Authorization and Permissions
+
+    * To update a queue with defined `in_queue_flow_id` or add the `in_queue_flow_id`, requires:
+      * Access permissions, all of:
+        * `queues:update`
+        * `in_queue_flows:update`
+    * To update a queue without in-queue flow associations, requires:
+      * Access permissions: `queues:update`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/queue.yaml#/queue_id'
+  requestBody:
+    required: true
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          $ref: '../schemas/update_queue.yaml'
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../responses/queue.yaml'
+          example:
+            $ref: '../examples/queues.yaml#/UpdatedQueue2'
+delete:
+  summary: Delete queue
+  tags:
+    - Queues
+  # yamllint disable rule:line-length
+  description: |
+    Deletes a specified queue if it is empty.
+
+    If the queue is not empty, or is in use in any other sense, e.g. associated to a [phone channel](ref:contacts), [digital channel](ref:digital-channels), or assigned as a fallback queue to another queue, the queue cannot be deleted and a `409 Conflict` response is returned.
+
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * Access permissions: `queues:delete`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/queue.yaml#/queue_id'
+  responses:
+    '204':
+      description: Queue was deleted.
