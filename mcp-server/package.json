@@ -1,0 +1,17 @@
+{
+  "name": "glia-functions-mcp-server",
+  "version": "0.1.0",
+  "description": "MCP Server for Glia Functions Tools",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.24.3",
+    "zod": "^4.1.12"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
