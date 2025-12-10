@@ -1,59 +1,36 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { spawn } from 'child_process';
 
-// Define current MCP protocol version
-const CURRENT_PROTOCOL_VERSION = "2025-11-25";
-const FALLBACK_PROTOCOL_VERSION = "2025-03-26";
+// --- STATIC IMPORTS ---
+// Ensure these paths match your folder structure exactly
+import GliaApiClient from "../src/lib/api.js";
+import { getApiConfig } from "../src/lib/config.js";
+import { parseAndValidateJson } from "../src/lib/validation.js";
+import { AuthenticationError, NetworkError } from "../src/lib/errors.js";
+import { fetchLogs } from "../src/commands/fetchLogs.js";
+import { 
+    validateCronExpression, 
+    parseCronExpression, 
+    getNextExecutionTime, 
+    CRON_PRESETS 
+} from "../src/utils/cron-helper.js";
+import { validateCode } from "../src/utils/code-validator.js";
 
-// Get the directory name of the current module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Resolve the path to the main project directory
-const projectDir = path.resolve(__dirname, '..');
-
-// Create server instance with explicit protocol version
 const server = new McpServer({
     name: "glia-functions-cli",
     version: "0.1.0",
-    protocolVersion: CURRENT_PROTOCOL_VERSION,
 });
 
-/**
- * Dynamic import helper - imports modules from the main project
- */
-async function importFromProject(modulePath) {
-    const fullPath = path.join(projectDir, modulePath);
-    return import(fullPath);
-}
-
-/**
- * Helper to create an authenticated GliaApiClient
- */
 async function makeApiClient() {
-    const { default: GliaApiClient } = await importFromProject('src/lib/api.js');
-    const { getApiConfig } = await importFromProject('src/lib/config.js');
-
-    const apiConfig = await getApiConfig(); // same config the CLI uses
+    const apiConfig = await getApiConfig();
     const api = new GliaApiClient(apiConfig);
     return { api, apiConfig };
 }
 
-/**
- * Helper to format results for MCP
- */
 function textResult(obj) {
     return {
-        content: [
-            {
-                type: "text",
-                text: typeof obj === "string" ? obj : JSON.stringify(obj, null, 2),
-            },
-        ],
+        content: [{ type: "text", text: typeof obj === "string" ? obj : JSON.stringify(obj, null, 2) }],
     };
 }
 
@@ -62,763 +39,404 @@ function textResult(obj) {
  */
 server.tool(
     "gf_list_functions",
-    "Lists all Glia Functions for the currently configured site/profile.",
+    "Lists all Glia Functions.",
     {
-        verbose: z
-            .boolean()
-            .optional()
-            .describe("If true, include raw API response."),
+        verbose: z.boolean().optional().describe("If true, include raw API response."),
     },
-    async ({ verbose }) => {
+    async ({ verbose } = {}) => {
         const { api } = await makeApiClient();
-        const { AuthenticationError, NetworkError } = await importFromProject('src/lib/errors.js');
-
         try {
             const list = await api.listFunctions();
-            if (!list || !Array.isArray(list.functions)) {
-                return textResult("No functions found or invalid response.");
-            }
-            if (verbose) {
-                return textResult(list);
-            }
-            const summary = list.functions.map((f) => ({
-                id: f.id,
-                name: f.name,
-                description: f.description,
-            }));
-            return textResult(summary);
+            if (verbose) return textResult(list);
+            return textResult(list?.functions || []);
         } catch (err) {
-            if (err instanceof AuthenticationError) {
-                return textResult(
-                    `Authentication error while listing functions: ${err.message}`
-                );
-            }
-            if (err instanceof NetworkError) {
-                return textResult(
-                    `Network error while listing functions: ${err.message}`
-                );
-            }
-            return textResult(`Unexpected error: ${err.message}`);
+            return textResult(`Error: ${err.message}`);
         }
     }
 );
 
 /**
- * 2) Get function details
+ * 2) Get function
  */
 server.tool(
     "gf_get_function",
-    "Returns detailed information about a specific function.",
-    {
-        functionId: z.string().describe("The Glia Function ID."),
-    },
+    "Get function details.",
+    { functionId: z.string() },
     async ({ functionId }) => {
         const { api } = await makeApiClient();
-        const fn = await api.getFunction(functionId);
-        return textResult(fn);
+        return textResult(await api.getFunction(functionId));
     }
 );
 
 /**
- * 3) List function versions
+ * 3) List versions
  */
 server.tool(
     "gf_list_function_versions",
-    "Lists all versions of a Glia Function, including which one is current.",
-    {
-        functionId: z.string().describe("The Glia Function ID."),
-    },
+    "List function versions.",
+    { functionId: z.string() },
     async ({ functionId }) => {
         const { api } = await makeApiClient();
-        const versions = await api.listVersions(functionId);
-        return textResult(versions);
+        return textResult(await api.listVersions(functionId));
     }
 );
 
 /**
- * 4) Deploy a function version
+ * 4) Deploy version
  */
 server.tool(
     "gf_deploy_version",
-    "Marks an existing function version as the main deployed version.",
-    {
-        functionId: z.string().describe("The Glia Function ID."),
-        versionId: z.string().describe("The function version ID to deploy."),
-    },
+    "Deploy a function version.",
+    { functionId: z.string(), versionId: z.string() },
     async ({ functionId, versionId }) => {
         const { api } = await makeApiClient();
-        const result = await api.deployVersion(functionId, versionId);
-        return textResult({
-            message: "Function version deployed",
-            result,
-        });
+        return textResult(await api.deployVersion(functionId, versionId));
     }
 );
 
 /**
- * 5) Invoke a function
+ * 5) Invoke function
  */
 server.tool(
     "gf_invoke_function",
-    "Invokes a Glia Function with an optional JSON payload. Returns the raw response.",
+    "Invoke a function.",
     {
-        invocationUri: z
-            .string()
-            .optional()
-            .describe(
-                "Full invocation URI (preferred). If omitted, functionId must be provided and server will look up invocation URI."
-            ),
-        functionId: z
-            .string()
-            .optional()
-            .describe(
-                "Function ID to look up invocation URI, if invocationUri is not provided."
-            ),
-        payloadJson: z
-            .string()
-            .optional()
-            .describe("JSON string payload to send to the function."),
+        invocationUri: z.string().optional(),
+        functionId: z.string().optional(),
+        payloadJson: z.string().optional(),
     },
     async ({ invocationUri, functionId, payloadJson }) => {
         const { api } = await makeApiClient();
-        const { parseAndValidateJson } = await importFromProject('src/lib/validation.js');
-
-        // Resolve invocation URI if only functionId provided
         let uri = invocationUri;
         if (!uri) {
-            if (!functionId) {
-                return textResult(
-                    "You must provide either invocationUri or functionId."
-                );
-            }
+            if (!functionId) return textResult("Error: Provide invocationUri or functionId");
             const fn = await api.getFunction(functionId);
-            if (!fn.invocation_uri) {
-                return textResult(
-                    `Function ${functionId} does not have an invocation_uri.`
-                );
-            }
             uri = fn.invocation_uri;
         }
-
-        let payload = undefined;
-        if (payloadJson) {
-            try {
-                payload = parseAndValidateJson(payloadJson);
-            } catch (err) {
-                return textResult(`Invalid payload JSON: ${err.message}`);
-            }
-        }
-
-        const response = await api.invokeFunction(uri, payload);
-        return textResult(response);
+        let payload;
+        if (payloadJson) payload = JSON.parse(payloadJson);
+        return textResult(await api.invokeFunction(uri, payload));
     }
 );
 
 /**
- * 6) Fetch function logs
+ * 6) Fetch logs
  */
 server.tool(
     "gf_fetch_logs",
-    "Fetches logs for a function. Useful for debugging from an AI agent.",
+    "Fetch logs.",
     {
-        functionId: z.string().describe("The Glia Function ID."),
-        limit: z
-            .number()
-            .int()
-            .min(1)
-            .max(2000)
-            .optional()
-            .describe("Max log entries per page (default 1000)."),
-        startTimeIso: z
-            .string()
-            .optional()
-            .describe("Optional ISO-8601 start time filter."),
-        endTimeIso: z
-            .string()
-            .optional()
-            .describe("Optional ISO-8601 end time filter."),
-        fetchAll: z
-            .boolean()
-            .optional()
-            .describe(
-                "If true, follow pagination until all logs are fetched (may be slow)."
-            ),
+        functionId: z.string(),
+        limit: z.number().optional(),
+        startTimeIso: z.string().optional(),
+        endTimeIso: z.string().optional(),
+        fetchAll: z.boolean().optional(),
     },
-    async ({ functionId, limit = 1000, startTimeIso, endTimeIso, fetchAll }) => {
-        const { fetchLogs } = await importFromProject('src/commands/fetchLogs.js');
-
+    async ({ functionId, limit, startTimeIso, endTimeIso, fetchAll }) => {
         const options = {
             functionId,
-            logsOptions: {
-                limit,
-                startTime: startTimeIso || null,
-                endTime: endTimeIso || null,
-            },
+            logsOptions: { limit: limit || 1000, startTime: startTimeIso, endTime: endTimeIso },
             fetchAll: !!fetchAll,
-            command: {
-                info: () => { }, // Silence info logs
-            },
+            command: { info: () => {} },
         };
-
         const logs = await fetchLogs(options);
         return textResult(logs);
     }
 );
 
 /**
- * 7) Create a new function
+ * 7) Create function
  */
 server.tool(
     "gf_create_function",
-    "Creates a new Glia Function with the specified name and description.",
+    "Create a function.",
     {
-        name: z.string().describe("The name of the function."),
-        description: z.string().optional().describe("Optional description of the function."),
-        warmInstances: z
-            .number()
-            .int()
-            .min(0)
-            .max(5)
-            .optional()
-            .describe("Number of warm instances (0-5). Default is 0."),
+        name: z.string(),
+        description: z.string().optional(),
+        warmInstances: z.number().optional(),
     },
     async ({ name, description, warmInstances }) => {
         const { api } = await makeApiClient();
-        const { ValidationError } = await importFromProject('src/lib/errors.js');
-
-        try {
-            const options = {};
-            if (warmInstances !== undefined) {
-                options.warmInstances = warmInstances;
-            }
-
-            const result = await api.createFunction(name, description || '', options);
-            return textResult({
-                message: "Function created successfully",
-                function: result,
-            });
-        } catch (err) {
-            if (err instanceof ValidationError) {
-                return textResult(`Validation error: ${err.message}`);
-            }
-            return textResult(`Failed to create function: ${err.message}`);
-        }
+        const options = warmInstances !== undefined ? { warmInstances } : {};
+        const result = await api.createFunction(name, description || "", options);
+        return textResult(result);
     }
 );
 
 /**
- * 8) Delete a function
+ * 8) Delete function
  */
 server.tool(
     "gf_delete_function",
-    "Deletes a Glia Function by ID. WARNING: This action cannot be undone.",
-    {
-        functionId: z.string().describe("The Glia Function ID to delete."),
-    },
+    "Delete a function.",
+    { functionId: z.string() },
     async ({ functionId }) => {
         const { api } = await makeApiClient();
-
-        try {
-            await api.deleteFunction(functionId);
-            return textResult({
-                message: "Function deleted successfully",
-                functionId: functionId,
-            });
-        } catch (err) {
-            return textResult(`Failed to delete function: ${err.message}`);
-        }
+        await api.deleteFunction(functionId);
+        return textResult({ success: true, functionId });
     }
 );
 
 /**
- * 9) Update a function
+ * 9) Update function
  */
 server.tool(
     "gf_update_function",
-    "Updates a Glia Function's metadata (name, description, warm instances).",
+    "Update function.",
     {
-        functionId: z.string().describe("The Glia Function ID to update."),
-        name: z.string().optional().describe("New name for the function."),
-        description: z.string().optional().describe("New description for the function."),
-        warmInstances: z
-            .number()
-            .int()
-            .min(0)
-            .max(5)
-            .optional()
-            .describe("New number of warm instances (0-5)."),
+        functionId: z.string(),
+        name: z.string().optional(),
+        description: z.string().optional(),
+        warmInstances: z.number().optional(),
     },
     async ({ functionId, name, description, warmInstances }) => {
         const { api } = await makeApiClient();
-        const { ValidationError } = await importFromProject('src/lib/errors.js');
-
-        try {
-            // Build updates object with only provided fields
-            const updates = {};
-            if (name !== undefined) updates.name = name;
-            if (description !== undefined) updates.description = description;
-            if (warmInstances !== undefined) updates.warmInstances = warmInstances;
-
-            // Validate at least one field is provided
-            if (Object.keys(updates).length === 0) {
-                return textResult(
-                    "At least one field (name, description, or warmInstances) must be provided."
-                );
-            }
-
-            const result = await api.updateFunction(functionId, updates);
-            return textResult({
-                message: "Function updated successfully",
-                function: result,
-            });
-        } catch (err) {
-            if (err instanceof ValidationError) {
-                return textResult(`Validation error: ${err.message}`);
-            }
-            return textResult(`Failed to update function: ${err.message}`);
-        }
+        const updates = {};
+        if (name) updates.name = name;
+        if (description) updates.description = description;
+        if (warmInstances !== undefined) updates.warmInstances = warmInstances;
+        return textResult(await api.updateFunction(functionId, updates));
     }
 );
 
 /**
- * 10) Create a new function version
+ * 10) Create version
+ * FIX: Replaced z.record() with z.string() for environmentVariables to fix Inspector crash.
  */
 server.tool(
     "gf_create_version",
-    "Creates a new version of a Glia Function with the provided code. Returns a task that can be polled for completion status.",
+    "Create version. Pass env vars as a JSON string.",
     {
-        functionId: z.string().describe("The Glia Function ID."),
-        code: z.string().describe("The JavaScript code for the function version."),
-        compatibilityDate: z
-            .string()
-            .optional()
-            .describe("Workerd compatibility date (e.g., '2023-10-30'). If omitted, uses the maximum supported date."),
-        environmentVariables: z
-            .record(z.string())
-            .optional()
-            .describe("Environment variables as key-value pairs."),
+        functionId: z.string(),
+        code: z.string(),
+        compatibilityDate: z.string().optional(),
+        environmentVariablesJson: z.string().optional().describe("JSON string of Key-Value pairs"),
     },
-    async ({ functionId, code, compatibilityDate, environmentVariables }) => {
+    async ({ functionId, code, compatibilityDate, environmentVariablesJson }) => {
         const { api } = await makeApiClient();
-        const { ValidationError } = await importFromProject('src/lib/errors.js');
-
-        try {
-            const options = {};
-            if (compatibilityDate) {
-                options.compatibilityDate = compatibilityDate;
+        const options = {};
+        if (compatibilityDate) options.compatibilityDate = compatibilityDate;
+        if (environmentVariablesJson) {
+            try {
+                options.environmentVariables = JSON.parse(environmentVariablesJson);
+            } catch (e) {
+                return textResult("Error: environmentVariablesJson must be valid JSON");
             }
-            if (environmentVariables) {
-                options.environmentVariables = environmentVariables;
-            }
-
-            const task = await api.createVersion(functionId, code, options);
-            return textResult({
-                message: "Function version creation task started",
-                task: task,
-                note: "Use gf_get_version_task to poll for completion status.",
-            });
-        } catch (err) {
-            if (err instanceof ValidationError) {
-                return textResult(`Validation error: ${err.message}`);
-            }
-            return textResult(`Failed to create function version: ${err.message}`);
         }
+        return textResult(await api.createVersion(functionId, code, options));
     }
 );
 
 /**
- * 11) Get version creation task status
+ * 11) Get task
  */
 server.tool(
     "gf_get_version_task",
-    "Gets the status of a function version creation task. Poll this to check if version creation is complete.",
-    {
-        functionId: z.string().describe("The Glia Function ID."),
-        taskId: z.string().describe("The task ID returned from gf_create_version."),
-    },
+    "Get version task status.",
+    { functionId: z.string(), taskId: z.string() },
     async ({ functionId, taskId }) => {
         const { api } = await makeApiClient();
-
-        try {
-            const taskStatus = await api.getVersionCreationTask(functionId, taskId);
-            return textResult(taskStatus);
-        } catch (err) {
-            return textResult(`Failed to get task status: ${err.message}`);
-        }
+        return textResult(await api.getVersionCreationTask(functionId, taskId));
     }
 );
 
 /**
- * 12) List KV pairs in a namespace
+ * 12) KV List
  */
 server.tool(
     "gf_kv_list",
-    "Lists all key-value pairs in a specified KV Store namespace. All KV data expires after 72 hours.",
+    "List KV pairs.",
     {
-        namespace: z
-            .string()
-            .describe("Namespace of the key-value store (max 128 bytes, alphanumeric, underscores, hyphens)."),
-        prefix: z
-            .string()
-            .optional()
-            .describe("Optional prefix to filter keys."),
-        limit: z
-            .number()
-            .int()
-            .min(1)
-            .max(1000)
-            .optional()
-            .describe("Maximum number of items to return (default 100)."),
+        namespace: z.string(),
+        prefix: z.string().optional(),
+        limit: z.number().optional(),
     },
     async ({ namespace, prefix, limit }) => {
         const { api } = await makeApiClient();
-        const { ValidationError } = await importFromProject('src/lib/errors.js');
-
-        try {
-            const options = {};
-            if (prefix) options.prefix = prefix;
-            if (limit) options.limit = limit;
-
-            const result = await api.listKvPairs(namespace, options);
-            return textResult(result);
-        } catch (err) {
-            if (err instanceof ValidationError) {
-                return textResult(`Validation error: ${err.message}`);
-            }
-            return textResult(`Failed to list KV pairs: ${err.message}`);
-        }
+        return textResult(await api.listKvPairs(namespace, { prefix, limit }));
     }
 );
 
 /**
- * 13) Get a KV value
+ * 13) KV Get
  */
 server.tool(
     "gf_kv_get",
-    "Gets a value from the KV Store by key. Returns null if the key doesn't exist or has expired.",
-    {
-        namespace: z
-            .string()
-            .describe("Namespace of the key-value store (max 128 bytes, alphanumeric, underscores, hyphens)."),
-        key: z
-            .string()
-            .describe("The key to retrieve (max 512 bytes, alphanumeric, underscores, hyphens)."),
-    },
+    "Get KV value.",
+    { namespace: z.string(), key: z.string() },
     async ({ namespace, key }) => {
         const { api } = await makeApiClient();
-        const { ValidationError } = await importFromProject('src/lib/errors.js');
-
-        try {
-            const result = await api.getKvValue(namespace, key);
-
-            if (!result || result.value === null) {
-                return textResult({
-                    found: false,
-                    key: key,
-                    namespace: namespace,
-                    message: "Key not found or has expired",
-                });
-            }
-
-            return textResult(result);
-        } catch (err) {
-            if (err instanceof ValidationError) {
-                return textResult(`Validation error: ${err.message}`);
-            }
-            return textResult(`Failed to get KV value: ${err.message}`);
-        }
+        return textResult(await api.getKvValue(namespace, key));
     }
 );
 
 /**
- * 14) Set a KV value
+ * 14) KV Set
  */
 server.tool(
     "gf_kv_set",
-    "Sets a key-value pair in the KV Store. Creates a new key or updates an existing one. All data expires after 72 hours.",
-    {
-        namespace: z
-            .string()
-            .describe("Namespace of the key-value store (max 128 bytes, alphanumeric, underscores, hyphens)."),
-        key: z
-            .string()
-            .describe("The key to set (max 512 bytes, alphanumeric, underscores, hyphens)."),
-        value: z
-            .string()
-            .describe("The value to store (max 16,000 bytes)."),
-    },
+    "Set KV value.",
+    { namespace: z.string(), key: z.string(), value: z.string() },
     async ({ namespace, key, value }) => {
         const { api } = await makeApiClient();
-        const { ValidationError } = await importFromProject('src/lib/errors.js');
-
-        try {
-            const result = await api.setKvValue(namespace, key, value);
-            return textResult({
-                message: "KV value set successfully",
-                result: result,
-            });
-        } catch (err) {
-            if (err instanceof ValidationError) {
-                return textResult(`Validation error: ${err.message}`);
-            }
-            return textResult(`Failed to set KV value: ${err.message}`);
-        }
+        return textResult(await api.setKvValue(namespace, key, value));
     }
 );
 
 /**
- * 15) Delete a KV value
+ * 15) KV Delete
  */
 server.tool(
     "gf_kv_delete",
-    "Deletes a key-value pair from the KV Store by key.",
-    {
-        namespace: z
-            .string()
-            .describe("Namespace of the key-value store (max 128 bytes, alphanumeric, underscores, hyphens)."),
-        key: z
-            .string()
-            .describe("The key to delete (max 512 bytes, alphanumeric, underscores, hyphens)."),
-    },
+    "Delete KV value.",
+    { namespace: z.string(), key: z.string() },
     async ({ namespace, key }) => {
         const { api } = await makeApiClient();
-        const { ValidationError } = await importFromProject('src/lib/errors.js');
-
-        try {
-            const result = await api.deleteKvValue(namespace, key);
-            return textResult({
-                message: "KV value deleted successfully",
-                result: result,
-            });
-        } catch (err) {
-            if (err instanceof ValidationError) {
-                return textResult(`Validation error: ${err.message}`);
-            }
-            return textResult(`Failed to delete KV value: ${err.message}`);
-        }
+        return textResult(await api.deleteKvValue(namespace, key));
     }
 );
 
 /**
- * 16) Test and set a KV value (conditional update)
+ * 16) KV Test & Set
+ * FIX: Removed z.union/z.null. Use string "null" or omit for simplicity to fix Inspector crash.
  */
 server.tool(
     "gf_kv_test_and_set",
-    "Conditionally updates a KV value only if the current value matches the expected value. Useful for atomic operations and avoiding race conditions.",
+    "Test and Set KV value. To represent NULL/Non-existent, pass the string 'null' or leave empty.",
     {
-        namespace: z
-            .string()
-            .describe("Namespace of the key-value store (max 128 bytes, alphanumeric, underscores, hyphens)."),
-        key: z
-            .string()
-            .describe("The key to update (max 512 bytes, alphanumeric, underscores, hyphens)."),
-        oldValue: z
-            .string()
-            .nullable()
-            .describe("The expected current value (null if key should not exist)."),
-        newValue: z
-            .string()
-            .nullable()
-            .describe("The new value to set (null to delete the key)."),
+        namespace: z.string(),
+        key: z.string(),
+        oldValue: z.string().optional().describe("Expected current value. Use 'null' for non-existent."),
+        newValue: z.string().optional().describe("New value. Use 'null' to delete."),
     },
     async ({ namespace, key, oldValue, newValue }) => {
         const { api } = await makeApiClient();
-        const { ValidationError } = await importFromProject('src/lib/errors.js');
-
-        try {
-            const result = await api.testAndSetKvValue(namespace, key, oldValue, newValue);
-
-            if (!result || result.value === null) {
-                return textResult({
-                    success: false,
-                    message: "Test-and-set failed: current value does not match expected value",
-                    key: key,
-                });
-            }
-
-            return textResult({
-                message: "Test-and-set operation successful",
-                result: result,
-            });
-        } catch (err) {
-            if (err instanceof ValidationError) {
-                return textResult(`Validation error: ${err.message}`);
-            }
-            return textResult(`Failed to perform test-and-set: ${err.message}`);
-        }
+        
+        // Helper to convert string "null" or undefined to actual null
+        const resolveVal = (v) => (v === 'null' || v === undefined) ? null : v;
+        
+        const result = await api.testAndSetKvValue(namespace, key, resolveVal(oldValue), resolveVal(newValue));
+        if (!result || result.value === null) return textResult("Mismatch or failed");
+        return textResult({ success: true, result });
     }
 );
 
 /**
- * 17) List scheduled triggers
+ * 17) List Schedules
  */
 server.tool(
     "gf_list_scheduled_triggers",
-    "Lists all scheduled triggers for the current site. Scheduled triggers invoke functions at specified times using cron expressions.",
-    {
-        verbose: z
-            .boolean()
-            .optional()
-            .describe("If true, include full details for each trigger."),
-    },
-    async ({ verbose }) => {
+    "List scheduled triggers.",
+    { verbose: z.boolean().optional() },
+    async ({ verbose } = {}) => {
         const { api } = await makeApiClient();
-
-        try {
-            const result = await api.listScheduledTriggers();
-
-            if (!result || !Array.isArray(result.items)) {
-                return textResult("No scheduled triggers found or invalid response.");
-            }
-
-            if (verbose) {
-                return textResult(result);
-            }
-
-            // Return simplified summary
-            const summary = result.items.map((t) => ({
-                id: t.id,
-                name: t.name,
-                description: t.description,
-                trigger_id: t.trigger_id,
-                schedule_pattern: t.schedule_pattern,
-                enabled: t.enabled,
-            }));
-
-            return textResult(summary);
-        } catch (err) {
-            return textResult(`Failed to list scheduled triggers: ${err.message}`);
-        }
+        const result = await api.listScheduledTriggers();
+        if (verbose) return textResult(result);
+        return textResult(result.items.map(t => ({ id: t.id, name: t.name, schedule: t.schedule_pattern })));
     }
 );
 
 /**
- * 18) Create a scheduled trigger
+ * 18) Create Schedule
  */
 server.tool(
     "gf_create_scheduled_trigger",
-    "Creates a new scheduled trigger to invoke a function at specified times. Uses Amazon EventBridge cron expression format: 'Minutes Hours Day-of-month Month Day-of-week [Year]'.",
+    "Create schedule.",
     {
-        name: z.string().describe("Name of the scheduled trigger."),
-        functionId: z.string().describe("The function ID to invoke on this schedule."),
-        schedulePattern: z
-            .string()
-            .describe("Cron expression (5-6 space-separated fields). Example: '0 2 * * ? *' for daily at 2 AM UTC."),
-        description: z
-            .string()
-            .optional()
-            .describe("Optional description of the scheduled trigger."),
+        name: z.string(),
+        functionId: z.string(),
+        schedulePattern: z.string(),
+        description: z.string().optional(),
     },
     async ({ name, functionId, schedulePattern, description }) => {
         const { api } = await makeApiClient();
-        const { ValidationError } = await importFromProject('src/lib/errors.js');
-
-        try {
-            const options = {
-                name,
-                trigger_type: "function",
-                trigger_id: functionId,
-                schedule_pattern: schedulePattern,
-            };
-
-            if (description) {
-                options.description = description;
-            }
-
-            const result = await api.createScheduledTrigger(options);
-            return textResult({
-                message: "Scheduled trigger created successfully",
-                trigger: result,
-            });
-        } catch (err) {
-            if (err instanceof ValidationError) {
-                return textResult(`Validation error: ${err.message}`);
-            }
-            return textResult(`Failed to create scheduled trigger: ${err.message}`);
-        }
+        return textResult(await api.createScheduledTrigger({
+            name,
+            trigger_type: "function",
+            trigger_id: functionId,
+            schedule_pattern: schedulePattern,
+            description
+        }));
     }
 );
 
 /**
- * 19) Update a scheduled trigger
+ * 19) Update Schedule
  */
 server.tool(
     "gf_update_scheduled_trigger",
-    "Updates a scheduled trigger's properties. You can update name, description, schedule pattern, or enabled status.",
+    "Update schedule.",
     {
-        triggerId: z.string().describe("The scheduled trigger ID to update."),
-        name: z.string().optional().describe("New name for the trigger."),
-        description: z.string().optional().describe("New description for the trigger."),
-        schedulePattern: z
-            .string()
-            .optional()
-            .describe("New cron expression. Example: '0 2 * * ? *' for daily at 2 AM UTC."),
-        enabled: z
-            .boolean()
-            .optional()
-            .describe("Enable (true) or disable (false) the trigger."),
+        triggerId: z.string(),
+        name: z.string().optional(),
+        description: z.string().optional(),
+        schedulePattern: z.string().optional(),
+        enabled: z.boolean().optional(),
     },
     async ({ triggerId, name, description, schedulePattern, enabled }) => {
         const { api } = await makeApiClient();
-        const { ValidationError } = await importFromProject('src/lib/errors.js');
-
-        try {
-            // Build updates object with only provided fields
-            const updates = {};
-            if (name !== undefined) updates.name = name;
-            if (description !== undefined) updates.description = description;
-            if (schedulePattern !== undefined) updates.schedulePattern = schedulePattern;
-            if (enabled !== undefined) updates.enabled = enabled;
-
-            // Validate at least one field is provided
-            if (Object.keys(updates).length === 0) {
-                return textResult(
-                    "At least one field (name, description, schedulePattern, or enabled) must be provided."
-                );
-            }
-
-            const result = await api.updateScheduledTrigger(triggerId, updates);
-            return textResult({
-                message: "Scheduled trigger updated successfully",
-                trigger: result,
-            });
-        } catch (err) {
-            if (err instanceof ValidationError) {
-                return textResult(`Validation error: ${err.message}`);
-            }
-            return textResult(`Failed to update scheduled trigger: ${err.message}`);
-        }
+        const updates = {};
+        if (name) updates.name = name;
+        if (description) updates.description = description;
+        if (schedulePattern) updates.schedulePattern = schedulePattern;
+        if (enabled !== undefined) updates.enabled = enabled;
+        return textResult(await api.updateScheduledTrigger(triggerId, updates));
     }
 );
 
 /**
- * 20) Delete a scheduled trigger
+ * 20) Delete Schedule
  */
 server.tool(
     "gf_delete_scheduled_trigger",
-    "Deletes a scheduled trigger by ID. This stops the function from being invoked on the schedule.",
-    {
-        triggerId: z.string().describe("The scheduled trigger ID to delete."),
-    },
+    "Delete schedule.",
+    { triggerId: z.string() },
     async ({ triggerId }) => {
         const { api } = await makeApiClient();
-
-        try {
-            await api.deleteScheduledTrigger(triggerId);
-            return textResult({
-                message: "Scheduled trigger deleted successfully",
-                triggerId: triggerId,
-            });
-        } catch (err) {
-            return textResult(`Failed to delete scheduled trigger: ${err.message}`);
-        }
+        await api.deleteScheduledTrigger(triggerId);
+        return textResult({ success: true, triggerId });
     }
 );
 
-// Additional tools can be added here (applets, etc.)
+/**
+ * 21) Validate Cron
+ */
+server.tool(
+    "gf_validate_cron",
+    "Validate cron expression.",
+    { cronExpression: z.string() },
+    async ({ cronExpression }) => {
+        const val = validateCronExpression(cronExpression);
+        if (!val.valid) return textResult({ valid: false, error: val.error });
+        return textResult({ valid: true, next: getNextExecutionTime(cronExpression) });
+    }
+);
+
+/**
+ * 22) Validate Code
+ */
+server.tool(
+    "gf_validate_code",
+    "Validate JS code.",
+    { code: z.string(), strict: z.boolean().optional() },
+    async ({ code, strict }) => {
+        return textResult(await validateCode(code, { strict }));
+    }
+);
+
+/**
+ * 23) Presets
+ */
+server.tool(
+    "gf_cron_presets",
+    "Get cron presets.",
+    {},
+    async () => {
+        return textResult(CRON_PRESETS);
+    }
+);
 
 async function main() {
-    // Use stdio transport only
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error('MCP server connected via stdio transport');
