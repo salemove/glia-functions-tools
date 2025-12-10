@@ -1,8 +1,8 @@
 /**
  * Start the MCP server
  *
- * This command starts the MCP (Model Context Protocol) server, which enables AI assistants
- * to interact with Glia Functions programmatically using standard input/output.
+ * This command starts the MCP (Model Context Protocol) server located in the ./mcp-server directory,
+ * which enables AI assistants to interact with Glia Functions programmatically using standard input/output.
  */
 
 import { spawn } from 'child_process';
@@ -19,7 +19,7 @@ const __dirname = path.dirname(__filename);
  */
 export async function startMcpServer(options = {}) {
   // Get the path to the MCP server
-  const serverPath = path.resolve(__dirname, '../mcp/server.js');
+  const serverPath = path.resolve(__dirname, '../../mcp-server/server.js');
 
   // Prepare environment variables
   const env = { ...process.env };
