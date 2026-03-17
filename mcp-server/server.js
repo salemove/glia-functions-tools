@@ -16,6 +16,7 @@ import {
     CRON_PRESETS 
 } from "../src/utils/cron-helper.js";
 import { validateCode } from "../src/utils/code-validator.js";
+import { registerAllAppletTools } from "./tools/applets.js";
 
 const server = new McpServer({
     name: "glia-functions-cli",
@@ -436,10 +437,18 @@ server.tool(
     }
 );
 
+/**
+ * Register applet management tools
+ */
+console.error('Registering applet management tools...');
+registerAllAppletTools(server);
+console.error('Applet management tools registered successfully');
+
 async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error('MCP server connected via stdio transport');
+    console.error('Total tools registered: 33 (25 existing + 8 applet tools)');
 }
 
 main().catch((err) => {
