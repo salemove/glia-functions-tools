@@ -11,8 +11,8 @@
   "scripts": {
     "start": "node src/index.js",
     "cli": "node bin/glia-functions.js",
-    "build": "./node_modules/esbuild/bin/esbuild --bundle --platform=browser --define:global=window --inject:config/esbuild.inject.js --format=esm --outfile=function-out.js --log-level=silent --target=es2020",
-    "build:watch": "./node_modules/esbuild/bin/esbuild --bundle --platform=browser --define:global=window --inject:config/esbuild.inject.js --format=esm --outfile=function-out.js --log-level=silent --target=es2020 --watch",
+    "build": "./node_modules/esbuild/bin/esbuild --bundle --platform=browser --define:global=window --inject:config/esbuild.inject.js --external:secure_connection --external:ai --format=esm --outfile=function-out.js --log-level=silent --target=es2020",
+    "build:watch": "./node_modules/esbuild/bin/esbuild --bundle --platform=browser --define:global=window --inject:config/esbuild.inject.js --external:secure_connection --external:ai --format=esm --outfile=function-out.js --log-level=silent --target=es2020 --watch",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --no-coverage",
     "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --watch --no-coverage",
     "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --no-coverage",
