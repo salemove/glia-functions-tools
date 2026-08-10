@@ -3,10 +3,9 @@
  * 
  * Provides caching mechanisms for API requests to improve performance
  * and reduce unnecessary network traffic. Includes support for both
- * in-memory caching and persistent disk-based caching.
+ * In-memory response cache with TTL-based expiration.
  */
 
-import { PersistentCacheStorage } from './offline.js';
 
 /**
  * Default cache configuration
@@ -16,8 +15,6 @@ export const DEFAULT_CACHE_CONFIG = {
   ttlMs: 60000, // 1 minute default TTL
   maxSize: 100, // Maximum number of cached entries
   methods: ['GET'], // Only cache GET requests by default
-  persistent: false, // Whether to use persistent cache
-  persistentPath: null, // Path for persistent cache (null = use default)
 };
 
 /**
@@ -32,26 +29,12 @@ export class ResponseCache {
    * @param {number} options.ttlMs - Time-to-live for cache entries in milliseconds
    * @param {number} options.maxSize - Maximum number of cache entries
    * @param {string[]} options.methods - HTTP methods to cache
-   * @param {boolean} options.persistent - Whether to use persistent cache
-   * @param {string} options.persistentPath - Path for persistent cache
    */
   constructor(options = {}) {
     this.config = { ...DEFAULT_CACHE_CONFIG, ...options };
     this.cache = new Map();
     this.keys = []; // For tracking LRU
     this.enabled = this.config.enabled;
-    
-    // Initialize persistent cache if enabled
-    if (this.config.persistent) {
-      this.persistentCache = new PersistentCacheStorage({
-        cachePath: this.config.persistentPath
-      });
-      
-      // Initialize persistent cache (async, but don't block constructor)
-      this.persistentCache.init().catch(err => {
-        console.error('Failed to initialize persistent cache:', err);
-      });
-    }
   }
   
   /**

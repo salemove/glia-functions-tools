@@ -47,7 +47,6 @@ import {
 import { validateFunctionId, validateFunctionName } from './validation.js';
 import { withRetry, CircuitBreaker, DEFAULT_RETRY_CONFIG } from './retry.js';
 import { ResponseCache, DEFAULT_CACHE_CONFIG } from './cache.js';
-import { OfflineManager, DEFAULT_OFFLINE_CONFIG } from './offline.js';
 
 /**
  * Default API client configuration
@@ -60,13 +59,6 @@ export const DEFAULT_API_CONFIG = {
     failureThreshold: 5,
     resetTimeoutMs: 30000,
     halfOpenMaxCalls: 1
-  },
-  offline: {
-    ...DEFAULT_OFFLINE_CONFIG,
-    // Off unless explicitly requested. No CLI flag or MCP tool exposes offline
-    // mode, so defaulting it on only bought a connectivity probe and a periodic
-    // network check on every client construction.
-    enabled: false
   },
   requests: {
     defaultTimeout: 30000,      // 30 seconds default timeout
@@ -315,40 +307,8 @@ export default class GliaApiClient {
     // Prefetch cache for storing prefetched data
     this.prefetchCache = new Map();
     
-    // Initialize offline manager with proper config
-    const offlineConfig = {
-      ...DEFAULT_API_CONFIG.offline,
-      ...(config.offline || {})
-    };
-    
-    // Only build the offline manager when it is asked for. Constructing it
-    // starts a connectivity probe and a periodic network check, which is a
-    // surprising side effect of creating an API client when no CLI flag or MCP
-    // tool exposes offline mode at all.
-    if (offlineConfig.enabled) {
-      this.offlineManager = new OfflineManager({
-        ...offlineConfig,
-        // Use a more reliable network check URL - Google's connectivity check
-        networkCheckUrl: 'https://www.gstatic.com/generate_204',
-        // Pass through the log level
-        logLevel: this.logLevel
-      });
-      
-      if (this.logRequests) {
-        console.log('[API] Initializing offline support');
-      }
-      
-      // Provide the makeRequest method to the offline manager
-      this.offlineManager.setExecuteFunction((endpoint, options, requestOptions) => {
-        return this.makeRequest(endpoint, options, requestOptions);
-      });
-      
-      this.offlineManager.init().catch(err => {
-        console.error('Failed to initialize offline manager:', err);
-      });
-    } else {
-      this.offlineManager = null;
-    }
+    // No offline support: this CLI manages a live cloud service.
+    this.offlineManager = null;
   }
   
   /**
