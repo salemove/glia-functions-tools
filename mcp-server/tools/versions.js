@@ -15,18 +15,23 @@ export function registerVersionTools(server) {
     "gf_list_function_versions",
     {
       title: "List function versions",
-      description: `Lists the versions of a function.
+      description: `Lists the versions of a function, newest first by default.
 
 Each version carries its own code and environment variables. Exactly one version
 is current (deployed) at a time, and rolling back is just deploying an older
-version with gf_deploy_version.`,
+version with gf_deploy_version.
+
+Versions accumulate quickly, so use perPage and order to keep the result small.`,
       inputSchema: {
-        functionId: z.string().describe("The Glia Function ID.")
+        functionId: z.string().describe("The Glia Function ID."),
+        perPage: z.number().optional().describe("Versions per page (1-100)."),
+        order: z.enum(["asc", "desc"]).optional().describe("Sort direction (default desc)."),
+        orderBy: z.string().optional().describe("Field to sort by, e.g. created_at.")
       }
     },
-    guarded("Error listing versions", async ({ functionId }) => {
+    guarded("Error listing versions", async ({ functionId, perPage, order, orderBy }) => {
       const { api } = await makeApiClient();
-      return textResult(await api.listVersions(functionId));
+      return textResult(await api.listVersions(functionId, { perPage, order, orderBy }));
     })
   );
 

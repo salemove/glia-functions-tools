@@ -4,63 +4,28 @@
  * Common functions for KV Store command implementations
  */
 
-import { ValidationError } from '../../lib/errors.js';
+// Namespace and key validation lives with the API client, so the rules from the
+// spec (charset as well as byte length) are defined in exactly one place.
+export { validateKvKey as validateKey, validateKvNamespace as validateNamespace }
+  from '../../lib/api.js';
 
 /**
- * Validate KV store key format
- * 
- * @param {string} key - The key to validate
- * @throws {ValidationError} - If key is invalid
+ * Interpret a value supplied on the command line.
+ *
+ * KV values are strings; the spec has no boolean type. The previous version
+ * turned "true" and "false" into booleans and sent them, which is why a value of
+ * "true" came back as something else. Only the literal "null" is special, and
+ * only where a null is meaningful: as an absent value in test-and-set.
+ *
+ * @param {string} value - Raw value from the command line
+ * @param {Object} [options] - Interpretation options
+ * @param {boolean} [options.allowNull] - Treat "null" as an absent value
+ * @returns {string|null} The value to send
  */
-export function validateKey(key) {
-  if (!key) {
-    throw new ValidationError('Key is required', { field: 'key' }, {});
+export function convertValue(value, { allowNull = false } = {}) {
+  if (allowNull && (value === 'null' || value === undefined)) {
+    return null;
   }
-  
-  const keyBytes = Buffer.from(key).length;
-  if (keyBytes > 512) {
-    throw new ValidationError(
-      'Key exceeds maximum length of 512 bytes', 
-      { field: 'key', length: keyBytes }, 
-      {}
-    );
-  }
-}
-
-/**
- * Validate KV store namespace format
- * 
- * @param {string} namespace - The namespace to validate
- * @throws {ValidationError} - If namespace is invalid
- */
-export function validateNamespace(namespace) {
-  if (!namespace) {
-    throw new ValidationError('Namespace is required', { field: 'namespace' }, {});
-  }
-  
-  const namespaceBytes = Buffer.from(namespace).length;
-  if (namespaceBytes > 128) {
-    throw new ValidationError(
-      'Namespace exceeds maximum length of 128 bytes', 
-      { field: 'namespace', length: namespaceBytes }, 
-      {}
-    );
-  }
-}
-
-/**
- * Convert string value to appropriate type (boolean or string)
- * 
- * @param {string} value - The value to convert
- * @returns {string|boolean} - Converted value
- */
-export function convertValue(value) {
-  // Handle boolean values
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  if (value === 'null') return null;
-  
-  // Return as string for all other cases
   return value;
 }
 
@@ -119,11 +84,14 @@ export function formatKvEntries(items, options = {}) {
   
   items.forEach(item => {
     const key = item.key.length > 35 ? item.key.substring(0, 32) + '...' : item.key.padEnd(35);
+    // `formatted` must not be called displayValue: a const of that name shadowed
+    // the imported function and was read on the line above its own
+    // initialisation, so this threw a TDZ error for every non-empty list.
     const value = displayValue(item.value);
-    const displayValue = value.length > 35 ? value.substring(0, 32) + '...' : value.padEnd(35);
+    const formatted = value.length > 35 ? value.substring(0, 32) + '...' : value.padEnd(35);
     const expires = item.expires ? new Date(item.expires).toLocaleString() : 'N/A';
     
-    output += `${key} ${displayValue} ${expires}\n`;
+    output += `${key} ${formatted} ${expires}\n`;
   });
   
   return output;

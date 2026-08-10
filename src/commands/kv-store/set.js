@@ -32,7 +32,7 @@ export default async function setKvValue(options) {
       throw new ValidationError('Value is required', { field: 'value' }, {});
     }
     
-    // Convert value to appropriate type
+    // KV values are strings; nothing is coerced.
     const convertedValue = convertValue(value);
     
     // Get API client

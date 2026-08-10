@@ -50,9 +50,9 @@ export default async function listKvPairs(options) {
     }
     
     // Show pagination info if not fetching all
-    if (!all && result.next_page_cursor) {
-      const message = `\nShowing ${result.items.length} of ${result.total_count || 'many'} items. ` +
-                      `Use --all to fetch all items or provide --cursor "${result.next_page_cursor}" for the next page.`;
+    if (!all && result.next) {
+      const message = `\nShowing ${result.items.length} items. ` +
+                      `Use --all to fetch all items.`;
       
       if (!json) {
         showInfo(message);

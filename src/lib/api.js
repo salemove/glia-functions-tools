@@ -84,6 +84,152 @@ export const DEFAULT_API_CONFIG = {
   }
 };
 
+
+// --- Functions KV Store -------------------------------------------------------
+//
+// Every constant below comes from specs/functions.json. The KV surface used to
+// run on unversioned /functions/kv* routes, which appear in no published spec,
+// with the namespace as a query parameter and camelCase testAndSet fields.
+
+/** Base path for the KV Store. */
+const KV_BASE_PATH = '/api/v2/functions/storage/kv/namespaces';
+
+/** Operations the batch endpoint accepts. */
+const KV_OPERATIONS = ['set', 'get', 'delete', 'testAndSet'];
+
+/** Namespaces and keys share this charset. */
+const KV_NAME_PATTERN = /^[0-9a-zA-Z_-]+$/;
+
+/** Maximum namespace length, in bytes. */
+const KV_NAMESPACE_MAX_BYTES = 128;
+
+/** Maximum key length, in bytes. */
+const KV_KEY_MAX_BYTES = 512;
+
+/** Maximum value length, in bytes. */
+const KV_VALUE_MAX_BYTES = 16000;
+
+/** Maximum operations in one batch request. */
+const KV_MAX_OPERATIONS_PER_REQUEST = 10;
+
+/**
+ * Byte length of a string, which is what the limits are expressed in.
+ *
+ * @param {string} value - String to measure
+ * @returns {number} Length in bytes
+ */
+function byteLength(value) {
+  return Buffer.byteLength(value, 'utf8');
+}
+
+/**
+ * Validate a KV namespace.
+ *
+ * Checked locally so a bad namespace fails with a specific message instead of a
+ * 422 from the API.
+ *
+ * @param {string} namespace - Namespace to validate
+ * @throws {ValidationError} If the namespace is missing or malformed
+ */
+export function validateKvNamespace(namespace) {
+  if (!namespace) {
+    throw new ValidationError('Namespace is required', { field: 'namespace' }, {});
+  }
+  if (typeof namespace !== 'string') {
+    throw new ValidationError('Namespace must be a string',
+      { field: 'namespace', type: typeof namespace }, {});
+  }
+  if (!KV_NAME_PATTERN.test(namespace)) {
+    throw new ValidationError(
+      'Namespace may contain only letters, digits, underscores and hyphens',
+      { field: 'namespace', namespace }, {});
+  }
+  if (byteLength(namespace) > KV_NAMESPACE_MAX_BYTES) {
+    throw new ValidationError(
+      `Namespace exceeds the maximum length of ${KV_NAMESPACE_MAX_BYTES} bytes`,
+      { field: 'namespace', length: byteLength(namespace) }, {});
+  }
+}
+
+/**
+ * Validate a KV key.
+ *
+ * @param {string} key - Key to validate
+ * @throws {ValidationError} If the key is missing or malformed
+ */
+export function validateKvKey(key) {
+  if (!key) {
+    throw new ValidationError('Key is required', { field: 'key' }, {});
+  }
+  if (typeof key !== 'string') {
+    throw new ValidationError('Key must be a string',
+      { field: 'key', type: typeof key }, {});
+  }
+  if (!KV_NAME_PATTERN.test(key)) {
+    throw new ValidationError(
+      'Key may contain only letters, digits, underscores and hyphens',
+      { field: 'key', key }, {});
+  }
+  if (byteLength(key) > KV_KEY_MAX_BYTES) {
+    throw new ValidationError(
+      `Key exceeds the maximum length of ${KV_KEY_MAX_BYTES} bytes`,
+      { field: 'key', length: byteLength(key) }, {});
+  }
+}
+
+/**
+ * Validate a KV value.
+ *
+ * @param {any} value - Value to validate
+ * @param {string} field - Field name for the error message
+ * @param {Object} [options] - Validation options
+ * @param {boolean} [options.nullable] - Whether null is acceptable
+ * @throws {ValidationError} If the value is missing or too large
+ */
+export function validateKvValue(value, field, { nullable = false } = {}) {
+  if (value === null || value === undefined) {
+    if (nullable) return;
+    throw new ValidationError(`${field} is required`, { field }, {});
+  }
+  if (typeof value !== 'string') {
+    throw new ValidationError(`${field} must be a string`,
+      { field, type: typeof value }, {});
+  }
+  if (byteLength(value) > KV_VALUE_MAX_BYTES) {
+    throw new ValidationError(
+      `${field} exceeds the maximum size of ${KV_VALUE_MAX_BYTES} bytes`,
+      { field, size: byteLength(value) }, {});
+  }
+}
+
+/**
+ * Take the single result out of a batch response.
+ *
+ * The batch endpoint answers with `{ items: [...] }`. The single-key helpers
+ * previously indexed the response object itself, so every one of them returned
+ * null regardless of what the API said.
+ *
+ * @param {Object} response - Batch response
+ * @returns {Object|null} The first result, or null
+ */
+function firstKvResult(response) {
+  return response?.items?.length ? response.items[0] : null;
+}
+
+/**
+ * Validate a YYYY-MM-DD date.
+ *
+ * @param {string} value - Date to validate
+ * @param {string} field - Field name for the error message
+ * @throws {ValidationError} If the date is malformed
+ */
+function validateIsoDate(value, field) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new ValidationError(`${field} must be a date in YYYY-MM-DD format`,
+      { field, provided: value }, {});
+  }
+}
+
 /**
  * Glia API Client
  */
@@ -1511,15 +1657,43 @@ export default class GliaApiClient {
    * List versions for a function
    * 
    * @param {string} functionId - Function ID
+   * @param {Object} [options] - Query options
+   * @param {number} [options.perPage] - Versions per page (1-100)
+   * @param {string} [options.order] - Sort direction, "asc" or "desc"
+   * @param {string} [options.orderBy] - Field to sort by, "created_at"
+   * @param {boolean} [options.fetchAll] - Follow `next_page` to the last page
    * @returns {Promise<Object>} - Versions list response
    */
-  async listVersions(functionId) {
+  async listVersions(functionId, options = {}) {
     try {
       validateFunctionId(functionId);
-      
-      // Using the correct endpoint from the OpenAPI spec
-      const endpoint = `/functions/${functionId}/versions`;
-      return await this.makeRequest(endpoint);
+
+      // Without these the endpoint returns only the first page. Functions
+      // accumulate versions quickly, so the default silently truncated.
+      const query = new URLSearchParams();
+      if (options.perPage) {
+        query.set('per_page', String(options.perPage));
+      }
+      if (options.order) {
+        if (!['asc', 'desc'].includes(options.order)) {
+          throw new ValidationError('order must be "asc" or "desc"',
+            { field: 'order', provided: options.order }, {});
+        }
+        query.set('order', options.order);
+      }
+      if (options.orderBy) {
+        query.set('order_by', options.orderBy);
+      }
+
+      const suffix = query.size > 0 ? `?${query}` : '';
+      const endpoint = `/functions/${functionId}/versions${suffix}`;
+      const response = await this.makeRequest(endpoint);
+
+      if (options.fetchAll && response.next_page) {
+        return this._fetchAllVersions(response);
+      }
+
+      return response;
     } catch (error) {
       const errorContext = {
         operation: 'listVersions',
@@ -1551,6 +1725,28 @@ export default class GliaApiClient {
         throw new FunctionError(`Failed to list function versions: ${error.message}`, errorContext);
       }
     }
+  }
+  
+  /**
+   * Follow `next_page` to the end and return one combined page.
+   *
+   * @private
+   * @param {Object} firstPage - The first page of results
+   * @returns {Promise<Object>} Combined results, with `next_page` null
+   */
+  async _fetchAllVersions(firstPage) {
+    const versions = [...(firstPage.function_versions || [])];
+    let nextPage = firstPage.next_page;
+
+    while (nextPage) {
+      const page = await this.makeRequest(nextPage);
+      if (page.function_versions?.length) {
+        versions.push(...page.function_versions);
+      }
+      nextPage = page.next_page;
+    }
+
+    return { ...firstPage, function_versions: versions, next_page: null };
   }
   
   /**
@@ -1612,7 +1808,7 @@ export default class GliaApiClient {
    * @param {string} versionId - Version ID
    * @returns {Promise<Object>} - Environment variables for the function version (keys only)
    */
-  async getVersionEnvVars(functionId, versionId) {
+  async getVersionEnvVars(functionId, versionId, options = {}) {
     try {
       validateFunctionId(functionId);
       
@@ -1620,21 +1816,21 @@ export default class GliaApiClient {
         throw new ValidationError('Version ID is required', { field: 'versionId' }, {});
       }
       
-      // First get version details to get the list of defined environment variables
-      const version = await this.getVersion(functionId, versionId);
-      
-      if (!version.defined_environment_variables || version.defined_environment_variables.length === 0) {
-        return {}; // No environment variables defined
+      // Use the dedicated endpoint rather than deriving keys from the version's
+      // defined_environment_variables and filling every value with a placeholder.
+      // It returns the values the API is willing to disclose, and supports a
+      // keys[] filter.
+      const query = new URLSearchParams();
+      for (const key of options.keys || []) {
+        query.append('keys[]', key);
       }
-      
-      // Return defined environment variables as an object with placeholder values
-      // Note: The actual values can't be fetched from the API for security reasons
-      const envVars = {};
-      version.defined_environment_variables.forEach(key => {
-        envVars[key] = '********'; // Placeholder for secured variables
-      });
-      
-      return envVars;
+      const suffix = query.size > 0 ? `?${query}` : '';
+
+      const endpoint =
+        `/functions/${functionId}/versions/${versionId}/environment_variables${suffix}`;
+      const response = await this.makeRequest(endpoint);
+
+      return response?.environment_variables || {};
     } catch (error) {
       const errorContext = {
         operation: 'getVersionEnvVars',
@@ -2475,475 +2671,339 @@ export default class GliaApiClient {
   }
   
   /**
-   * List all key-value pairs in a namespace
-   * 
-   * @param {string} namespace - The KV store namespace
-   * @param {Object} options - List options
-   * @param {number} options.limit - Maximum number of results to return (per page)
-   * @param {string} options.cursor - Pagination cursor for fetching next page
-   * @param {boolean} options.fetchAll - Whether to fetch all pages automatically
-   * @returns {Promise<Object>} - KV pairs list response
+   * List the KV Store namespaces available to the account.
+   *
+   * @returns {Promise<Object>} `{ items: string[], self: string }`
+   */
+  async listKvNamespaces() {
+    try {
+      return await this.makeRequest(`${KV_BASE_PATH}/`);
+    } catch (error) {
+      throw this._kvError('Failed to list KV namespaces', error, {
+        operation: 'listKvNamespaces'
+      });
+    }
+  }
+
+  /**
+   * List the key-value pairs in a namespace.
+   *
+   * @param {string} namespace - KV namespace
+   * @param {Object} [options] - List options
+   * @param {number} [options.limit] - Page size, sent as `maxpagesize` (1-1000)
+   * @param {string} [options.cursor] - Opaque page token, sent as `p`
+   * @param {boolean} [options.fetchAll] - Follow `next` until the last page
+   * @param {string} [options.prefix] - Filter keys by prefix, applied locally
+   * @param {boolean} [options.useCache] - Use the response cache
+   * @param {boolean} [options.forceRefresh] - Bypass the response cache
+   * @returns {Promise<Object>} `{ items, self, next }`
    */
   async listKvPairs(namespace, options = {}) {
     try {
-      if (!namespace) {
-        throw new ValidationError('Namespace is required', { field: 'namespace' }, {});
-      }
-      
-      // Build query parameters
-      const queryParams = [`namespace=${encodeURIComponent(namespace)}`];
+      validateKvNamespace(namespace);
+
+      const query = new URLSearchParams();
       if (options.limit) {
-        queryParams.push(`per_page=${options.limit}`);
+        query.set('maxpagesize', String(options.limit));
       }
       if (options.cursor) {
-        queryParams.push(`cursor=${encodeURIComponent(options.cursor)}`);
+        query.set('p', options.cursor);
       }
-      
-      const endpoint = `/functions/kv?${queryParams.join('&')}`;
-      const initialResponse = await this.makeRequest(endpoint, {}, {
+
+      const suffix = query.size > 0 ? `?${query}` : '';
+      const endpoint = `${KV_BASE_PATH}/${encodeURIComponent(namespace)}${suffix}`;
+
+      let response = await this.makeRequest(endpoint, {}, {
         useCache: options.useCache !== false,
         forceRefresh: options.forceRefresh === true
       });
-      
-      // If fetchAll is true, get all pages
-      if (options.fetchAll && initialResponse.next_page_cursor) {
-        return this._fetchAllKvPairs(namespace, initialResponse);
-      }
-      
-      return initialResponse;
-    } catch (error) {
-      const errorContext = {
-        operation: 'listKvPairs',
-        siteId: this.siteId,
-        namespace
-      };
-      
-      // A ValidationError means the caller passed bad arguments; wrapping it in a
-      // FunctionError would report a local programming mistake as an API failure.
-      if (error instanceof ValidationError) {
-        throw error;
+
+      // `next` is null on the last page. Follow it rather than reconstructing a
+      // cursor: the spec states its format may change.
+      if (options.fetchAll && response.next) {
+        response = await this._fetchAllKvPairs(response);
       }
 
-      if (error instanceof GliaError) {
-        throw new FunctionError(
-          `Failed to list KV pairs: ${error.message}`, 
-          { ...errorContext, originalError: error },
-          {
-            cause: error,
-            endpoint: error.endpoint,
-            method: error.method,
-            statusCode: error.statusCode,
-            requestId: error.requestId,
-            requestPayload: error.requestPayload,
-            responseBody: error.responseBody
-          }
-        );
-      } else {
-        throw new FunctionError(`Failed to list KV pairs: ${error.message}`, errorContext);
+      // The v2 endpoint has no prefix parameter, so filter here and say so
+      // rather than silently ignoring the option.
+      if (options.prefix) {
+        return {
+          ...response,
+          items: (response.items || []).filter(item => item.key?.startsWith(options.prefix)),
+          prefixFilteredLocally: true
+        };
       }
+
+      return response;
+    } catch (error) {
+      throw this._kvError('Failed to list KV pairs', error, {
+        operation: 'listKvPairs',
+        namespace
+      });
     }
   }
-  
+
   /**
-   * Helper function to fetch all pages of KV pairs
-   * 
+   * Follow `next` to the end and return one combined page.
+   *
    * @private
-   * @param {string} namespace - The KV store namespace
-   * @param {Object} initialResponse - Initial API response
-   * @returns {Promise<Object>} - Combined results from all pages
+   * @param {Object} firstPage - The first page of results
+   * @returns {Promise<Object>} Combined results, with `next` null
    */
-  async _fetchAllKvPairs(namespace, initialResponse) {
-    const allItems = [...(initialResponse.items || [])];
-    let nextCursor = initialResponse.next_page_cursor;
-    
-    // Fetch all subsequent pages
-    while (nextCursor) {
-      const queryParams = [
-        `namespace=${encodeURIComponent(namespace)}`,
-        `cursor=${encodeURIComponent(nextCursor)}`
-      ];
-      
-      const endpoint = `/functions/kv?${queryParams.join('&')}`;
-      const response = await this.makeRequest(endpoint);
-      
-      if (response.items && response.items.length > 0) {
-        allItems.push(...response.items);
+  async _fetchAllKvPairs(firstPage) {
+    const items = [...(firstPage.items || [])];
+    let next = firstPage.next;
+
+    while (next) {
+      const page = await this.makeRequest(next);
+      if (page.items?.length) {
+        items.push(...page.items);
       }
-      
-      nextCursor = response.next_page_cursor;
+      next = page.next;
     }
-    
-    // Return combined result
-    return {
-      ...initialResponse,
-      items: allItems,
-      next_page_cursor: null,
-      total_count: allItems.length
-    };
+
+    return { ...firstPage, items, next: null, total_count: items.length };
   }
-  
+
   /**
-   * Perform batch operations on KV store
-   * 
-   * @param {string} namespace - The KV store namespace
-   * @param {Array} operations - Array of operations to perform
-   * @returns {Promise<Array>} - Array of operation results
+   * Perform a batch of KV operations in one request.
+   *
+   * The wire format uses snake_case `old_value` / `new_value` for testAndSet.
+   * Callers pass camelCase, matching the in-function KV SDK, and the conversion
+   * happens here.
+   *
+   * @param {string} namespace - KV namespace
+   * @param {Array<Object>} operations - Up to 10 operations
+   * @returns {Promise<Object>} `{ items }`, one result per operation
    */
   async batchKvOperations(namespace, operations = []) {
     try {
-      if (!namespace) {
-        throw new ValidationError('Namespace is required', { field: 'namespace' }, {});
-      }
-      
+      validateKvNamespace(namespace);
+
       if (!Array.isArray(operations) || operations.length === 0) {
-        throw new ValidationError('Operations array is required and cannot be empty', 
-          { field: 'operations', provided: operations }, 
-          {});
-      }
-      
-      // Validate operations limit (10 per batch)
-      if (operations.length > 10) {
-        throw new ValidationError('Maximum of 10 operations per batch', 
-          { field: 'operations', count: operations.length }, 
-          {});
-      }
-      
-      // Validate all operations
-      for (const op of operations) {
-        if (!op.op) {
-          throw new ValidationError('Operation type required for each operation', 
-            { field: 'op', operation: op }, 
-            {});
-        }
-        
-        if (!op.key) {
-          throw new ValidationError('Key required for each operation', 
-            { field: 'key', operation: op }, 
-            {});
-        }
-      }
-      
-      // Format payload according to the API requirements
-      const payload = {
-        namespace,
-        operations
-      };
-      
-      const endpoint = `/functions/kv/batch`;
-      return await this.makeRequest(endpoint, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-    } catch (error) {
-      const errorContext = {
-        operation: 'batchKvOperations',
-        siteId: this.siteId,
-        namespace,
-        operationsCount: operations ? operations.length : 0
-      };
-      
-      // A ValidationError means the caller passed bad arguments; wrapping it in a
-      // FunctionError would report a local programming mistake as an API failure.
-      if (error instanceof ValidationError) {
-        throw error;
+        throw new ValidationError('Operations array is required and cannot be empty',
+          { field: 'operations', provided: operations }, {});
       }
 
-      if (error instanceof GliaError) {
-        throw new FunctionError(
-          `Failed to perform KV batch operations: ${error.message}`, 
-          { ...errorContext, originalError: error },
-          {
-            cause: error,
-            endpoint: error.endpoint,
-            method: error.method,
-            statusCode: error.statusCode,
-            requestId: error.requestId,
-            requestPayload: error.requestPayload,
-            responseBody: error.responseBody
-          }
-        );
-      } else {
-        throw new FunctionError(`Failed to perform KV batch operations: ${error.message}`, errorContext);
+      if (operations.length > KV_MAX_OPERATIONS_PER_REQUEST) {
+        throw new ValidationError(
+          `Maximum of ${KV_MAX_OPERATIONS_PER_REQUEST} operations per request`,
+          { field: 'operations', count: operations.length }, {});
       }
+
+      const wireOperations = operations.map(operation => {
+        if (!operation.op) {
+          throw new ValidationError('Operation type is required for each operation',
+            { field: 'op', operation }, {});
+        }
+        if (!KV_OPERATIONS.includes(operation.op)) {
+          throw new ValidationError(
+            `Unknown operation "${operation.op}". Expected one of: ${KV_OPERATIONS.join(', ')}`,
+            { field: 'op', operation }, {});
+        }
+
+        validateKvKey(operation.key);
+
+        const wire = { op: operation.op, key: operation.key };
+
+        if (operation.op === 'set') {
+          validateKvValue(operation.value, 'value');
+          wire.value = operation.value;
+        }
+
+        if (operation.op === 'testAndSet') {
+          validateKvValue(operation.oldValue, 'oldValue', { nullable: true });
+          validateKvValue(operation.newValue, 'newValue', { nullable: true });
+          // snake_case on the wire. Sending oldValue/newValue meant the API
+          // never saw a condition, so test-and-set silently did not compare.
+          wire.old_value = operation.oldValue ?? null;
+          wire.new_value = operation.newValue ?? null;
+        }
+
+        return wire;
+      });
+
+      // The namespace is a path parameter in v2; sending it in the body as well
+      // is what the retired route required.
+      const endpoint = `${KV_BASE_PATH}/${encodeURIComponent(namespace)}`;
+      return await this.makeRequest(endpoint, {
+        method: 'POST',
+        body: JSON.stringify({ operations: wireOperations })
+      });
+    } catch (error) {
+      throw this._kvError('Failed to perform KV batch operations', error, {
+        operation: 'batchKvOperations',
+        namespace,
+        operationsCount: Array.isArray(operations) ? operations.length : 0
+      });
     }
   }
-  
+
   /**
-   * Get a value from the KV store
-   * 
-   * @param {string} namespace - The KV store namespace
-   * @param {string} key - The key to get
-   * @returns {Promise<Object>} - KV pair result
+   * Read one key.
+   *
+   * @param {string} namespace - KV namespace
+   * @param {string} key - Key to read
+   * @returns {Promise<Object|null>} The operation result, or null if absent
    */
   async getKvValue(namespace, key) {
     try {
-      if (!namespace) {
-        throw new ValidationError('Namespace is required', { field: 'namespace' }, {});
-      }
-      
-      if (!key) {
-        throw new ValidationError('Key is required', { field: 'key' }, {});
-      }
-      
-      // Use batch operation with a single get
-      const operations = [{
-        op: 'get',
-        key
-      }];
-      
-      const result = await this.batchKvOperations(namespace, operations);
-      return result && result.length > 0 ? result[0] : null;
+      return firstKvResult(await this.batchKvOperations(namespace, [{ op: 'get', key }]));
     } catch (error) {
-      const errorContext = {
-        operation: 'getKvValue',
-        siteId: this.siteId,
-        namespace,
-        key
-      };
-      
-      // A ValidationError means the caller passed bad arguments; wrapping it in a
-      // FunctionError would report a local programming mistake as an API failure.
-      if (error instanceof ValidationError) {
-        throw error;
-      }
-
-      if (error instanceof GliaError) {
-        throw new FunctionError(
-          `Failed to get KV value: ${error.message}`, 
-          { ...errorContext, originalError: error },
-          {
-            cause: error,
-            endpoint: error.endpoint,
-            method: error.method,
-            statusCode: error.statusCode,
-            requestId: error.requestId,
-            requestPayload: error.requestPayload,
-            responseBody: error.responseBody
-          }
-        );
-      } else {
-        throw new FunctionError(`Failed to get KV value: ${error.message}`, errorContext);
-      }
+      throw this._kvError('Failed to get KV value', error, {
+        operation: 'getKvValue', namespace, key
+      });
     }
   }
-  
+
   /**
-   * Set a value in the KV store
-   * 
-   * @param {string} namespace - The KV store namespace
-   * @param {string} key - The key to set
-   * @param {string|boolean} value - The value to set
-   * @returns {Promise<Object>} - KV pair result
+   * Write one key, overwriting any existing value.
+   *
+   * @param {string} namespace - KV namespace
+   * @param {string} key - Key to write
+   * @param {string} value - Value to store
+   * @returns {Promise<Object|null>} The operation result
    */
   async setKvValue(namespace, key, value) {
     try {
-      if (!namespace) {
-        throw new ValidationError('Namespace is required', { field: 'namespace' }, {});
-      }
-      
-      if (!key) {
-        throw new ValidationError('Key is required', { field: 'key' }, {});
-      }
-      
-      if (value === undefined) {
-        throw new ValidationError('Value is required', { field: 'value' }, {});
-      }
-      
-      // Validate key length (max 512 bytes)
-      if (Buffer.from(key).length > 512) {
-        throw new ValidationError('Key exceeds maximum length of 512 bytes', 
-          { field: 'key', length: Buffer.from(key).length }, 
-          {});
-      }
-      
-      // Validate value type (string or boolean)
-      if (typeof value !== 'string' && typeof value !== 'boolean' && value !== null) {
-        throw new ValidationError('Value must be a string, boolean, or null', 
-          { field: 'value', type: typeof value }, 
-          {});
-      }
-      
-      // Validate value size (max 16KB)
-      if (typeof value === 'string' && Buffer.from(value).length > 16000) {
-        throw new ValidationError('Value exceeds maximum size of 16,000 bytes', 
-          { field: 'value', size: Buffer.from(value).length }, 
-          {});
-      }
-      
-      // Use batch operation with a single set
-      const operations = [{
-        op: 'set',
-        key,
-        value
-      }];
-      
-      const result = await this.batchKvOperations(namespace, operations);
-      return result && result.length > 0 ? result[0] : null;
+      return firstKvResult(
+        await this.batchKvOperations(namespace, [{ op: 'set', key, value }])
+      );
     } catch (error) {
-      const errorContext = {
-        operation: 'setKvValue',
-        siteId: this.siteId,
-        namespace,
-        key,
-        valueType: typeof value
-      };
-      
-      // A ValidationError means the caller passed bad arguments; wrapping it in a
-      // FunctionError would report a local programming mistake as an API failure.
-      if (error instanceof ValidationError) {
-        throw error;
-      }
-
-      if (error instanceof GliaError) {
-        throw new FunctionError(
-          `Failed to set KV value: ${error.message}`, 
-          { ...errorContext, originalError: error },
-          {
-            cause: error,
-            endpoint: error.endpoint,
-            method: error.method,
-            statusCode: error.statusCode,
-            requestId: error.requestId,
-            requestPayload: error.requestPayload,
-            responseBody: error.responseBody
-          }
-        );
-      } else {
-        throw new FunctionError(`Failed to set KV value: ${error.message}`, errorContext);
-      }
+      throw this._kvError('Failed to set KV value', error, {
+        operation: 'setKvValue', namespace, key, valueType: typeof value
+      });
     }
   }
-  
+
   /**
-   * Delete a value from the KV store
-   * 
-   * @param {string} namespace - The KV store namespace
-   * @param {string} key - The key to delete
-   * @returns {Promise<Object>} - KV pair result
+   * Delete one key.
+   *
+   * @param {string} namespace - KV namespace
+   * @param {string} key - Key to delete
+   * @returns {Promise<Object|null>} The operation result
    */
   async deleteKvValue(namespace, key) {
     try {
-      if (!namespace) {
-        throw new ValidationError('Namespace is required', { field: 'namespace' }, {});
-      }
-      
-      if (!key) {
-        throw new ValidationError('Key is required', { field: 'key' }, {});
-      }
-      
-      // Use batch operation with a single delete
-      const operations = [{
-        op: 'delete',
-        key
-      }];
-      
-      const result = await this.batchKvOperations(namespace, operations);
-      return result && result.length > 0 ? result[0] : null;
+      return firstKvResult(
+        await this.batchKvOperations(namespace, [{ op: 'delete', key }])
+      );
     } catch (error) {
-      const errorContext = {
-        operation: 'deleteKvValue',
-        siteId: this.siteId,
-        namespace,
-        key
-      };
-      
-      // A ValidationError means the caller passed bad arguments; wrapping it in a
-      // FunctionError would report a local programming mistake as an API failure.
-      if (error instanceof ValidationError) {
-        throw error;
-      }
-
-      if (error instanceof GliaError) {
-        throw new FunctionError(
-          `Failed to delete KV value: ${error.message}`, 
-          { ...errorContext, originalError: error },
-          {
-            cause: error,
-            endpoint: error.endpoint,
-            method: error.method,
-            statusCode: error.statusCode,
-            requestId: error.requestId,
-            requestPayload: error.requestPayload,
-            responseBody: error.responseBody
-          }
-        );
-      } else {
-        throw new FunctionError(`Failed to delete KV value: ${error.message}`, errorContext);
-      }
+      throw this._kvError('Failed to delete KV value', error, {
+        operation: 'deleteKvValue', namespace, key
+      });
     }
   }
-  
+
   /**
-   * Test and set a value in the KV store (conditional update)
-   * 
-   * @param {string} namespace - The KV store namespace
-   * @param {string} key - The key to update
-   * @param {string|boolean} oldValue - The expected current value
-   * @param {string|boolean} newValue - The new value to set
-   * @returns {Promise<Object>} - KV pair result
+   * Write one key only if its current value matches.
+   *
+   * @param {string} namespace - KV namespace
+   * @param {string} key - Key to write
+   * @param {string|null} oldValue - Expected current value; null means absent
+   * @param {string|null} newValue - Value to write; null deletes the key
+   * @returns {Promise<Object|null>} The operation result. A null `value` means
+   *   the condition did not hold and nothing was written.
    */
   async testAndSetKvValue(namespace, key, oldValue, newValue) {
     try {
-      if (!namespace) {
-        throw new ValidationError('Namespace is required', { field: 'namespace' }, {});
-      }
-      
-      if (!key) {
-        throw new ValidationError('Key is required', { field: 'key' }, {});
-      }
-      
-      if (oldValue === undefined) {
-        throw new ValidationError('Old value is required', { field: 'oldValue' }, {});
-      }
-      
-      if (newValue === undefined) {
-        throw new ValidationError('New value is required', { field: 'newValue' }, {});
-      }
-      
-      // Use batch operation with a single testAndSet
-      const operations = [{
-        op: 'testAndSet',
-        key,
-        oldValue,
-        newValue
-      }];
-      
-      const result = await this.batchKvOperations(namespace, operations);
-      return result && result.length > 0 ? result[0] : null;
-    } catch (error) {
-      const errorContext = {
-        operation: 'testAndSetKvValue',
-        siteId: this.siteId,
-        namespace,
-        key
-      };
-      
-      // A ValidationError means the caller passed bad arguments; wrapping it in a
-      // FunctionError would report a local programming mistake as an API failure.
-      if (error instanceof ValidationError) {
-        throw error;
+      if (oldValue === undefined && newValue === undefined) {
+        throw new ValidationError(
+          'At least one of oldValue or newValue must be provided',
+          { field: 'oldValue' }, {});
       }
 
-      if (error instanceof GliaError) {
-        throw new FunctionError(
-          `Failed to test and set KV value: ${error.message}`, 
-          { ...errorContext, originalError: error },
-          {
-            cause: error,
-            endpoint: error.endpoint,
-            method: error.method,
-            statusCode: error.statusCode,
-            requestId: error.requestId,
-            requestPayload: error.requestPayload,
-            responseBody: error.responseBody
-          }
-        );
-      } else {
-        throw new FunctionError(`Failed to test and set KV value: ${error.message}`, errorContext);
-      }
+      return firstKvResult(await this.batchKvOperations(namespace, [{
+        op: 'testAndSet',
+        key,
+        oldValue: oldValue ?? null,
+        newValue: newValue ?? null
+      }]));
+    } catch (error) {
+      throw this._kvError('Failed to test and set KV value', error, {
+        operation: 'testAndSetKvValue', namespace, key
+      });
     }
   }
-  
+
+  /**
+   * Fetch usage statistics for functions.
+   *
+   * @param {Object} [options] - Query options
+   * @param {string[]} [options.functionIds] - Functions to report on
+   * @param {string} [options.startDate] - Start of the period, YYYY-MM-DD
+   * @param {string} [options.endDate] - End of the period, YYYY-MM-DD
+   * @returns {Promise<Object>} `{ statistics }`
+   */
+  async getFunctionStats(options = {}) {
+    try {
+      const body = {};
+      if (options.functionIds) {
+        if (!Array.isArray(options.functionIds)) {
+          throw new ValidationError('functionIds must be an array',
+            { field: 'functionIds', provided: options.functionIds }, {});
+        }
+        body.function_ids = options.functionIds;
+      }
+      if (options.startDate) {
+        validateIsoDate(options.startDate, 'startDate');
+        body.start_date = options.startDate;
+      }
+      if (options.endDate) {
+        validateIsoDate(options.endDate, 'endDate');
+        body.end_date = options.endDate;
+      }
+
+      // The v2 endpoint accepts a date range; the legacy /functions/stats takes
+      // only function_ids, so it is not used.
+      return await this.makeRequest('/api/v2/functions/stats', {
+        method: 'POST',
+        body: JSON.stringify(body)
+      });
+    } catch (error) {
+      throw this._kvError('Failed to get function statistics', error, {
+        operation: 'getFunctionStats'
+      });
+    }
+  }
+
+  /**
+   * Wrap an error from a KV or stats call, preserving ValidationError.
+   *
+   * @private
+   * @param {string} message - Prefix for the wrapped message
+   * @param {Error} error - The original error
+   * @param {Object} context - Operation context
+   * @returns {Error} The error to throw
+   */
+  _kvError(message, error, context) {
+    // A ValidationError means the caller passed bad arguments; wrapping it in a
+    // FunctionError would report a local programming mistake as an API failure.
+    if (error instanceof ValidationError) {
+      return error;
+    }
+
+    const errorContext = { ...context, siteId: this.siteId };
+
+    if (error instanceof GliaError) {
+      return new FunctionError(
+        `${message}: ${error.message}`,
+        { ...errorContext, originalError: error },
+        {
+          cause: error,
+          endpoint: error.endpoint,
+          method: error.method,
+          statusCode: error.statusCode,
+          requestId: error.requestId,
+          requestPayload: error.requestPayload,
+          responseBody: error.responseBody
+        }
+      );
+    }
+
+    return new FunctionError(`${message}: ${error.message}`, errorContext);
+  }
+
   /**
    * Update function details
    *
