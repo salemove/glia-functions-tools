@@ -21,7 +21,7 @@
     "install-global": "npm install -g .",
     "uninstall-global": "npm uninstall -g glia-functions-tools",
     "verify": "npm run test:unit && npm run audit:ci && npm run lint:links",
-    "audit:ci": "npm audit --audit-level=high && npm --prefix mcp-server audit --audit-level=high",
+    "audit:ci": "npm audit --audit-level=high",
     "lint:links": "node scripts/check-doc-links.js",
     "install-hooks": "node scripts/install-hooks.js"
   },
@@ -81,6 +81,9 @@
     "undici": "^7.29.0"
   },
   "private": true,
+  "workspaces": [
+    "mcp-server"
+  ],
   "files": [
     "bin",
     "src",
