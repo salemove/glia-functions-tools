@@ -321,11 +321,6 @@ npm run build
 glia-functions create-version --function-id YOUR_FUNCTION_ID --path ./function-out.js --deploy
 ```
 
-## Further Reading
-
-- [Glia Functions Documentation](https://docs.glia.com/functions)
-- [KV Store API Reference](https://docs.glia.com/functions/kv-store)
-
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.

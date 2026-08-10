@@ -18,11 +18,12 @@
     "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --no-coverage",
     "test:unit": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/unit --no-coverage",
     "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration --no-coverage",
-    "docs": "jsdoc -c jsdoc.json",
-    "docs:dev": "jsdoc -c jsdoc.json && serve docs/api",
-    "generate:commands": "node scripts/generate-command-docs.js",
     "install-global": "npm install -g .",
-    "uninstall-global": "npm uninstall -g glia-functions-tools"
+    "uninstall-global": "npm uninstall -g glia-functions-tools",
+    "verify": "npm run test:unit && npm run audit:ci && npm run lint:links",
+    "audit:ci": "npm audit --audit-level=high && npm --prefix mcp-server audit --audit-level=high",
+    "lint:links": "node scripts/check-doc-links.js",
+    "install-hooks": "node scripts/install-hooks.js"
   },
   "devDependencies": {
     "@babel/plugin-transform-export-namespace-from": "^7.25.9",
@@ -34,9 +35,7 @@
     "cross-env": "^7.0.3",
     "esbuild": "^0.25.12",
     "jest": "^29.7.0",
-    "jest-fetch-mock": "^3.0.3",
-    "jsdoc": "^4.0.2",
-    "serve": "^14.2.1"
+    "jest-fetch-mock": "^3.0.3"
   },
   "dependencies": {
     "@inquirer/prompts": "^3.2.0",

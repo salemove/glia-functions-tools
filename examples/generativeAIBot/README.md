@@ -72,13 +72,6 @@ To use this function, you'll need to configure the following environment variabl
    - Deploy the function using the Glia Functions CLI
    - Configure it to be triggered by visitor messages
 
-## Documentation Resources
-
-For more information, see the official Glia documentation:
-
-- [Writing and Deploying Glia Functions](https://docs.glia.com/glia-how-to/docs/writing-and-deploying-glia-functions)
-- [Connecting Glia Functions to AI Engines](https://docs.glia.com/glia-how-to/docs/connecting-glia-functions-to-ai-engines)
-
 ## Advanced Features
 
 ### Knowledge Base Integration
