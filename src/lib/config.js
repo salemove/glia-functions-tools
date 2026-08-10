@@ -717,15 +717,17 @@ export async function deleteProfile(profileName) {
 }
 
 /**
- * Gets the CLI version from package.json
- * 
+ * Gets the CLI version from the package's own package.json.
+ *
+ * Resolved relative to this module rather than the working directory, so the
+ * reported version is correct when the CLI is run from another project.
+ *
  * @returns {string} The CLI version
  */
 export function getCliVersion() {
   try {
-    const packageJson = JSON.parse(
-      fs.readFileSync(path.resolve('./package.json'), 'utf8')
-    );
+    const packageJsonPath = new URL('../../package.json', import.meta.url);
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
     return packageJson.version || '0.1.0';
   } catch (error) {
     // Default to development version if we can't read package.json

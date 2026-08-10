@@ -16,8 +16,5 @@ export { runCLI } from './cli/index.js';
 // Export commands
 export * from './commands/index.js';
 
-// Export utilities
-export * as utils from './utils/index.js';
-
 // Export version
 export const version = process.env.npm_package_version || '0.2.0';

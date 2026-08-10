@@ -118,12 +118,12 @@ export async function createApplet(options) {
           
           // Install dependencies
           command.info('Installing dependencies...');
-          const { execSync } = require('child_process');
-          execSync('npm install', { stdio: 'inherit' });
+          const { execFileSync } = await import('node:child_process');
+          execFileSync('npm', ['install'], { stdio: 'inherit' });
           
           // Build the project
           command.info('Building project...');
-          execSync('npm run build', { stdio: 'inherit' });
+          execFileSync('npm', ['run', 'build'], { stdio: 'inherit' });
           
           // Reset working directory
           process.chdir(cwd);
