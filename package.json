@@ -84,7 +84,6 @@
   "files": [
     "bin",
     "src",
-    "specs",
     "mcp-server/*.js",
     "mcp-server/package.json",
     "mcp-server/tools",

@@ -54,6 +54,30 @@ export const EXPORT_EVENT_TYPES = {
     samplePayloadFile: 'presence-update-sample.json',
     templateName: 'export-handler-presence-update',
     tags: ['export', 'webhook', 'operator', 'presence']
+  },
+  'inbox-message': {
+    displayName: 'Inbox Message',
+    description: 'Triggered when a visitor leaves a message with no specific operator identified',
+    templateName: 'export-handler-inbox-message',
+    tags: ['export', 'webhook', 'message', 'visitor']
+  },
+  'operator-message': {
+    displayName: 'Operator Message',
+    description: 'Triggered when an operator sends a message during an engagement',
+    templateName: 'export-handler-operator-message',
+    tags: ['export', 'webhook', 'message', 'operator']
+  },
+  'voicemail': {
+    displayName: 'Voicemail',
+    description: 'Triggered when a visitor leaves a voicemail on an incoming phone number',
+    templateName: 'export-handler-voicemail',
+    tags: ['export', 'webhook', 'phone', 'voicemail']
+  },
+  'outbound-call-initialization': {
+    displayName: 'Outbound Call Initialization',
+    description: 'Triggered when an outbound call is initiated',
+    templateName: 'export-handler-outbound-call-initialization',
+    tags: ['export', 'webhook', 'phone', 'outbound']
   }
 };
 
