@@ -10,9 +10,6 @@ export * from './lib/config.js';
 export * from './lib/errors.js';
 export * from './lib/validation.js';
 
-// Re-export CLI
-export { runCLI } from './cli/index.js';
-
 // Export commands
 export * from './commands/index.js';
 

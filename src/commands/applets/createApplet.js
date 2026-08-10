@@ -14,7 +14,6 @@ import {
   listAppletTemplates
 } from '../../utils/unified-template-manager.js';
 import { validateTemplateVariables } from '../../utils/template-engine.js';
-import { input, select, checkbox, confirm } from '@inquirer/prompts';
 
 // Get the directory of this file
 const __filename = fileURLToPath(import.meta.url);

@@ -30,7 +30,6 @@ export default async function setupExportHandler(options, command = new BaseComm
     // Run wizard if interactive mode is enabled
     if (interactive) {
       // Import wizard only when needed
-      const { runExportWizard } = await import('../../cli/export-wizard.js');
       const wizardResult = await runExportWizard(options);
       
       if (wizardResult.canceled) {

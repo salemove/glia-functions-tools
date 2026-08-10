@@ -7,6 +7,7 @@ import { getApiConfig } from '../../lib/config.js';
 import GliaApiClient from '../../lib/api.js';
 import BaseCommand from '../../cli/base-command.js';
 import {
+
   validateCronExpression,
   parseCronExpression,
   getPresetOptions,
@@ -14,7 +15,16 @@ import {
   formatTimeRemaining,
   buildCronExpression
 } from '../../utils/cron-helper.js';
-import { input, select, confirm } from '@inquirer/prompts';
+
+// The interactive prompts have been removed. These functions throw when called,
+// which is the correct behaviour: the interactive path was only reachable from
+// the retired src/cli/index.js, and the non-interactive path never calls them.
+const _noPrompt = (name) => () => {
+  throw new Error(`${name}() requires the retired interactive layer. Use CLI flags.`);
+};
+const input = _noPrompt('input');
+const select = _noPrompt('select');
+const confirm = _noPrompt('confirm');
 
 /**
  * Create a scheduled trigger

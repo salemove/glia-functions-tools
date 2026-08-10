@@ -7,7 +7,6 @@
  */
 import colorizer from '../utils/colorizer.js';
 import Table from 'cli-table3';
-import inquirer from 'inquirer';
 import path from 'path';
 
 import {

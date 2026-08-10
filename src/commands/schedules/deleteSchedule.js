@@ -38,16 +38,8 @@ async function main() {
         command.warning('This action cannot be undone!');
 
         if (!options.yes) {
-          const { confirm } = await import('@inquirer/prompts');
-          const shouldDelete = await confirm({
-            message: 'Are you sure you want to delete this scheduled trigger?',
-            default: false
-          });
-
-          if (!shouldDelete) {
-            command.info('Scheduled trigger deletion cancelled');
-            return;
-          }
+          command.error('Refusing to delete without --yes. This action is not reversible.');
+          return;
         }
 
         command.info(`Deleting scheduled trigger "${options.id}"...`);

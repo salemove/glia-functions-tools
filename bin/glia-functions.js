@@ -13,7 +13,6 @@
 // Program instance will be created below
 
 import { Command } from 'commander';
-import { runCLI } from '../src/cli/index.js';
 import { routeCommand } from '../src/cli/command-router.js';
 // Import project commands directly at top level to ensure it's loaded first
 import projectCommands from './glia-functions-project-commands.js';
@@ -1344,18 +1343,12 @@ program.hook('preAction', (thisCommand, actionCommand) => {
   }
 });
 
-// Handle interactive mode when no arguments provided
+// When invoked with no arguments, show help rather than starting an
+// interactive menu. The interactive layer has been retired; all commands are
+// now flag-driven and every one works with --json for scripted use.
 if (process.argv.length <= 2) {
-  runCLI()
-    .then(() => {
-      // Ensure process exits after CLI completes
-      if (!process.exitCode) process.exit(0);
-    })
-    .catch(error => {
-      console.error(colorizer.red(`Unexpected error: ${error.message}`));
-      console.error('Please report this issue on GitHub or contact support.');
-      process.exit(1);
-    });
+  program.outputHelp();
+  process.exit(0);
 } else {
   // Resolve --profile from raw argv before anything reads configuration: the
   // active profile determines which config file is loaded.
