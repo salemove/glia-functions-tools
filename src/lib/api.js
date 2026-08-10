@@ -16,11 +16,11 @@
 
 // Import Node.js specific packages
 import fs from 'fs/promises';
-import FormData from 'form-data';
-import nodeFetch from 'node-fetch';
 
-// Use node-fetch for consistent behavior in Node.js environment
-const fetch = nodeFetch;
+// fetch, FormData and Blob are globals on the supported Node versions
+// (>=20). node-fetch and the form-data package were dropped: both were
+// duplicating platform APIs, and form-data required the caller to set the
+// multipart Content-Type by hand.
 
 // Verbose request/response tracing. Off unless explicitly requested: these are
 // internals, and printing them unconditionally makes normal CLI output unusable.
@@ -553,21 +553,16 @@ export default class GliaApiClient {
           // skipTokenRefresh, ...) before the 401 retry could pass it on.
           let fetchOptions;
           
-          // Special handling for FormData
+          // Special handling for FormData. Content-Type must be left unset so
+          // fetch can generate the multipart boundary; supplying one produces a
+          // body the server cannot parse.
           if (options.body instanceof FormData) {
-            // Get content-type header with boundary from FormData
-            const formHeaders = options.body.getHeaders();
-            
-            // Combine FormData headers with authorization headers
-            const headers = {
-              ...formHeaders,
-              'Authorization': `Bearer ${this.bearerToken}`,
-              'Accept': 'application/vnd.salemove.v1+json'
-            };
-            
             fetchOptions = {
               ...options,
-              headers // Use combined headers
+              headers: {
+                'Authorization': `Bearer ${this.bearerToken}`,
+                'Accept': 'application/vnd.salemove.v1+json'
+              }
             };
           } else {
             // Normal JSON request
@@ -2118,7 +2113,7 @@ export default class GliaApiClient {
         throw new ValidationError('Either source or sourceUrl is required');
       }
       
-      // Prepare FormData for multipart request using form-data package (Node.js)
+      // Prepare a multipart body using the platform FormData
       apiDebug('[API DEBUG] Creating FormData for applet request');
       
       const formData = new FormData();
@@ -2138,64 +2133,29 @@ export default class GliaApiClient {
       
       // Add source content or source URL
       if (options.source) {
-        // For Node.js FormData, use a Buffer
-        const buffer = Buffer.from(options.source, 'utf8');
-        formData.append('source', buffer, {
-          filename: 'applet.html',
-          contentType: 'text/html'
-        });
-        
-        apiDebug(`[API DEBUG] Added source content as buffer (${buffer.length} bytes)`);
+        formData.append(
+          'source',
+          new Blob([options.source], { type: 'text/html' }),
+          'applet.html'
+        );
+        apiDebug(`[API DEBUG] Added source content (${options.source.length} bytes)`);
       } else if (options.sourceUrl) {
         formData.append('source_url', options.sourceUrl);
         apiDebug(`[API DEBUG] Added source_url: ${options.sourceUrl}`);
       }
       
-      // Debug the form-data contents
-      if (DEBUG_API) {
-        apiDebug('[API DEBUG] FormData headers:');
-        const headers = formData.getHeaders();
-        Object.keys(headers).forEach(key => {
-          apiDebug(`[API DEBUG] ${key}: ${headers[key]}`);
-        });
-      }
-      
-      // REMOVED DUPLICATE FORMDATA CODE
-      
-      // Make the request with FormData
-      // We'll use native node-fetch capabilities to send this request
-      // to ensure compatibility with the API endpoint
-      
-      if (DEBUG_API) {
-        apiDebug('[API DEBUG] Setting up direct fetch with node-fetch + form-data');
-        // Some FormData implementations might have getBuffer() as async or requiring callback
-        // Avoid calling it directly to prevent callback errors
-        apiDebug('[API DEBUG] FormData created and ready to send');
-      }
-      
-      // Instead of using makeRequest, make a direct fetch call
       const fullUrl = `${this.baseUrl}/axons`;
+      apiDebug(`[API DEBUG] Making direct fetch to: ${fullUrl}`);
       
-      if (DEBUG_API) {
-        apiDebug(`[API DEBUG] Making direct fetch to: ${fullUrl}`);
-      }
-      
-      // Get content-type with boundary from form-data but set auth headers manually
-      const formHeaders = formData.getHeaders();
-      
-      // Create headers object with the correct content-type from formData
-      // but also including auth and accept headers
-      const headers = {
-        ...formHeaders,
-        'Authorization': `Bearer ${this.bearerToken}`,
-        'Accept': 'application/vnd.salemove.v1+json' // Required by the API
-      };
-      
-      // Make the request with proper headers
+      // Content-Type is deliberately absent: fetch derives it, with the
+      // multipart boundary, from the FormData body.
       const response = await fetch(fullUrl, {
         method: 'POST',
         body: formData,
-        headers: headers
+        headers: {
+          'Authorization': `Bearer ${this.bearerToken}`,
+          'Accept': 'application/vnd.salemove.v1+json' // Required by the API
+        }
       });
       
       // Handle the response
@@ -2286,36 +2246,20 @@ export default class GliaApiClient {
       
       // Add source (HTML content) or source_url (external URL)
       if (options.source) {
-        // For Node.js FormData, use a Buffer instead of Blob
-        const buffer = Buffer.from(options.source, 'utf8');
-        formData.append('source', buffer, {
-          filename: 'applet.html',
-          contentType: 'text/html'
-        });
+        formData.append(
+          'source',
+          new Blob([options.source], { type: 'text/html' }),
+          'applet.html'
+        );
       } else if (options.sourceUrl) {
         formData.append('source_url', options.sourceUrl);
       }
       
-      // Make the request
-      // Get content-type with boundary from form-data but set auth headers manually
-      const formHeaders = formData.getHeaders();
-      
-      // Create headers object with the correct content-type from formData
-      // but also including auth and accept headers
-      const headers = {
-        ...formHeaders,
-        'Authorization': `Bearer ${this.bearerToken}`,
-        'Accept': 'application/vnd.salemove.v1+json' // Required by the API
-      };
-      
-      // Create request options with proper headers
-      const requestOptions = {
+      // makeRequest recognises a FormData body and leaves Content-Type to fetch.
+      return await this.makeRequest(`/axons/${appletId}`, {
         method: 'PATCH',
-        body: formData,
-        headers: headers
-      };
-      
-      return await this.makeRequest(`/axons/${appletId}`, requestOptions);
+        body: formData
+      });
     } catch (error) {
       const errorContext = {
         operation: 'updateApplet',

@@ -131,20 +131,6 @@ describe('GliaApiClient - Applet Methods', () => {
       const mockResponse = { id: 'new-applet-id', name: options.name };
       fetchMock.mockResponseOnce(JSON.stringify(mockResponse));
       
-      // Mock FormData since it's not available in Jest environment
-      global.FormData = class {
-        constructor() {
-          this.data = {};
-          this.append = jest.fn((key, value, options) => {
-            this.data[key] = value;
-            if (options) this.data[key + '_options'] = options;
-          });
-          this.getHeaders = jest.fn(() => {
-            return { 'content-type': 'multipart/form-data; boundary=--boundary' };
-          });
-        }
-      };
-      
       const result = await api.createApplet(options);
       
       // Check that the right endpoint was called with POST method
@@ -154,6 +140,16 @@ describe('GliaApiClient - Applet Methods', () => {
           'Authorization': 'Bearer test-bearer-token'
         })
       }));
+      
+      // The body must be a real FormData and Content-Type must be absent, so
+      // that fetch generates the multipart boundary. Setting it by hand produces
+      // a body the API cannot parse.
+      const [, init] = fetchMock.mock.calls[0];
+      expect(init.body).toBeInstanceOf(FormData);
+      expect(init.body.get('name')).toBe(options.name);
+      expect(init.body.get('owner_site_id')).toBe(options.ownerSiteId);
+      expect(init.body.get('source')).toBeInstanceOf(Blob);
+      expect(Object.keys(init.headers).map(h => h.toLowerCase())).not.toContain('content-type');
       
       expect(result).toEqual(mockResponse);
     });
@@ -168,20 +164,6 @@ describe('GliaApiClient - Applet Methods', () => {
       };
       const mockResponse = { id: 'new-applet-id', name: options.name };
       fetchMock.mockResponseOnce(JSON.stringify(mockResponse));
-      
-      // Mock FormData
-      global.FormData = class {
-        constructor() {
-          this.data = {};
-          this.append = jest.fn((key, value, options) => {
-            this.data[key] = value;
-            if (options) this.data[key + '_options'] = options;
-          });
-          this.getHeaders = jest.fn(() => {
-            return { 'content-type': 'multipart/form-data; boundary=--boundary' };
-          });
-        }
-      };
       
       const result = await api.createApplet(options);
       
@@ -222,20 +204,6 @@ describe('GliaApiClient - Applet Methods', () => {
       const mockResponse = { id: appletId, name: options.name };
       fetchMock.mockResponseOnce(JSON.stringify(mockResponse));
       
-      // Mock FormData
-      global.FormData = class {
-        constructor() {
-          this.data = {};
-          this.append = jest.fn((key, value, options) => {
-            this.data[key] = value;
-            if (options) this.data[key + '_options'] = options;
-          });
-          this.getHeaders = jest.fn(() => {
-            return { 'content-type': 'multipart/form-data; boundary=--boundary' };
-          });
-        }
-      };
-      
       const result = await api.updateApplet(appletId, options);
       
       expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/axons/${appletId}`, expect.objectContaining({
@@ -244,6 +212,11 @@ describe('GliaApiClient - Applet Methods', () => {
           'Authorization': 'Bearer test-bearer-token'
         })
       }));
+      
+      const [, init] = fetchMock.mock.calls[0];
+      expect(init.body).toBeInstanceOf(FormData);
+      expect(init.body.get('name')).toBe(options.name);
+      expect(Object.keys(init.headers).map(h => h.toLowerCase())).not.toContain('content-type');
       
       expect(result).toEqual(mockResponse);
     });
