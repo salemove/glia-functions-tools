@@ -1,86 +1,74 @@
 import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
-import { listFunctions } from '../../../src/commands/listFunctions.js';
-import GliaApiClient from '../../../src/lib/api.js';
-import * as configModule from '../../../src/lib/config.js';
 
-// Mock dependencies
-jest.mock('../../../src/lib/api.js');
-jest.mock('../../../src/lib/config.js');
+// Mock specifiers resolve relative to tests/setup/setupTests.js, not this file.
+// See the note at the bottom of that file.
+jest.unstable_mockModule('../../src/lib/api.js', () => ({
+  __esModule: true,
+  default: jest.fn()
+}));
+
+jest.unstable_mockModule('../../src/lib/config.js', () => ({
+  __esModule: true,
+  getApiConfig: jest.fn()
+}));
+
+const { default: GliaApiClient } = await import('../../../src/lib/api.js');
+const { getApiConfig } = await import('../../../src/lib/config.js');
+const { listFunctions } = await import('../../../src/commands/listFunctions.js');
 
 describe('listFunctions command', () => {
-  // Setup mocks
   const mockApiConfig = {
     apiUrl: 'https://test-api.glia.com',
     siteId: 'test-site-id',
     bearerToken: 'test-bearer-token'
   };
-  
+
   const mockFunctions = {
     functions: [
       { id: 'func1', name: 'Function 1' },
       { id: 'func2', name: 'Function 2' }
     ]
   };
-  
+
   let mockListFunctions;
-  let consoleLogSpy;
-  
+
   beforeEach(() => {
-    // Setup API client mock
     mockListFunctions = jest.fn().mockResolvedValue(mockFunctions);
-    GliaApiClient.mockImplementation(() => ({
-      listFunctions: mockListFunctions
-    }));
-    
-    // Setup config mock
-    configModule.getApiConfig = jest.fn().mockResolvedValue(mockApiConfig);
-    
-    // Spy on console.log
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    GliaApiClient.mockImplementation(() => ({ listFunctions: mockListFunctions }));
+    getApiConfig.mockResolvedValue(mockApiConfig);
   });
-  
+
   afterEach(() => {
-    // Clear mocks
     jest.clearAllMocks();
-    consoleLogSpy.mockRestore();
   });
-  
-  it('should list functions with default options', async () => {
+
+  it('should build a client from the resolved API config', async () => {
     await listFunctions();
-    
-    // Verify API client was created with correct config
-    expect(GliaApiClient).toHaveBeenCalledWith(mockApiConfig);
-    
-    // Verify listFunctions was called
-    expect(mockListFunctions).toHaveBeenCalled();
-    
-    // Verify console output
-    expect(consoleLogSpy).toHaveBeenCalledWith('Retrieving functions list...');
-    expect(consoleLogSpy).toHaveBeenCalledWith(`Found ${mockFunctions.functions.length} functions:`);
-    expect(consoleLogSpy).toHaveBeenCalledWith('- Function 1 (func1)');
-    expect(consoleLogSpy).toHaveBeenCalledWith('- Function 2 (func2)');
+
+    expect(getApiConfig).toHaveBeenCalled();
+    // The command routes through BaseCommand.getApiClient, which also sets a
+    // log level, so assert on the credentials rather than the whole object.
+    expect(GliaApiClient).toHaveBeenCalledWith(expect.objectContaining(mockApiConfig));
   });
-  
-  it('should list functions with detailed output', async () => {
-    await listFunctions({ detailed: true });
-    
-    // Verify API client was created with correct config
-    expect(GliaApiClient).toHaveBeenCalledWith(mockApiConfig);
-    
-    // Verify listFunctions was called
+
+  it('should return the functions returned by the API', async () => {
+    const result = await listFunctions();
+
     expect(mockListFunctions).toHaveBeenCalled();
-    
-    // Verify console output
-    expect(consoleLogSpy).toHaveBeenCalledWith('Retrieving functions list...');
-    expect(consoleLogSpy).toHaveBeenCalledWith('Functions:');
-    expect(consoleLogSpy).toHaveBeenCalledWith(JSON.stringify(mockFunctions, null, 2));
+    expect(result).toEqual(mockFunctions);
   });
-  
-  it('should handle errors properly', async () => {
+
+  it('should return the same result regardless of the detailed flag', async () => {
+    // `detailed` only affects how the CLI renders the result, not what is fetched.
+    const result = await listFunctions({ detailed: true });
+
+    expect(result).toEqual(mockFunctions);
+  });
+
+  it('should propagate API errors to the caller', async () => {
     const testError = new Error('API error');
     mockListFunctions.mockRejectedValue(testError);
-    
-    // Verify function properly re-throws the error
+
     await expect(listFunctions()).rejects.toThrow(testError);
   });
 });

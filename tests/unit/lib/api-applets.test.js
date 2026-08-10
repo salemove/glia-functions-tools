@@ -2,9 +2,6 @@ import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll 
 import GliaApiClient from '../../../src/lib/api.js';
 import { FunctionError } from '../../../src/lib/errors.js';
 
-// Import our custom fetch mock
-import '../../setup/mockFetch.js';
-
 describe('GliaApiClient - Applet Methods', () => {
   // Setup test configuration
   const config = {
@@ -22,6 +19,7 @@ describe('GliaApiClient - Applet Methods', () => {
     // Create a new API client with logging level set to silent for tests
     api = new GliaApiClient({
       ...config,
+      retry: { maxRetries: 0 },
       logging: {
         level: 'silent' // Don't show logs during tests
       }
@@ -43,7 +41,7 @@ describe('GliaApiClient - Applet Methods', () => {
       
       const result = await api.listApplets();
       
-      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/axons`, expect.any(Object));
+      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/sites/${config.siteId}/axons`, expect.any(Object));
       expect(result).toEqual(mockResponse);
     });
     
@@ -57,7 +55,7 @@ describe('GliaApiClient - Applet Methods', () => {
       
       const result = await api.listApplets({ siteId: 'filter-site-id' });
       
-      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/axons?site_id=filter-site-id`, expect.any(Object));
+      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/sites/filter-site-id/axons`, expect.any(Object));
       expect(result).toEqual(mockResponse);
     });
     
@@ -71,7 +69,7 @@ describe('GliaApiClient - Applet Methods', () => {
       
       const result = await api.listApplets({ scope: 'engagement' });
       
-      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/axons?scope=engagement`, expect.any(Object));
+      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/sites/${config.siteId}/axons?scope=engagement`, expect.any(Object));
       expect(result).toEqual(mockResponse);
     });
     
@@ -85,7 +83,7 @@ describe('GliaApiClient - Applet Methods', () => {
       
       const result = await api.listApplets({ siteId: 'filter-site-id', scope: 'engagement' });
       
-      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/axons?site_id=filter-site-id&scope=engagement`, expect.any(Object));
+      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/sites/filter-site-id/axons?scope=engagement`, expect.any(Object));
       expect(result).toEqual(mockResponse);
     });
     

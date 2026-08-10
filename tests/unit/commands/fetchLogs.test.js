@@ -1,15 +1,28 @@
 import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
-import { fetchLogs } from '../../../src/commands/fetchLogs.js';
-import GliaApiClient from '../../../src/lib/api.js';
-import * as configModule from '../../../src/lib/config.js';
-import fs from 'fs/promises';
 
-// Mock dependencies
-jest.mock('../../../src/lib/api.js');
-jest.mock('../../../src/lib/config.js');
-jest.mock('fs/promises', () => ({
-  writeFile: jest.fn().mockResolvedValue(undefined)
+// Mock specifiers resolve relative to tests/setup/setupTests.js, not this
+// file. See the note at the bottom of that file.
+jest.unstable_mockModule('../../src/lib/api.js', () => ({
+  __esModule: true,
+  default: jest.fn()
 }));
+
+jest.unstable_mockModule('../../src/lib/config.js', () => ({
+  __esModule: true,
+  getApiConfig: jest.fn()
+}));
+
+const fsPromisesMock = { writeFile: jest.fn().mockResolvedValue(undefined) };
+jest.unstable_mockModule('fs/promises', () => ({
+  __esModule: true,
+  ...fsPromisesMock,
+  default: fsPromisesMock
+}));
+
+const { default: GliaApiClient } = await import('../../../src/lib/api.js');
+const { getApiConfig } = await import('../../../src/lib/config.js');
+const fs = (await import('fs/promises')).default;
+const { fetchLogs } = await import('../../../src/commands/fetchLogs.js');
 
 describe('fetchLogs command', () => {
   // Mock data
@@ -52,7 +65,7 @@ describe('fetchLogs command', () => {
     }));
     
     // Setup config mock
-    configModule.getApiConfig = jest.fn().mockResolvedValue(mockApiConfig);
+    getApiConfig.mockResolvedValue(mockApiConfig);
     
     // Setup mock command for progress reporting
     mockCommand = {

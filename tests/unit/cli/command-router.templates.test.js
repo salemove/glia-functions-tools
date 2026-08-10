@@ -1,17 +1,19 @@
 import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
 
 // Mock dependencies
-jest.mock('../../../src/lib/config.js', () => ({
+// Mock specifiers resolve relative to tests/setup/setupTests.js, not this
+// file. See the note at the bottom of that file.
+jest.unstable_mockModule('../../src/lib/config.js', () => ({
   refreshBearerTokenIfNeeded: jest.fn().mockResolvedValue(false)
 }));
 
-jest.mock('../../../src/commands/index.js', () => ({
+jest.unstable_mockModule('../../src/commands/index.js', () => ({
   templates: jest.fn().mockResolvedValue({ success: true })
 }));
 
-// Import the module under test
-import { routeCommand } from '../../../src/cli/command-router.js';
-import { templates } from '../../../src/commands/index.js';
+// Import the module under test after the mocks are registered.
+const { routeCommand } = await import('../../../src/cli/command-router.js');
+const { templates } = await import('../../../src/commands/index.js');
 
 describe('command-router with templates command', () => {
   beforeEach(() => {

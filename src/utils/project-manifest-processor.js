@@ -62,11 +62,16 @@ export async function processProjectManifest(template, variables, outputDir, opt
     // Process variable substitutions throughout manifest
     const manifestWithVars = processTemplateObject(manifestBase, variables);
     
-    // Auto-discover components if enabled and needed
+    // Auto-discover components if enabled and needed. A template manifest is
+    // allowed to omit `components` or either of its arrays, so read defensively:
+    // reaching into `.functions.length` used to throw a TypeError and mask the
+    // validation error that should have been reported.
+    const declaredFunctions = manifestWithVars.components?.functions ?? [];
+    const declaredApplets = manifestWithVars.components?.applets ?? [];
+    
     if (autoDiscover && 
         (!template.projectManifest || 
-         manifestWithVars.components.functions.length === 0 && 
-         manifestWithVars.components.applets.length === 0)) {
+         (declaredFunctions.length === 0 && declaredApplets.length === 0))) {
       
       // Set a timeout for the discovery process
       const discoveryPromise = autoDiscoverComponents(

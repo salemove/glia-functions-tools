@@ -3,19 +3,9 @@
  */
 import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
 
-// Mock template registry functions that aren't being tested
-jest.mock('../../../src/utils/template-registry', () => {
-  const originalModule = jest.requireActual('../../../src/utils/template-registry');
-  
-  return {
-    ...originalModule,
-    readTemplateRegistry: jest.fn(),
-    getTemplateByName: jest.fn()
-  };
-});
-
-// Import after mocking
-import { mergeProjectManifest } from '../../../src/utils/template-registry';
+// mergeProjectManifest is a pure function over two manifests, so it needs no
+// mocking; the rest of the registry is not exercised here.
+import { mergeProjectManifest } from '../../../src/utils/template-registry.js';
 
 describe('Template Registry Project Manifest Support', () => {
   describe('mergeProjectManifest', () => {

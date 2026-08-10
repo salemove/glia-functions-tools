@@ -391,6 +391,11 @@ export class NetworkDetector {
     this.checkIntervalId = setInterval(() => {
       this._checkConnection();
     }, this.checkInterval);
+
+    // A background health check must never be the reason a process stays alive.
+    // Without this the CLI hangs after its command completes, and Jest workers
+    // never exit.
+    this.checkIntervalId.unref?.();
   }
 
   /**

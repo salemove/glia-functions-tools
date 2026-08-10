@@ -35,6 +35,30 @@ export let BASE_TEMPLATE_PATHS = {
 export let templateRegistry = null;
 
 /**
+ * Point the registry at a different set of template roots.
+ *
+ * `BASE_TEMPLATE_PATHS` is an `export let`, which cannot be assigned from
+ * outside the module, so there was previously no way to redirect template
+ * discovery — the only option was to mock `node:fs` wholesale. Overriding the
+ * roots also clears the registry cache, since it is no longer valid.
+ *
+ * @param {Object} paths - Partial map of template type to directory
+ * @returns {Object} The resulting template paths
+ */
+export function setBaseTemplatePaths(paths) {
+  BASE_TEMPLATE_PATHS = { ...BASE_TEMPLATE_PATHS, ...paths };
+  templateRegistry = null;
+  return BASE_TEMPLATE_PATHS;
+}
+
+/**
+ * Discard the cached registry so the next read rediscovers from disk.
+ */
+export function clearTemplateRegistryCache() {
+  templateRegistry = null;
+}
+
+/**
  * Validate a template object's structure
  * 
  * @param {Object} template - Template object to validate
@@ -420,20 +444,42 @@ export async function resolveTemplateInheritance(template, visited = new Set()) 
  * @returns {Array<string>} Merged file list
  */
 function mergeFiles(parentFiles = [], childFiles = []) {
-  // Get exclusions from child (files starting with !)
+  /**
+   * A file entry is either a plain string path or a
+   * `{ source, destination, template }` object. Every template that ships in
+   * this repo uses the object form, so assuming strings made inheritance throw
+   * `file.startsWith is not a function` for all of them.
+   *
+   * @param {string|Object} file - File entry
+   * @returns {string} A stable identity for deduplication
+   */
+  const identityOf = (file) =>
+    typeof file === 'string' ? file : (file?.destination ?? file?.source ?? '');
+
+  /**
+   * @param {string|Object} file - File entry
+   * @returns {boolean} True if the entry excludes an inherited file
+   */
+  const isExclusion = (file) => typeof file === 'string' && file.startsWith('!');
+
+  // Get exclusions from child (string entries starting with !)
   const exclusions = (childFiles || [])
-    .filter(file => file.startsWith('!'))
+    .filter(isExclusion)
     .map(file => file.substring(1));
   
   // Start with parent files not excluded
   const result = (parentFiles || [])
-    .filter(file => !exclusions.includes(file));
+    .filter(file => !exclusions.includes(identityOf(file)));
   
-  // Add non-exclusion child files
+  // Add non-exclusion child files, overriding a parent entry with the same target
   (childFiles || [])
-    .filter(file => !file.startsWith('!'))
+    .filter(file => !isExclusion(file))
     .forEach(file => {
-      if (!result.includes(file)) {
+      const identity = identityOf(file);
+      const existingIndex = result.findIndex(existing => identityOf(existing) === identity);
+      if (existingIndex >= 0) {
+        result[existingIndex] = file;
+      } else {
         result.push(file);
       }
     });
@@ -486,7 +532,7 @@ function mergeConditionalFiles(parentConditionalFiles = {}, childConditionalFile
  * @param {Object} childManifest - Project manifest from child template
  * @returns {Object} Merged project manifest
  */
-function mergeProjectManifest(parentManifest, childManifest) {
+export function mergeProjectManifest(parentManifest, childManifest) {
   // If either is missing, return the other
   if (!parentManifest) return childManifest;
   if (!childManifest) return parentManifest;
@@ -494,10 +540,16 @@ function mergeProjectManifest(parentManifest, childManifest) {
   // Start with a deep copy of parent
   const result = JSON.parse(JSON.stringify(parentManifest));
   
-  // Merge basic properties
-  result.name = childManifest.name || result.name;
-  result.version = childManifest.version || result.version;
-  result.description = childManifest.description || result.description;
+  // Merge every top-level property the child defines, not just the three that
+  // used to be handled by name. Any other field a child manifest declared
+  // (author, license, scripts, ...) was previously dropped on the floor.
+  // Keys with structural merges of their own are handled below.
+  const STRUCTURALLY_MERGED_KEYS = new Set(['components', 'kvStore', 'linkages', 'deployment']);
+  for (const [key, value] of Object.entries(childManifest)) {
+    if (STRUCTURALLY_MERGED_KEYS.has(key)) continue;
+    if (value === undefined) continue;
+    result[key] = value;
+  }
   
   // Merge components
   if (childManifest.components) {
@@ -649,6 +701,7 @@ export default {
   registerTemplate,
   resolveTemplateInheritance,
   validateTemplate,
+  mergeProjectManifest,
   mergePackageJsonConfig,
   BASE_TEMPLATE_PATHS
 };

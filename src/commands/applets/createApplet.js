@@ -44,7 +44,7 @@ export async function createApplet(options) {
       
       command.info('\nAvailable applet templates:');
       templates.forEach(template => {
-        command.log(`- ${template.displayName}: ${template.description}`);
+        command.print(`- ${template.displayName}: ${template.description}`);
       });
       
       return { templates };
@@ -291,14 +291,14 @@ async function main() {
         // Display success message
         if (result.applet) {
           command.success(`Applet "${name}" created and deployed with ID: ${result.applet.id}`);
-          command.log(`Output directory: ${result.outputDir}`);
+          command.print(`Output directory: ${result.outputDir}`);
         } else {
           command.success(`Applet "${name}" created successfully!`);
-          command.log(`Output directory: ${result.outputDir}`);
+          command.print(`Output directory: ${result.outputDir}`);
           
           if (!deploy) {
             command.info('\nTo deploy this applet, run:');
-            command.log(`glia-functions deploy-applet --path "${result.outputDir}/applet.html" --name "${name}" --owner-site-id <YOUR_SITE_ID>`);
+            command.print(`glia-functions deploy-applet --path "${result.outputDir}/applet.html" --name "${name}" --owner-site-id <YOUR_SITE_ID>`);
           }
         }
       } catch (error) {

@@ -4,7 +4,7 @@
  * This utility provides template processing capabilities for the template system,
  * including variable substitution, conditional sections, and validation.
  */
-import * as Handlebars from 'handlebars';
+import Handlebars from 'handlebars';
 
 /**
  * Process a template with variables using simple substitution

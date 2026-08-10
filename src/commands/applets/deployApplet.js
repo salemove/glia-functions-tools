@@ -105,12 +105,12 @@ async function main() {
         
         // Display success
         command.success('Applet deployed successfully!');
-        command.log(`\nApplet ID: ${applet.id}`);
-        command.log(`Applet Name: ${applet.name}`);
-        command.log(`Scope: ${applet.scope}`);
+        command.print(`\nApplet ID: ${applet.id}`);
+        command.print(`Applet Name: ${applet.name}`);
+        command.print(`Scope: ${applet.scope}`);
         
         if (applet.source_url) {
-          command.log(`Source URL: ${applet.source_url}`);
+          command.print(`Source URL: ${applet.source_url}`);
         }
       } catch (error) {
         command.error(`Failed to deploy applet: ${error.message}`);

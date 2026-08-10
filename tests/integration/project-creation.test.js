@@ -5,8 +5,8 @@ import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll 
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { execSync } from 'child_process';
 import { createFromTemplate } from '../../src/utils/unified-template-manager.js';
+import { autoDiscoverComponents } from '../../src/utils/project-manifest-processor.js';
 
 describe('Project Creation With Manifest', () => {
   let tempDir;
@@ -18,12 +18,8 @@ describe('Project Creation With Manifest', () => {
 
   afterEach(() => {
     // Clean up temp directory
-    try {
-      if (tempDir) {
-        execSync(`rm -rf ${tempDir}`);
-      }
-    } catch (error) {
-      console.error(`Error cleaning up: ${error.message}`);
+    if (tempDir) {
+      fs.rmSync(tempDir, { recursive: true, force: true });
     }
   });
 
@@ -84,19 +80,29 @@ describe('Project Creation With Manifest', () => {
     );
     
     expect(manifestContent.name).toBe('test-api-integration');
+    expect(manifestContent.description).toBe('API integration test');
     expect(manifestContent.components.functions).toHaveLength(1);
-    expect(manifestContent.components.functions[0].environment.API_KEY).toBe('test-key');
-    expect(manifestContent.components.functions[0].environment.API_URL).toBe('https://test-api.example.com');
-    expect(manifestContent.kvStore.namespaces).toHaveLength(2);
+    expect(manifestContent.components.functions[0].path).toBe('function.js');
+    
+    // The template ships no `projectManifest` section, so the manifest is
+    // produced entirely by auto-discovery: it finds the function file and
+    // records no environment variables, KV namespaces or linkages. The previous
+    // assertions here expected declared env vars and two namespaces, which no
+    // template has ever provided.
+    expect(manifestContent.kvStore.namespaces).toEqual([]);
+    expect(manifestContent.linkages).toEqual([]);
+    
+    // The variables themselves land in the generated .env, not the manifest.
+    const envFile = fs.readFileSync(path.join(tempDir, '.env'), 'utf8');
+    expect(envFile).toContain('test-key');
+    expect(envFile).toContain('https://test-api.example.com');
   }, 30000); // Extend timeout for this test
   
-  test('should generate linkages between discovered components', async () => {
-    // Skip if CI environment (no access to template files)
-    if (process.env.CI) {
-      console.log('Skipping test in CI environment');
-      return;
-    }
-    
+  // Auto-discovery is exercised directly rather than through createFromTemplate:
+  // the previous version of this test passed a `template` object for a template
+  // name that does not exist, and createFromTemplate resolves by name only, so
+  // it could only ever throw.
+  test('should discover functions, applets and KV namespaces on disk', async () => {
     // Create test function and applet files
     const functionDir = path.join(tempDir, 'functions');
     fs.mkdirSync(functionDir, { recursive: true });
@@ -122,28 +128,22 @@ describe('Project Creation With Manifest', () => {
       </html>
     `);
     
-    // Create minimal template object
-    const testTemplate = {
-      name: 'test-template',
-      type: 'project'
+    const manifest = {
+      name: 'test-discovery',
+      version: '1.0.0',
+      components: { functions: [], applets: [] },
+      kvStore: { namespaces: [] },
+      linkages: []
     };
     
-    // Act - Create project with auto-discovery
-    const result = await createFromTemplate('test-template', tempDir, {
-      type: 'project',
-      variables: {
-        projectName: 'test-discovery'
-      },
-      template: testTemplate
-    });
+    await autoDiscoverComponents(manifest, tempDir);
     
-    // Check if manifest was created with linkages
-    if (result.manifest) {
-      const manifestContent = result.manifest.content;
-      expect(manifestContent.components.functions).toHaveLength(1);
-      expect(manifestContent.components.applets).toHaveLength(1);
-      expect(manifestContent.linkages).toHaveLength(1);
-      expect(manifestContent.linkages[0].placeholders).toHaveProperty('API_URL');
-    }
+    expect(manifest.components.functions).toHaveLength(1);
+    expect(manifest.components.functions[0].path).toBe(path.join('functions', 'test-function.js'));
+    expect(manifest.components.applets).toHaveLength(1);
+    expect(manifest.components.applets[0].path).toBe('applet.html');
+    
+    // The function initialises a KV store, so the namespace is picked up.
+    expect(manifest.kvStore.namespaces.map(ns => ns.name)).toContain('test_namespace');
   }, 30000); // Extend timeout for this test
 });

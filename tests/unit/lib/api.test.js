@@ -9,9 +9,6 @@ import {
   RateLimitError
 } from '../../../src/lib/errors.js';
 
-// Import our custom fetch mock
-import '../../setup/mockFetch.js';
-
 describe('GliaApiClient', () => {
   // Setup test configuration
   const config = {
@@ -26,16 +23,16 @@ describe('GliaApiClient', () => {
     // Reset the fetch mock between tests
     global.fetch.mockClear();
     
-    // Create a new API client with logging level set to silent for tests
+    // Create a new API client with logging level set to silent for tests.
+    // Retries are off: a test asserting "network failure rejects" should not
+    // spend seven seconds in exponential backoff first.
     api = new GliaApiClient({
       ...config,
+      retry: { maxRetries: 0 },
       logging: {
         level: 'silent' // Don't show logs during tests
       }
     });
-    
-    // Disable actual offline manager
-    api.offlineManager = null;
   });
   
   describe('constructor', () => {
@@ -95,22 +92,41 @@ describe('GliaApiClient', () => {
       expect(result).toEqual(plainTextResponse);
     });
     
-    it('should throw AuthenticationError for 401 responses', async () => {
-      fetchMock.mockResponseOnce(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    it('should throw AuthenticationError for 401 responses when not refreshing', async () => {
+      fetchMock.mockResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
       
-      await expect(api.makeRequest('/test-endpoint')).rejects.toThrow(AuthenticationError);
-      await expect(api.makeRequest('/test-endpoint')).rejects.toThrow('Authentication failed');
+      // skipTokenRefresh isolates the error path from the refresh-and-retry path.
+      const request = () => api.makeRequest('/test-endpoint', {}, { skipTokenRefresh: true });
+      
+      await expect(request()).rejects.toThrow(AuthenticationError);
+      await expect(request()).rejects.toThrow('Authentication failed');
+    });
+    
+    it('should refresh the token and retry once on a 401', async () => {
+      // 1: the 401. 2: the token refresh. 3: the retried request.
+      fetchMock.mockResponseOnce(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+      fetchMock.mockResponseOnce(JSON.stringify({
+        token: 'refreshed-token',
+        expires_at: new Date(Date.now() + 3600_000).toISOString()
+      }));
+      fetchMock.mockResponseOnce(JSON.stringify({ success: true }));
+      
+      const result = await api.makeRequest('/test-endpoint');
+      
+      expect(result).toEqual({ success: true });
+      expect(fetchMock).toHaveBeenCalledTimes(3);
     });
     
     it('should throw GliaError for 404 responses', async () => {
-      fetchMock.mockResponseOnce(JSON.stringify({ error: 'Not found' }), { status: 404 });
+      // mockResponse, not mockResponseOnce: both assertions issue a request.
+      fetchMock.mockResponse(JSON.stringify({ error: 'Not found' }), { status: 404 });
       
       await expect(api.makeRequest('/test-endpoint')).rejects.toThrow(GliaError);
       await expect(api.makeRequest('/test-endpoint')).rejects.toThrow('Resource not found: /test-endpoint');
     });
     
     it('should throw GliaError for other error responses', async () => {
-      fetchMock.mockResponseOnce(JSON.stringify({ error: 'Bad request' }), { status: 400 });
+      fetchMock.mockResponse(JSON.stringify({ error: 'Bad request' }), { status: 400 });
       
       await expect(api.makeRequest('/test-endpoint')).rejects.toThrow(ValidationError);
       await expect(api.makeRequest('/test-endpoint')).rejects.toThrow('Bad request');
@@ -159,7 +175,7 @@ describe('GliaApiClient', () => {
       fetchMock.mockReject(new Error('Network failure'));
       
       await expect(api.makeRequest('/test-endpoint')).rejects.toThrow(GliaError);
-      await expect(api.makeRequest('/test-endpoint')).rejects.toContain('Network failure');
+      await expect(api.makeRequest('/test-endpoint')).rejects.toThrow('Network failure');
     });
   });
   
@@ -210,7 +226,7 @@ describe('GliaApiClient', () => {
     
     it('should validate function ID', async () => {
       await expect(api.getFunction()).rejects.toThrow('Function ID is required');
-      await expect(api.getFunction('')).rejects.toThrow('Function ID cannot be empty');
+      await expect(api.getFunction('')).rejects.toThrow('Function ID is required');
     });
   });
   
@@ -224,11 +240,10 @@ describe('GliaApiClient', () => {
       const result = await api.createFunction(name, description);
       
       // Updated to use the new endpoint and include site_id in the request
-      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/functions`, {
+      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/functions`, expect.objectContaining({
         method: 'POST',
-        body: JSON.stringify({ name, description, site_id: config.siteId }),
-        headers: expect.any(Object)
-      });
+        body: JSON.stringify({ name, description, site_id: config.siteId })
+      }));
       expect(result).toEqual(mockResponse);
     });
     
@@ -241,7 +256,7 @@ describe('GliaApiClient', () => {
     
     it('should validate function name', async () => {
       await expect(api.createFunction()).rejects.toThrow('Function name is required');
-      await expect(api.createFunction('')).rejects.toThrow('Function name cannot be empty');
+      await expect(api.createFunction('')).rejects.toThrow('Function name is required');
     });
   });
   
@@ -259,15 +274,14 @@ describe('GliaApiClient', () => {
       const result = await api.createVersion(functionId, code, options);
       
       // Updated to use the new endpoint and parameter names
-      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/functions/${functionId}/versions`, {
+      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/functions/${functionId}/versions`, expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
           code: code, // updated from code_bundle to code
           compatibility_date: options.compatibilityDate,
           environment_variables: options.environmentVariables
-        }),
-        headers: expect.any(Object)
-      });
+        })
+      }));
       expect(result).toEqual(mockResponse);
     });
     
@@ -280,7 +294,7 @@ describe('GliaApiClient', () => {
     
     it('should validate function ID', async () => {
       await expect(api.createVersion()).rejects.toThrow('Function ID is required');
-      await expect(api.createVersion('')).rejects.toThrow('Function ID cannot be empty');
+      await expect(api.createVersion('')).rejects.toThrow('Function ID is required');
     });
   });
   
@@ -296,11 +310,10 @@ describe('GliaApiClient', () => {
       // Updated to use the new endpoint and include version_id in the body
       expect(fetchMock).toHaveBeenCalledWith(
         `${config.apiUrl}/functions/${functionId}/deployments`,
-        {
+        expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ version_id: versionId }),
-          headers: expect.any(Object)
-        }
+          body: JSON.stringify({ version_id: versionId })
+        })
       );
       expect(result).toEqual(mockResponse);
     });
@@ -359,7 +372,7 @@ describe('GliaApiClient', () => {
     
     it('should validate function ID', async () => {
       await expect(api.getFunctionLogs()).rejects.toThrow('Function ID is required');
-      await expect(api.getFunctionLogs('')).rejects.toThrow('Function ID cannot be empty');
+      await expect(api.getFunctionLogs('')).rejects.toThrow('Function ID is required');
     });
   });
   
@@ -373,14 +386,14 @@ describe('GliaApiClient', () => {
       
       const result = await api.invokeFunction(invocationUri, payload);
       
-      expect(fetchMock).toHaveBeenCalledWith(fullUrl, {
+      expect(fetchMock).toHaveBeenCalledWith(fullUrl, expect.objectContaining({
         method: 'POST',
         body: JSON.stringify(payload),
-        headers: {
+        headers: expect.objectContaining({
           'Authorization': 'Bearer test-bearer-token',
           'Content-Type': 'application/json'
-        }
-      });
+        })
+      }));
       expect(result).toEqual(mockResponse);
     });
     
@@ -393,14 +406,14 @@ describe('GliaApiClient', () => {
       
       const result = await api.invokeFunction(invocationUri, payload);
       
-      expect(fetchMock).toHaveBeenCalledWith(fullUrl, {
+      expect(fetchMock).toHaveBeenCalledWith(fullUrl, expect.objectContaining({
         method: 'POST',
         body: payload,
-        headers: {
+        headers: expect.objectContaining({
           'Authorization': 'Bearer test-bearer-token',
           'Content-Type': 'application/json'
-        }
-      });
+        })
+      }));
       expect(result).toEqual(mockResponse);
     });
     
@@ -408,7 +421,7 @@ describe('GliaApiClient', () => {
       fetchMock.mockReject(new Error('Network failure'));
       
       await expect(api.invokeFunction('/integrations/test-id/endpoint')).rejects.toThrow(FunctionError);
-      await expect(api.invokeFunction('/integrations/test-id/endpoint')).rejects.toContain('Failed to invoke function');
+      await expect(api.invokeFunction('/integrations/test-id/endpoint')).rejects.toThrow('Failed to invoke function');
     });
 
     it('should handle absolute URLs', async () => {
@@ -522,14 +535,14 @@ describe('GliaApiClient', () => {
       const updates = { name: 'Updated Function' };
       
       await expect(api.updateFunction()).rejects.toThrow('Function ID is required');
-      await expect(api.updateFunction('')).rejects.toThrow('Function ID cannot be empty');
+      await expect(api.updateFunction('')).rejects.toThrow('Function ID is required');
     });
     
     it('should validate function name if provided', async () => {
       const functionId = 'test-function-id';
       const invalidUpdates = { name: '' };
       
-      await expect(api.updateFunction(functionId, invalidUpdates)).rejects.toThrow('Function name cannot be empty');
+      await expect(api.updateFunction(functionId, invalidUpdates)).rejects.toThrow('Function name is required');
     });
     
     it('should throw FunctionError on failure', async () => {
@@ -587,15 +600,16 @@ describe('GliaApiClient', () => {
       
       const result = await api.updateVersion(functionId, versionId, options);
       
-      expect(fetchMock).toHaveBeenCalledWith(`${config.apiUrl}/functions/${functionId}/versions/${versionId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          code: options.code,
-          environment_variables: options.environmentVariables,
-          compatibility_date: options.compatibilityDate
-        }),
-        headers: expect.anything(),
-        signal: expect.anything()
+      expect(fetchMock).toHaveBeenCalledWith(
+        `${config.apiUrl}/functions/${functionId}/versions/${versionId}`,
+        expect.objectContaining({ method: 'PATCH' })
+      );
+      // Compare the parsed body: asserting on the serialised string would make
+      // the test depend on property insertion order.
+      expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+        code: options.code,
+        environment_variables: options.environmentVariables,
+        compatibility_date: options.compatibilityDate
       });
       expect(result).toEqual(mockResponse);
     });

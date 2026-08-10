@@ -22,8 +22,18 @@ import nodeFetch from 'node-fetch';
 // Use node-fetch for consistent behavior in Node.js environment
 const fetch = nodeFetch;
 
-// Set up for debugging
-const DEBUG_API = true;
+// Verbose request/response tracing. Off unless explicitly requested: these are
+// internals, and printing them unconditionally makes normal CLI output unusable.
+const DEBUG_API = process.env.GLIA_DEBUG_API === 'true';
+
+/**
+ * Log a verbose API trace line when GLIA_DEBUG_API=true.
+ *
+ * @param {...any} args - Arguments forwarded to console.log
+ */
+const apiDebug = (...args) => {
+  if (DEBUG_API) console.log(...args);
+};
 
 import { 
   GliaError, 
@@ -51,7 +61,13 @@ export const DEFAULT_API_CONFIG = {
     resetTimeoutMs: 30000,
     halfOpenMaxCalls: 1
   },
-  offline: DEFAULT_OFFLINE_CONFIG,
+  offline: {
+    ...DEFAULT_OFFLINE_CONFIG,
+    // Off unless explicitly requested. No CLI flag or MCP tool exposes offline
+    // mode, so defaulting it on only bought a connectivity probe and a periodic
+    // network check on every client construction.
+    enabled: false
+  },
   requests: {
     defaultTimeout: 30000,      // 30 seconds default timeout
     prefetchEnabled: false,     // Prefetching disabled by default
@@ -125,6 +141,23 @@ export default class GliaApiClient {
       ...(config.requests || {})
     };
     
+    // Configure logging before anything that reads it. This block used to sit at
+    // the end of the constructor, so this.logLevel and this.logRequests were
+    // undefined everywhere above and `logging: { level: 'silent' }` had no
+    // effect on the offline manager or the redirect log below.
+    const loggingConfig = {
+      ...DEFAULT_API_CONFIG.logging,
+      ...(config.logging || {})
+    };
+    
+    // Set log level and features
+    this.logLevel = config.logLevel || loggingConfig.level || 'info';
+    // Valid log levels: 'silent', 'error', 'warn', 'info', 'debug', 'trace'
+    this.includeTimestamps = loggingConfig.includeTimestamps;
+    this.includeRequestIds = loggingConfig.includeRequestIds;
+    // For backward compatibility
+    this.logRequests = (config.logRequests || this.logLevel === 'debug' || this.logLevel === 'trace');
+    
     // Log redirect configuration if debug logging enabled
     if (this.logRequests) {
       console.log(`[API] Redirect handling: ${this.requestConfig.followRedirect ? 'enabled' : 'disabled'}, max redirects: ${this.requestConfig.maxRedirects}`);
@@ -140,22 +173,22 @@ export default class GliaApiClient {
     const offlineConfig = {
       ...DEFAULT_API_CONFIG.offline,
       ...(config.offline || {})
-      // Remove the forced disabled status to respect user configuration
     };
     
-    // Create the offline manager but with more reliable network detection
-    this.offlineManager = new OfflineManager({
-      ...offlineConfig,
-      // Use a more reliable network check URL - Google's connectivity check
-      networkCheckUrl: 'https://www.gstatic.com/generate_204',
-      // Pass through the log level
-      logLevel: this.logLevel
-    });
-    
-    // Initialize offline manager with better error handling
-    if (this.offlineManager) {
-      // Log that we're initializing offline support when enabled
-      if (offlineConfig.enabled && this.logRequests) {
+    // Only build the offline manager when it is asked for. Constructing it
+    // starts a connectivity probe and a periodic network check, which is a
+    // surprising side effect of creating an API client when no CLI flag or MCP
+    // tool exposes offline mode at all.
+    if (offlineConfig.enabled) {
+      this.offlineManager = new OfflineManager({
+        ...offlineConfig,
+        // Use a more reliable network check URL - Google's connectivity check
+        networkCheckUrl: 'https://www.gstatic.com/generate_204',
+        // Pass through the log level
+        logLevel: this.logLevel
+      });
+      
+      if (this.logRequests) {
         console.log('[API] Initializing offline support');
       }
       
@@ -167,21 +200,9 @@ export default class GliaApiClient {
       this.offlineManager.init().catch(err => {
         console.error('Failed to initialize offline manager:', err);
       });
+    } else {
+      this.offlineManager = null;
     }
-      
-    // Configure request logging
-    const loggingConfig = {
-      ...DEFAULT_API_CONFIG.logging,
-      ...(config.logging || {})
-    };
-    
-    // Set log level and features
-    this.logLevel = config.logLevel || loggingConfig.level || 'info';
-    // Valid log levels: 'silent', 'error', 'warn', 'info', 'debug', 'trace'
-    this.includeTimestamps = loggingConfig.includeTimestamps;
-    this.includeRequestIds = loggingConfig.includeRequestIds;
-    // For backward compatibility
-    this.logRequests = (config.logRequests || this.logLevel === 'debug' || this.logLevel === 'trace');
   }
   
   /**
@@ -527,7 +548,10 @@ export default class GliaApiClient {
       // Execute the request function (with retry if enabled)
       const executeRequest = async () => {
         try {
-          let requestOptions;
+          // Named separately from the requestOptions parameter: assigning to that
+          // parameter destroyed the caller's request-options bag (timeout,
+          // skipTokenRefresh, ...) before the 401 retry could pass it on.
+          let fetchOptions;
           
           // Special handling for FormData
           if (options.body instanceof FormData) {
@@ -541,20 +565,20 @@ export default class GliaApiClient {
               'Accept': 'application/vnd.salemove.v1+json'
             };
             
-            requestOptions = {
+            fetchOptions = {
               ...options,
               headers // Use combined headers
             };
           } else {
             // Normal JSON request
             const headers = this._prepareHeaders(options.headers);
-            requestOptions = {
+            fetchOptions = {
               ...options,
               headers // Apply headers last to prevent them from being overridden
             };
           }
           
-          const response = await fetch(url, requestOptions);
+          const response = await fetch(url, fetchOptions);
           
           // Extract and process response metadata
           const responseInfo = this._extractResponseMetadata(response);
@@ -598,23 +622,23 @@ export default class GliaApiClient {
         }
         
         // Debug logging for all response headers to troubleshoot
-        console.log(`[API DEBUG] Got ${response.status} redirect response`);
-        console.log('[API DEBUG] Response headers:');
+        apiDebug(`[API DEBUG] Got ${response.status} redirect response`);
+        apiDebug('[API DEBUG] Response headers:');
         response.headers.forEach((value, key) => {
-          console.log(`[API DEBUG] ${key}: ${value}`);
+          apiDebug(`[API DEBUG] ${key}: ${value}`);
         });
-        console.log('[API DEBUG] Response body:', JSON.stringify(data));
+        apiDebug('[API DEBUG] Response body:', JSON.stringify(data));
         
         // Try to get redirect URL from headers first
         let redirectUrl = response.headers.get('Location') || response.headers.get('location');
         
         // If no Location header but we have a 303 with data
         if (!redirectUrl && response.status === 303 && data) {
-          console.log('[API DEBUG] No Location header found, examining response body');
+          apiDebug('[API DEBUG] No Location header found, examining response body');
           
           // Special case: If the response has 'status' field, it might be a task result already
           if (data.status && (data.status === 'completed' || data.status === 'failed')) {
-            console.log(`[API DEBUG] Found task status in response body: ${data.status}`);
+            apiDebug(`[API DEBUG] Found task status in response body: ${data.status}`);
             // Return the data directly - it's a task result, not a redirect
             return data;
           }
@@ -626,10 +650,10 @@ export default class GliaApiClient {
           const extractUrl = (field, value) => {
             if (!value) return null;
             if (value === currentPath) {
-              console.log(`[API DEBUG] Ignoring self-redirect in '${field}' field: ${value}`);
+              apiDebug(`[API DEBUG] Ignoring self-redirect in '${field}' field: ${value}`);
               return null;
             }
-            console.log(`[API DEBUG] Found URL in '${field}' field: ${value}`);
+            apiDebug(`[API DEBUG] Found URL in '${field}' field: ${value}`);
             return value;
           };
           
@@ -641,13 +665,13 @@ export default class GliaApiClient {
           // Last resort, try self but explicitly check for self-redirect
           if (!redirectUrl && data.self && data.self !== currentPath) {
             redirectUrl = data.self;
-            console.log(`[API DEBUG] Found URL in 'self' field: ${redirectUrl}`);
+            apiDebug(`[API DEBUG] Found URL in 'self' field: ${redirectUrl}`);
           }
           
           // If we still have no redirect URL but have a full task response,
           // return the data directly instead of trying to redirect
           if (!redirectUrl && data.entity && data.status) {
-            console.log('[API DEBUG] No valid redirect URL found but response contains task data, using directly');
+            apiDebug('[API DEBUG] No valid redirect URL found but response contains task data, using directly');
             return data;
           }
         }
@@ -1021,6 +1045,12 @@ export default class GliaApiClient {
         siteId: this.siteId
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to list functions: ${error.message}`, 
@@ -1065,6 +1095,12 @@ export default class GliaApiClient {
         functionId
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to get function: ${error.message}`, 
@@ -1126,6 +1162,12 @@ export default class GliaApiClient {
         functionName: name
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to create function: ${error.message}`, 
@@ -1190,6 +1232,12 @@ export default class GliaApiClient {
         codeSize: code ? code.length : 0
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to create function version: ${error.message}`, 
@@ -1273,6 +1321,12 @@ export default class GliaApiClient {
         hasCode: options.code ? true : false
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to update function version: ${error.message}`, 
@@ -1318,6 +1372,12 @@ export default class GliaApiClient {
         taskId
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to get version creation task: ${error.message}`, 
@@ -1371,6 +1431,12 @@ export default class GliaApiClient {
         versionId
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to get function version code: ${error.message}`, 
@@ -1420,6 +1486,12 @@ export default class GliaApiClient {
         versionId
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to deploy function version: ${error.message}`, 
@@ -1460,6 +1532,12 @@ export default class GliaApiClient {
         functionId
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to list function versions: ${error.message}`, 
@@ -1506,6 +1584,12 @@ export default class GliaApiClient {
         versionId
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to get function version: ${error.message}`, 
@@ -1564,6 +1648,12 @@ export default class GliaApiClient {
         versionId
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to get function version environment variables: ${error.message}`, 
@@ -1670,6 +1760,12 @@ export default class GliaApiClient {
         envVarsCount: environmentVariables ? Object.keys(environmentVariables).length : 0
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to update environment variables: ${error.message}`, 
@@ -1753,6 +1849,12 @@ export default class GliaApiClient {
         payloadSize: typeof payload === 'string' ? payload.length : JSON.stringify(payload).length
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to invoke function: ${error.message}`, 
@@ -1816,6 +1918,12 @@ export default class GliaApiClient {
         endTime: options.endTime
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to get function logs: ${error.message}`, 
@@ -1969,6 +2077,10 @@ export default class GliaApiClient {
    */
   async getApplet(appletId) {
     try {
+      if (!appletId) {
+        throw new ValidationError('Applet ID is required');
+      }
+      
       return await this.makeRequest(`/axons/${appletId}`);
     } catch (error) {
       const errorContext = {
@@ -1995,19 +2107,19 @@ export default class GliaApiClient {
   async createApplet(options) {
     try {
       if (!options.name) {
-        throw new Error('Applet name is required');
+        throw new ValidationError('Applet name is required');
       }
       
       if (!options.ownerSiteId) {
-        throw new Error('Owner site ID is required');
+        throw new ValidationError('Owner site ID is required');
       }
       
       if (!options.source && !options.sourceUrl) {
-        throw new Error('Either source or sourceUrl is required');
+        throw new ValidationError('Either source or sourceUrl is required');
       }
       
       // Prepare FormData for multipart request using form-data package (Node.js)
-      if (DEBUG_API) console.log('[API DEBUG] Creating FormData for applet request');
+      apiDebug('[API DEBUG] Creating FormData for applet request');
       
       const formData = new FormData();
       
@@ -2033,18 +2145,18 @@ export default class GliaApiClient {
           contentType: 'text/html'
         });
         
-        if (DEBUG_API) console.log(`[API DEBUG] Added source content as buffer (${buffer.length} bytes)`);
+        apiDebug(`[API DEBUG] Added source content as buffer (${buffer.length} bytes)`);
       } else if (options.sourceUrl) {
         formData.append('source_url', options.sourceUrl);
-        if (DEBUG_API) console.log(`[API DEBUG] Added source_url: ${options.sourceUrl}`);
+        apiDebug(`[API DEBUG] Added source_url: ${options.sourceUrl}`);
       }
       
       // Debug the form-data contents
       if (DEBUG_API) {
-        console.log('[API DEBUG] FormData headers:');
+        apiDebug('[API DEBUG] FormData headers:');
         const headers = formData.getHeaders();
         Object.keys(headers).forEach(key => {
-          console.log(`[API DEBUG] ${key}: ${headers[key]}`);
+          apiDebug(`[API DEBUG] ${key}: ${headers[key]}`);
         });
       }
       
@@ -2055,17 +2167,17 @@ export default class GliaApiClient {
       // to ensure compatibility with the API endpoint
       
       if (DEBUG_API) {
-        console.log('[API DEBUG] Setting up direct fetch with node-fetch + form-data');
+        apiDebug('[API DEBUG] Setting up direct fetch with node-fetch + form-data');
         // Some FormData implementations might have getBuffer() as async or requiring callback
         // Avoid calling it directly to prevent callback errors
-        console.log('[API DEBUG] FormData created and ready to send');
+        apiDebug('[API DEBUG] FormData created and ready to send');
       }
       
       // Instead of using makeRequest, make a direct fetch call
       const fullUrl = `${this.baseUrl}/axons`;
       
       if (DEBUG_API) {
-        console.log(`[API DEBUG] Making direct fetch to: ${fullUrl}`);
+        apiDebug(`[API DEBUG] Making direct fetch to: ${fullUrl}`);
       }
       
       // Get content-type with boundary from form-data but set auth headers manually
@@ -2088,10 +2200,10 @@ export default class GliaApiClient {
       
       // Handle the response
       if (DEBUG_API) {
-        console.log(`[API DEBUG] Response status: ${response.status}`);
-        console.log(`[API DEBUG] Response headers:`);
+        apiDebug(`[API DEBUG] Response status: ${response.status}`);
+        apiDebug(`[API DEBUG] Response headers:`);
         response.headers.forEach((value, name) => {
-          console.log(`[API DEBUG] ${name}: ${value}`);
+          apiDebug(`[API DEBUG] ${name}: ${value}`);
         });
       }
       
@@ -2101,13 +2213,13 @@ export default class GliaApiClient {
         // Try to parse response as JSON
         responseData = await response.json();
         if (DEBUG_API) {
-          console.log('[API DEBUG] Response body:', JSON.stringify(responseData));
+          apiDebug('[API DEBUG] Response body:', JSON.stringify(responseData));
         }
       } catch (error) {
         // If response is not JSON
         const text = await response.text();
         if (DEBUG_API) {
-          console.log('[API DEBUG] Non-JSON response:', text);
+          apiDebug('[API DEBUG] Non-JSON response:', text);
         }
         
         if (!response.ok) {
@@ -2153,7 +2265,7 @@ export default class GliaApiClient {
   async updateApplet(appletId, options) {
     try {
       if (!appletId) {
-        throw new Error('Applet ID is required');
+        throw new ValidationError('Applet ID is required');
       }
       
       // Prepare FormData for multipart request
@@ -2228,7 +2340,7 @@ export default class GliaApiClient {
   async deleteApplet(appletId) {
     try {
       if (!appletId) {
-        throw new Error('Applet ID is required');
+        throw new ValidationError('Applet ID is required');
       }
       
       return await this.makeRequest(`/axons/${appletId}`, {
@@ -2254,11 +2366,11 @@ export default class GliaApiClient {
   async addAppletToSite(siteId, appletId) {
     try {
       if (!siteId) {
-        throw new Error('Site ID is required');
+        throw new ValidationError('Site ID is required');
       }
       
       if (!appletId) {
-        throw new Error('Applet ID is required');
+        throw new ValidationError('Applet ID is required');
       }
       
       return await this.makeRequest(`/sites/${siteId}/axons`, {
@@ -2289,7 +2401,7 @@ export default class GliaApiClient {
   async listSiteApplets(siteId, options = {}) {
     try {
       if (!siteId) {
-        throw new Error('Site ID is required');
+        throw new ValidationError('Site ID is required');
       }
       
       const queryParams = [];
@@ -2328,6 +2440,12 @@ export default class GliaApiClient {
       ...context,
       siteId: this.siteId
     };
+    
+    // A ValidationError means the caller passed bad arguments; wrapping it in a
+    // FunctionError would report a local programming mistake as an API failure.
+    if (error instanceof ValidationError) {
+      return error;
+    }
     
     if (error instanceof GliaError) {
       return new FunctionError(
@@ -2456,6 +2574,12 @@ export default class GliaApiClient {
         namespace
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to list KV pairs: ${error.message}`, 
@@ -2574,6 +2698,12 @@ export default class GliaApiClient {
         operationsCount: operations ? operations.length : 0
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to perform KV batch operations: ${error.message}`, 
@@ -2627,6 +2757,12 @@ export default class GliaApiClient {
         key
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to get KV value: ${error.message}`, 
@@ -2708,6 +2844,12 @@ export default class GliaApiClient {
         valueType: typeof value
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to set KV value: ${error.message}`, 
@@ -2761,6 +2903,12 @@ export default class GliaApiClient {
         key
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to delete KV value: ${error.message}`, 
@@ -2826,6 +2974,12 @@ export default class GliaApiClient {
         key
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to test and set KV value: ${error.message}`, 
@@ -2894,6 +3048,12 @@ export default class GliaApiClient {
         updates
       };
       
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw new FunctionError(
           `Failed to update function: ${error.message}`, 
@@ -2935,6 +3095,12 @@ export default class GliaApiClient {
         siteId: this.siteId,
         functionId
       };
+
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
 
       if (error instanceof GliaError) {
         throw new FunctionError(
@@ -2992,6 +3158,12 @@ export default class GliaApiClient {
         body: JSON.stringify(payload)
       });
     } catch (error) {
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw error;
       }
@@ -3011,6 +3183,12 @@ export default class GliaApiClient {
         method: 'GET'
       });
     } catch (error) {
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw error;
       }
@@ -3035,6 +3213,12 @@ export default class GliaApiClient {
         method: 'GET'
       });
     } catch (error) {
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw error;
       }
@@ -3108,6 +3292,12 @@ export default class GliaApiClient {
         body: JSON.stringify({ operations })
       });
     } catch (error) {
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw error;
       }
@@ -3132,6 +3322,12 @@ export default class GliaApiClient {
         method: 'DELETE'
       });
     } catch (error) {
+      // A ValidationError means the caller passed bad arguments; wrapping it in a
+      // FunctionError would report a local programming mistake as an API failure.
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+
       if (error instanceof GliaError) {
         throw error;
       }

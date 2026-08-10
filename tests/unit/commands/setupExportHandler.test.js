@@ -3,18 +3,39 @@
  */
 
 import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
-import path from 'path';
-import fs from 'fs';
-import setupExportHandler from '../../../src/commands/exports/setupExportHandler';
-import { getExportEventMetadata } from '../../../src/utils/export-events-registry';
-import { createFromTemplate } from '../../../src/utils/unified-template-manager';
+// Mock specifiers resolve relative to tests/setup/setupTests.js, not this
+// file. See the note at the bottom of that file.
+// Automock does not exist for ESM, so every mocked export is spelled out.
+jest.unstable_mockModule('../../src/utils/export-events-registry.js', () => ({
+  __esModule: true,
+  getExportEventMetadata: jest.fn(),
+  getExportEventMetadataSync: jest.fn(),
+  getExportEventTypes: jest.fn().mockResolvedValue({}),
+  getSchemaPath: jest.fn(),
+  getSchemaPathSync: jest.fn(),
+  getSamplePayloadPath: jest.fn(),
+  getSamplePayloadPathSync: jest.fn(),
+  filterEventTypesByTag: jest.fn().mockResolvedValue({}),
+  EXPORT_EVENT_TYPES: {}
+}));
 
-// Mock dependencies
-jest.mock('../../../src/utils/export-events-registry');
-jest.mock('../../../src/utils/unified-template-manager');
-jest.mock('../../../src/cli/export-wizard', () => ({
+jest.unstable_mockModule('../../src/utils/unified-template-manager.js', () => ({
+  __esModule: true,
+  createFromTemplate: jest.fn()
+}));
+
+jest.unstable_mockModule('../../src/cli/export-wizard.js', () => ({
+  __esModule: true,
   runExportWizard: jest.fn()
 }));
+
+const { default: setupExportHandler } =
+  await import('../../../src/commands/exports/setupExportHandler.js');
+const { getExportEventMetadata } =
+  await import('../../../src/utils/export-events-registry.js');
+const { createFromTemplate } =
+  await import('../../../src/utils/unified-template-manager.js');
+const { runExportWizard } = await import('../../../src/cli/export-wizard.js');
 
 // Mock BaseCommand
 const mockCommand = {
@@ -46,7 +67,7 @@ describe('setupExportHandler command', () => {
 
     // Verify the error was reported via the command
     expect(mockCommand.error).toHaveBeenCalled();
-    expect(getExportEventMetadata).toHaveBeenCalledWith('invalid-event-type');
+    expect(getExportEventMetadata).toHaveBeenCalledWith('invalid-event-type', true);
   });
 
   it('should create an export handler successfully', async () => {
@@ -91,13 +112,12 @@ describe('setupExportHandler command', () => {
 
     // Verify success was reported via the command
     expect(mockCommand.success).toHaveBeenCalled();
-    expect(mockCommand.info).toHaveBeenCalledTimes(5); // Next steps info
+    // Assert the guidance is printed rather than pinning an exact call count.
+    expect(mockCommand.info).toHaveBeenCalledWith('Next steps:');
+    expect(mockCommand.info).toHaveBeenCalledWith('5. Deploy: npm run deploy');
   });
 
   it('should use the wizard in interactive mode', async () => {
-    // Import the wizard module
-    const { runExportWizard } = require('../../../src/cli/export-wizard');
-    
     // Mock the wizard to return a specific configuration
     runExportWizard.mockResolvedValue({
       eventType: 'engagement-end',
@@ -156,9 +176,6 @@ describe('setupExportHandler command', () => {
   });
 
   it('should handle wizard cancellation', async () => {
-    // Import the wizard module
-    const { runExportWizard } = require('../../../src/cli/export-wizard');
-    
     // Mock the wizard to return a canceled result
     runExportWizard.mockResolvedValue({
       canceled: true

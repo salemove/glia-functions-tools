@@ -4,31 +4,41 @@
 import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
 import path from 'path';
 
+// Mock specifiers resolve relative to tests/setup/setupTests.js, not this
+// file. See the note at the bottom of that file.
 // Mock the file system
-jest.mock('fs/promises', () => ({
+const fsPromisesMock = {
   readFile: jest.fn(),
   writeFile: jest.fn().mockResolvedValue(undefined)
+};
+// The module under test uses a default import, so the mock must supply one.
+jest.unstable_mockModule('fs/promises', () => ({
+  __esModule: true,
+  ...fsPromisesMock,
+  default: fsPromisesMock
 }));
 
 // Mock component detector
-jest.mock('../../../src/utils/component-detector', () => ({
+jest.unstable_mockModule('../../src/utils/component-detector.js', () => ({
   isGliaFunction: jest.fn().mockResolvedValue(true),
   isGliaApplet: jest.fn().mockResolvedValue(true),
   detectKvNamespaces: jest.fn().mockResolvedValue(['test_namespace']),
-  findJavaScriptFiles: jest.fn().mockResolvedValue(['function.js']),
-  findHtmlFiles: jest.fn().mockResolvedValue(['applet.html'])
+  findJavaScriptFiles: jest.fn().mockResolvedValue(['/test/output/function.js']),
+  findHtmlFiles: jest.fn().mockResolvedValue(['/test/output/applet.html'])
 }));
 
 // Mock schema validator
-jest.mock('../../../src/utils/schema-validator', () => ({
+jest.unstable_mockModule('../../src/utils/schema-validator.js', () => ({
   validate: jest.fn().mockReturnValue({ valid: true, errors: [] })
 }));
 
 // Import after mocking
-import fs from 'fs/promises';
-import { processProjectManifest, autoDiscoverComponents } from '../../../src/utils/project-manifest-processor';
-import { isGliaFunction, isGliaApplet, detectKvNamespaces, findJavaScriptFiles, findHtmlFiles } from '../../../src/utils/component-detector';
-import { validate } from '../../../src/utils/schema-validator';
+const fs = (await import('fs/promises')).default;
+const { processProjectManifest, autoDiscoverComponents } =
+  await import('../../../src/utils/project-manifest-processor.js');
+const { isGliaFunction, isGliaApplet, detectKvNamespaces, findJavaScriptFiles, findHtmlFiles } =
+  await import('../../../src/utils/component-detector.js');
+const { validate } = await import('../../../src/utils/schema-validator.js');
 
 describe('Project Manifest Processor', () => {
   beforeEach(() => {
@@ -41,7 +51,7 @@ describe('Project Manifest Processor', () => {
       const template = {
         name: 'test-template',
         projectManifest: {
-          name: '${projectName}',
+          name: '{{projectName}}',
           version: '1.0.0',
           components: {
             functions: [{ name: 'test-function', path: 'function.js' }]
@@ -85,8 +95,8 @@ describe('Project Manifest Processor', () => {
       const outputDir = '/test/output';
       
       // Mock function discovery
-      findJavaScriptFiles.mockResolvedValueOnce(['function.js']);
-      findHtmlFiles.mockResolvedValueOnce(['applet.html']);
+      findJavaScriptFiles.mockResolvedValueOnce(['/test/output/function.js']);
+      findHtmlFiles.mockResolvedValueOnce(['/test/output/applet.html']);
       
       // Act
       const result = await processProjectManifest(template, variables, outputDir, {
@@ -108,7 +118,7 @@ describe('Project Manifest Processor', () => {
       const template = {
         name: 'test-template',
         projectManifest: {
-          name: '${projectName}',
+          name: '{{projectName}}',
           components: {} // Missing required version
         }
       };
@@ -148,8 +158,8 @@ describe('Project Manifest Processor', () => {
       const outputDir = '/test/output';
       
       // Mock file discovery
-      findJavaScriptFiles.mockResolvedValueOnce(['function.js']);
-      findHtmlFiles.mockResolvedValueOnce(['applet.html']);
+      findJavaScriptFiles.mockResolvedValueOnce(['/test/output/function.js']);
+      findHtmlFiles.mockResolvedValueOnce(['/test/output/applet.html']);
       isGliaFunction.mockResolvedValueOnce(true);
       isGliaApplet.mockResolvedValueOnce(true);
       detectKvNamespaces.mockResolvedValueOnce(['test_namespace']);
@@ -189,7 +199,7 @@ describe('Project Manifest Processor', () => {
       const outputDir = '/test/output';
       
       // Mock many files
-      const manyFiles = Array(10).fill(0).map((_, i) => `function${i}.js`);
+      const manyFiles = Array(10).fill(0).map((_, i) => `/test/output/function${i}.js`);
       findJavaScriptFiles.mockResolvedValueOnce(manyFiles);
       
       // Act

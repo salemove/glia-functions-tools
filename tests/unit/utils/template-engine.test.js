@@ -63,10 +63,31 @@ describe('templateEngine', () => {
   });
   
   describe('processHandlebarsTemplate', () => {
-    // Skip these tests since we can't easily mock Handlebars in ESM
-    it.skip('should use Handlebars to compile and execute the template', () => {});
-    
-    it.skip('should throw an error if Handlebars compilation fails', () => {});
+    // These were skipped "since we can't easily mock Handlebars in ESM", but
+    // there is no need to mock it: exercise the real engine. Handlebars is the
+    // component with the injection advisory, so leaving its wrapper untested was
+    // the wrong thing to skip.
+    it('should compile and execute the template', () => {
+      const result = processHandlebarsTemplate('Hello {{name}}!', { name: 'World' });
+      expect(result).toBe('Hello World!');
+    });
+
+    it('should support block helpers', () => {
+      const content = '{{#if enabled}}on{{else}}off{{/if}}';
+      expect(processHandlebarsTemplate(content, { enabled: true })).toBe('on');
+      expect(processHandlebarsTemplate(content, { enabled: false })).toBe('off');
+    });
+
+    it('should HTML-escape interpolated values by default', () => {
+      const result = processHandlebarsTemplate('{{value}}', { value: '<script>x</script>' });
+      expect(result).not.toContain('<script>');
+      expect(result).toContain('&lt;script&gt;');
+    });
+
+    it('should throw a wrapped error when compilation fails', () => {
+      expect(() => processHandlebarsTemplate('{{#if unclosed}}', {}))
+        .toThrow('Failed to process template');
+    });
   });
   
   describe('processConditionalSections', () => {
@@ -151,8 +172,13 @@ describe('templateEngine', () => {
       expect(result).toBe('Hello World!');
     });
     
-    it.skip('should use handlebars engine when specified', () => {
-      // Skipping this test since we can't easily mock Handlebars in ESM
+    it('should use the handlebars engine when specified', () => {
+      // A block helper is the observable difference: the simple engine only does
+      // {{var}} substitution and would leave this untouched.
+      const content = '{{#if enabled}}yes{{/if}}';
+      
+      expect(processTemplate(content, { enabled: true }, 'handlebars')).toBe('yes');
+      expect(processTemplate(content, { enabled: true }, 'simple')).toBe(content);
     });
     
     it('should fall back to simple engine for unknown engine type', () => {

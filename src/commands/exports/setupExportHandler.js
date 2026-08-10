@@ -7,10 +7,7 @@
 
 import path from 'path';
 import { BaseCommand } from '../../cli/base-command.js';
-import { 
-  getExportEventMetadata, 
-  getExportEventMetadataSync 
-} from '../../utils/export-events-registry.js';
+import { getExportEventMetadata } from '../../utils/export-events-registry.js';
 import { createFromTemplate } from '../../utils/unified-template-manager.js';
 
 /**
