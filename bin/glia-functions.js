@@ -13,35 +13,22 @@
 // Program instance will be created below
 
 import { Command } from 'commander';
-import { runCLI, createBearerToken } from '../src/cli/index.js';
 import { routeCommand } from '../src/cli/command-router.js';
 // Import project commands directly at top level to ensure it's loaded first
 import projectCommands from './glia-functions-project-commands.js';
-import { 
-  getApiConfig, 
-  getCliVersion, 
-  hasValidBearerToken, 
-  getAuthConfig, 
-  updateEnvFile, 
-  updateGlobalConfig,
+import {
+  getApiConfig,
+  getCliVersion,
+  refreshBearerTokenIfNeeded,
   listProfiles,
   createProfile,
-  updateProfile,
   switchProfile,
-  deleteProfile 
+  deleteProfile
 } from '../src/lib/config.js';
 import GliaApiClient from '../src/lib/api.js';
 import colorizer from '../src/utils/colorizer.js';
 import * as fs from 'fs';
 import path from 'path';
-import os from 'os';
-import { confirm } from '@inquirer/prompts';
-
-// Global config paths
-const GLOBAL_CONFIG_DIR = path.join(os.homedir(), '.glia-cli');
-const GLOBAL_CONFIG_FILE = path.join(GLOBAL_CONFIG_DIR, 'config.env');
-
-// Remove banner for cleaner CLI output
 
 // Create program instance
 const program = new Command();
@@ -51,6 +38,20 @@ export { program };
 
 // Make program available globally to avoid circular import issues
 global.__glia_cli_program = program;
+
+/**
+ * Build an API client for a command that talks to the API directly.
+ *
+ * Authentication is deliberately lazy: nothing is minted or refreshed until a
+ * command actually needs it, so --help, --version, init, dev and
+ * list-templates work offline and with no credentials configured.
+ *
+ * @returns {Promise<GliaApiClient>} An authenticated API client
+ */
+async function createApiClient() {
+  await refreshBearerTokenIfNeeded();
+  return new GliaApiClient(await getApiConfig());
+}
 
 // Configure basic program information
 program
@@ -73,11 +74,8 @@ program
   .option('-d, --detailed', 'Show detailed output', false)
   .action(async (options) => {
     try {
-      // Get API configuration directly
-      const apiConfig = await getApiConfig();
-      
-      // Create API client
-      const api = new GliaApiClient(apiConfig);
+      // Create API client (auth is acquired lazily)
+      const api = await createApiClient();
       
       // Show we're working
       console.log(colorizer.blue('ℹ️  Loading functions...'));
@@ -224,11 +222,8 @@ program
       }
       
       // Create function via API
-      // Get API configuration directly
-      const apiConfig = await getApiConfig();
-      
-      // Create API client
-      const api = new GliaApiClient(apiConfig);
+      // Create API client (auth is acquired lazily)
+      const api = await createApiClient();
       
       console.log(colorizer.blue('ℹ️  Info:'), `Creating function "${options.name}"...`);
       
@@ -311,6 +306,98 @@ program
     }
   });
 
+// Environment variables management command
+program
+  .command('update-env-vars')
+  .description('List or update the environment variables of a function')
+  .requiredOption('--id <id>', 'Function ID')
+  .option('--list', 'List current environment variables')
+  .option('--env <envVars>', 'Environment variables to set, as a JSON object string')
+  .option('--env-file <path>', 'Path to a JSON file containing environment variables')
+  .option('--no-deploy', 'Create a new version but do not deploy it')
+  .option('--output <path>', 'Write environment variables to a file (with --list)')
+  .option('--json', 'Output raw JSON')
+  .option('--profile <profile>', 'Profile to use for this operation')
+  .addHelpText('after', `
+Examples:
+  $ glia update-env-vars --id abc123 --list
+  $ glia update-env-vars --id abc123 --env '{"API_KEY":"secret"}'
+  $ glia update-env-vars --id abc123 --env-file ./env.json --no-deploy
+
+Setting a variable to null deletes it. Updating environment variables always
+creates a new function version; it is deployed unless --no-deploy is passed.`)
+  .action(async (options) => {
+    try {
+      // Load variables from a file if one was given
+      if (options.envFile) {
+        if (!fs.existsSync(options.envFile)) {
+          console.error(colorizer.red('Error:'), `File not found: ${options.envFile}`);
+          process.exit(1);
+        }
+        options.env = fs.readFileSync(options.envFile, 'utf8');
+        console.log(colorizer.blue('ℹ️  Info:'), `Loaded environment variables from ${options.envFile}`);
+      }
+
+      if (!options.list && !options.env) {
+        console.error(colorizer.red('Error:'), 'Specify --list, --env or --env-file');
+        process.exit(1);
+      }
+
+      // Parse the JSON payload for updates
+      let env;
+      if (options.env) {
+        try {
+          env = typeof options.env === 'string' ? JSON.parse(options.env) : options.env;
+        } catch (error) {
+          console.error(colorizer.red('Error:'), `Invalid JSON for environment variables: ${error.message}`);
+          process.exit(1);
+        }
+      }
+
+      const result = await routeCommand('update-env-vars', {
+        id: options.id,
+        list: options.list,
+        env,
+        deploy: options.deploy
+      }, false);
+
+      if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+      } else if (options.list) {
+        const envVars = result.environmentVariables || {};
+        console.log(colorizer.green('✅ Success:'), `${result.functionName} (${result.functionId})`);
+        console.log(colorizer.blue('ℹ️  Version:'), result.versionId);
+        const keys = Object.keys(envVars);
+        if (keys.length === 0) {
+          console.log('No environment variables defined.');
+        } else {
+          const pad = Math.max(...keys.map(k => k.length));
+          keys.forEach(k => console.log(`  ${colorizer.bold(k.padEnd(pad))}: ${envVars[k]}`));
+        }
+      } else {
+        console.log(colorizer.green('✅ Success:'), result.deployed
+          ? 'Environment variables updated and deployed.'
+          : 'Environment variables updated; new version not deployed.');
+        console.log(colorizer.blue('ℹ️  New version:'), result.newVersionId);
+      }
+
+      // Write the listed variables out to a file if requested
+      if (options.list && options.output) {
+        const envVars = result.environmentVariables || {};
+        const dir = path.dirname(options.output);
+        if (dir && !fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(options.output, JSON.stringify(envVars, null, 2));
+        console.log(colorizer.green('✅ Success:'), `Written to ${options.output}`);
+      }
+
+      setTimeout(() => process.exit(0), 100);
+    } catch (error) {
+      const { handleError } = await import('../src/cli/error-handler.js');
+      handleError(error);
+      setTimeout(() => process.exit(1), 100);
+    }
+  });
+
 // Deploy function version command
 program
   .command('deploy')
@@ -319,11 +406,8 @@ program
   .requiredOption('--version-id <versionId>', 'Version ID')
   .action(async (options) => {
     try {
-      // Get API configuration directly
-      const apiConfig = await getApiConfig();
-      
-      // Create API client
-      const api = new GliaApiClient(apiConfig);
+      // Create API client (auth is acquired lazily)
+      const api = await createApiClient();
       
       console.log(colorizer.blue('ℹ️  Info:'), 'Deploying function version...');
       
@@ -369,11 +453,8 @@ program
         process.exit(1);
       }
       
-      // Get API configuration directly
-      const apiConfig = await getApiConfig();
-      
-      // Create API client
-      const api = new GliaApiClient(apiConfig);
+      // Create API client (auth is acquired lazily)
+      const api = await createApiClient();
       
       // Get the function details to obtain invocation URI
       console.log(colorizer.blue('ℹ️  Info:'), 'Getting function details...');
@@ -422,11 +503,8 @@ program
   .requiredOption('--function-id <functionId>', 'Function ID')
   .action(async (options) => {
     try {
-      // Get API configuration directly
-      const apiConfig = await getApiConfig();
-      
-      // Create API client
-      const api = new GliaApiClient(apiConfig);
+      // Create API client (auth is acquired lazily)
+      const api = await createApiClient();
       
       console.log(colorizer.blue('ℹ️  Info:'), 'Fetching logs...');
       
@@ -610,23 +688,21 @@ program
         process.exit(1);
       }
       
-      // Get API configuration directly
-      const apiConfig = await getApiConfig();
-      const api = new GliaApiClient(apiConfig);
+      // Create API client (auth is acquired lazily)
+      const api = await createApiClient();
       
       // Read and bundle the function code
       console.log(colorizer.blue('ℹ️  Info:'), `Bundling code from ${options.path}...`);
-      const { execSync } = require('child_process');
-      
+      const { execFileSync } = await import('node:child_process');
+
       try {
-        execSync(`npm run build ${options.path}`, { stdio: 'inherit' });
+        execFileSync('npm', ['run', 'build', options.path], { stdio: 'inherit' });
       } catch (error) {
         console.error(colorizer.red('Error bundling code:'), error.message);
         process.exit(1);
       }
       
       // Read the bundled code
-      const fs = require('fs');
       let code;
       try {
         code = fs.readFileSync('./function-out.js', 'utf8');
@@ -1096,7 +1172,75 @@ program
   .option('--variables <vars>', 'Template variables (key1=value1,key2=value2)')
   .option('--list-templates', 'List available project templates')
   .option('--force', 'Force create even if directory exists')
-  
+  .action(async (options) => {
+    try {
+      // Handle list templates option
+      if (options.listTemplates) {
+        try {
+          const { listProjectTemplates } = await import('../src/utils/project-template-manager.js');
+          const templates = await listProjectTemplates();
+          
+          console.log(colorizer.blue('ℹ️  Available project templates:'));
+          
+          if (templates.length === 0) {
+            console.log('No project templates available');
+          } else {
+            templates.forEach(template => {
+              console.log(`- ${colorizer.bold(template.displayName)}: ${template.description}`);
+            });
+          }
+          
+          // Delay exit to ensure output is flushed
+          setTimeout(() => {
+            process.exit(0);
+          }, 100);
+          return;
+        } catch (error) {
+          console.error(colorizer.red(`Error listing project templates: ${error.message}`));
+          
+          // Delay exit to ensure output is flushed
+          setTimeout(() => {
+            process.exit(1);
+          }, 100);
+          return;
+        }
+      }
+      
+      // Parse variables if provided
+      let parsedVars = {};
+      if (options.variables) {
+        parsedVars = options.variables.split(',').reduce((vars, item) => {
+          const [key, value] = item.split('=');
+          if (key && value) {
+            vars[key.trim()] = value.trim();
+          }
+          return vars;
+        }, {});
+      }
+      
+      // Import and run init command
+      const { initCommand } = await import('../src/commands/init.js');
+      await initCommand({
+        template: options.template,
+        output: options.output,
+        variables: parsedVars,
+        force: options.force
+      });
+      
+      // Delay exit to ensure output is flushed
+      setTimeout(() => {
+        process.exit(0);
+      }, 100);
+    } catch (error) {
+      console.error(colorizer.red(`Error initializing project: ${error.message}`));
+      
+      // Delay exit to ensure output is flushed
+      setTimeout(() => {
+        process.exit(1);
+      }, 100);
+    }
+  });
+
 // Setup export handler command
 program
   .command('setup-export-handler')
@@ -1180,245 +1324,46 @@ program
     await startMcpServer();
   });
 
-// Continue with init command action
-program.commands.find(cmd => cmd.name() === 'init').action(async (options) => {
-    try {
-      // Handle list templates option
-      if (options.listTemplates) {
-        try {
-          const { listProjectTemplates } = await import('../src/utils/project-template-manager.js');
-          const templates = await listProjectTemplates();
-          
-          console.log(colorizer.blue('ℹ️  Available project templates:'));
-          
-          if (templates.length === 0) {
-            console.log('No project templates available');
-          } else {
-            templates.forEach(template => {
-              console.log(`- ${colorizer.bold(template.displayName)}: ${template.description}`);
-            });
-          }
-          
-          // Delay exit to ensure output is flushed
-          setTimeout(() => {
-            process.exit(0);
-          }, 100);
-          return;
-        } catch (error) {
-          console.error(colorizer.red(`Error listing project templates: ${error.message}`));
-          
-          // Delay exit to ensure output is flushed
-          setTimeout(() => {
-            process.exit(1);
-          }, 100);
-          return;
-        }
-      }
-      
-      // Parse variables if provided
-      let parsedVars = {};
-      if (options.variables) {
-        parsedVars = options.variables.split(',').reduce((vars, item) => {
-          const [key, value] = item.split('=');
-          if (key && value) {
-            vars[key.trim()] = value.trim();
-          }
-          return vars;
-        }, {});
-      }
-      
-      // Import and run init command
-      const { initCommand } = await import('../src/commands/init.js');
-      await initCommand({
-        template: options.template,
-        output: options.output,
-        variables: parsedVars,
-        force: options.force
-      });
-      
-      // Delay exit to ensure output is flushed
-      setTimeout(() => {
-        process.exit(0);
-      }, 100);
-    } catch (error) {
-      console.error(colorizer.red(`Error initializing project: ${error.message}`));
-      
-      // Delay exit to ensure output is flushed
-      setTimeout(() => {
-        process.exit(1);
-      }, 100);
-    }
-  });
-
-// Add --profile option to all commands
+// Add --profile to every command that does not already declare it.
 program.commands.forEach(command => {
-  // Skip the profiles command as it already handles profiles
-  if (command.name() !== 'profiles') {
-    command.option('--profile <profile>', 'Profile to use for this operation');
-    
-    // Wrap the action to set the profile before executing
-    const originalAction = command.actionFunction;
-    if (originalAction) {
-      command.action((options, ...args) => {
-        if (options.profile) {
-          // Set the profile for this command execution
-          process.env.GLIA_PROFILE = options.profile;
-        }
-        
-        // Call the original action
-        return originalAction(options, ...args);
-      });
-    }
+  // The `profiles` command group manages profiles itself.
+  if (command.name() === 'profiles') return;
+  if (command.options.some(option => option.long === '--profile')) return;
+  command.option('--profile <profile>', 'Profile to use for this operation');
+});
+
+// Apply --profile before the selected command's action runs. A preAction hook is
+// used rather than wrapping each action: Commander does not expose the
+// registered handler, so the previous `command.actionFunction` wrapper never
+// fired and profiles only worked via the raw argv scan below.
+program.hook('preAction', (thisCommand, actionCommand) => {
+  const profile = actionCommand.opts().profile;
+  if (profile) {
+    process.env.GLIA_PROFILE = profile;
   }
 });
 
-// Handle interactive mode when no arguments provided
+// When invoked with no arguments, show help rather than starting an
+// interactive menu. The interactive layer has been retired; all commands are
+// now flag-driven and every one works with --json for scripted use.
 if (process.argv.length <= 2) {
-  runCLI()
-    .then(() => {
-      // Ensure process exits after CLI completes
-      if (!process.exitCode) process.exit(0);
-    })
-    .catch(error => {
-      console.error(colorizer.red(`Unexpected error: ${error.message}`));
-      console.error('Please report this issue on GitHub or contact support.');
-      process.exit(1);
-    });
+  program.outputHelp();
+  process.exit(0);
 } else {
-  // Check for profile flag first
+  // Resolve --profile from raw argv before anything reads configuration: the
+  // active profile determines which config file is loaded.
   const profileIndex = process.argv.findIndex(arg => arg === '--profile');
   if (profileIndex > 0 && profileIndex < process.argv.length - 1) {
-    // Set the profile for this command execution
     process.env.GLIA_PROFILE = process.argv[profileIndex + 1];
   }
-  
-  // Ensure configuration is loaded properly
-  const loadAndCheckConfig = async () => {
-    try {
-      // Load full configuration first to ensure site ID is properly loaded
-      const { loadConfig } = await import('../src/lib/config.js');
-      const config = await loadConfig();
-      
-      // Check if site ID is missing but we have auth config
-      if (!config.siteId) {
-        console.log(colorizer.yellow('⚠️ No site ID found in configuration.'));
-        console.log(colorizer.yellow('Some commands may fail without a site ID.'));
-        console.log(colorizer.yellow('Consider running the CLI in interactive mode to set a site ID.'));
-        console.log('');
-      }
-      
-      // Check for valid bearer token
-      const hasToken = await hasValidBearerToken();
-      // Skip token check for profile commands
-      const isProfileCommand = process.argv.includes('profiles');
-      
-      if (!hasToken && !isProfileCommand) {
-        console.log(colorizer.yellow('⚠️ No valid bearer token found or token has expired.'));
-        
-        // Check if we have auth config to auto-refresh the token
-        try {
-          const authConfig = await getAuthConfig();
-          if (authConfig.keyId && authConfig.keySecret) {
-            console.log(colorizer.blue('ℹ️  Automatically refreshing authentication token...'));
-            
-            // Generate new token
-            const tokenInfo = await createBearerToken(
-              authConfig.keyId, 
-              authConfig.keySecret, 
-              authConfig.apiUrl || 'https://api.glia.com',
-              config.siteId // Pass site ID to validate access
-            );
-            
-            // Check if we're using a specific profile
-            const profileName = process.env.GLIA_PROFILE || 'default';
-            
-            // Check if token has suggested site ID and we need to update
-            if (!config.siteId && tokenInfo.suggestedSiteId) {
-              console.log(colorizer.blue(`ℹ️  Found available site ID: ${tokenInfo.suggestedSiteId}`));
-              console.log(colorizer.blue('ℹ️  Setting as default site ID for this session.'));
-              
-              // Update site ID in environment
-              process.env.GLIA_SITE_ID = tokenInfo.suggestedSiteId;
-              
-              // Include site ID in updates
-              const updates = {
-                'GLIA_BEARER_TOKEN': tokenInfo.token,
-                'GLIA_TOKEN_EXPIRES_AT': tokenInfo.expiresAt,
-                'GLIA_SITE_ID': tokenInfo.suggestedSiteId
-              };
-              
-              // Save to the appropriate location
-              if (profileName !== 'default') {
-                await updateProfile(profileName, updates);
-              } else {
-                const useGlobal = fs.existsSync(GLOBAL_CONFIG_FILE) && 
-                  fs.readFileSync(GLOBAL_CONFIG_FILE, 'utf8').includes(`GLIA_KEY_ID=${authConfig.keyId}`);
-                
-                const updateFn = useGlobal ? updateGlobalConfig : updateEnvFile;
-                await updateFn(updates);
-              }
-              
-              console.log(colorizer.green(`✅ Site ID ${tokenInfo.suggestedSiteId} set and saved to configuration.`));
-            } else {
-              // Standard token update without site ID change
-              const updates = {
-                'GLIA_BEARER_TOKEN': tokenInfo.token,
-                'GLIA_TOKEN_EXPIRES_AT': tokenInfo.expiresAt
-              };
-              
-              // Save to the appropriate location
-              if (profileName !== 'default') {
-                await updateProfile(profileName, updates);
-              } else {
-                const useGlobal = fs.existsSync(GLOBAL_CONFIG_FILE) && 
-                  fs.readFileSync(GLOBAL_CONFIG_FILE, 'utf8').includes(`GLIA_KEY_ID=${authConfig.keyId}`);
-                
-                const updateFn = useGlobal ? updateGlobalConfig : updateEnvFile;
-                await updateFn(updates);
-              }
-            }
-            
-            // Update process.env for current session
-            process.env.GLIA_BEARER_TOKEN = tokenInfo.token;
-            process.env.GLIA_TOKEN_EXPIRES_AT = tokenInfo.expiresAt.toString();
-            
-            console.log(colorizer.green('✅ Authentication token refreshed successfully.'));
-          } else {
-            console.log(colorizer.yellow('Some commands may fail without proper authentication.'));
-            console.log(colorizer.yellow('Consider running the CLI in interactive mode first to set up your environment.'));
-            console.log('');
-          }
-        } catch (error) {
-          console.log(colorizer.yellow('Some commands may fail without proper authentication.'));
-          console.log(colorizer.yellow('Consider running the CLI in interactive mode first to set up your environment.'));
-          console.log('');
-        }
-      }
-    } catch (error) {
-      console.log(colorizer.yellow(`⚠️ Warning: Error loading configuration: ${error.message}`));
-      console.log(colorizer.yellow('Some commands may fail. Consider running the CLI in interactive mode first.'));
-    }
-  };
-  
-  // We need to import project commands module at top level
-  // This is handled separately
-  
-  // Load and check configuration before parsing commands
-  loadAndCheckConfig().then(() => {
-    // Parse command line arguments - after all commands are registered
-    program.parse();
-    
-    // Since we're dealing with commander.js, there's a chance that no action is called
-    // if the user provides incorrect or no command. In that case, commander will display help
-    // and we don't want to exit prematurely.
-    // 
-    // Do not exit - let commander handle the flow
-  }).catch(error => {
-    console.error(colorizer.red(`Error loading configuration: ${error.message}`));
-    // Continue anyway with command parsing
-    program.parse();
-    
-    // Do not exit - let commander handle the flow
+
+  // Authentication is lazy. Commands that need the API mint or refresh a token
+  // on demand (routeCommand -> refreshBearerTokenIfNeeded, or createApiClient
+  // here), and GliaApiClient refreshes and retries on a 401. Nothing is
+  // requested up front, so --help, --version, init, dev and list-templates work
+  // offline with no credentials configured.
+  program.parseAsync(process.argv).catch(error => {
+    console.error(colorizer.red(`Error: ${error.message}`));
+    process.exit(1);
   });
 }
-

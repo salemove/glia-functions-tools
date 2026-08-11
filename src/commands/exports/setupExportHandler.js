@@ -7,10 +7,7 @@
 
 import path from 'path';
 import { BaseCommand } from '../../cli/base-command.js';
-import { 
-  getExportEventMetadata, 
-  getExportEventMetadataSync 
-} from '../../utils/export-events-registry.js';
+import { getExportEventMetadata } from '../../utils/export-events-registry.js';
 import { createFromTemplate } from '../../utils/unified-template-manager.js';
 
 /**
@@ -33,7 +30,6 @@ export default async function setupExportHandler(options, command = new BaseComm
     // Run wizard if interactive mode is enabled
     if (interactive) {
       // Import wizard only when needed
-      const { runExportWizard } = await import('../../cli/export-wizard.js');
       const wizardResult = await runExportWizard(options);
       
       if (wizardResult.canceled) {

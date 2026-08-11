@@ -1,10 +1,9 @@
 import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
-import { routeCommand } from '../../src/cli/command-router.js';
-import * as commands from '../../src/commands/index.js';
-import { handleError } from '../../src/cli/error-handler.js';
 
-// Mock commands and error handler
-jest.mock('../../src/commands/index.js', () => ({
+// Mock specifiers resolve relative to tests/setup/setupTests.js, not this file.
+// See the note at the bottom of that file.
+jest.unstable_mockModule('../../src/commands/index.js', () => ({
+  __esModule: true,
   listFunctions: jest.fn().mockResolvedValue({ functions: [] }),
   createFunction: jest.fn().mockResolvedValue({ id: 'new-function-id' }),
   fetchLogs: jest.fn().mockResolvedValue({ logs: [] }),
@@ -12,9 +11,19 @@ jest.mock('../../src/commands/index.js', () => ({
   createAndDeployVersion: jest.fn().mockResolvedValue({ id: 'new-version-id' })
 }));
 
-jest.mock('../../src/cli/error-handler.js', () => ({
+jest.unstable_mockModule('../../src/cli/error-handler.js', () => ({
+  __esModule: true,
   handleError: jest.fn()
 }));
+
+jest.unstable_mockModule('../../src/lib/config.js', () => ({
+  __esModule: true,
+  refreshBearerTokenIfNeeded: jest.fn().mockResolvedValue(false)
+}));
+
+const { routeCommand } = await import('../../src/cli/command-router.js');
+const commands = await import('../../src/commands/index.js');
+const { handleError } = await import('../../src/cli/error-handler.js');
 
 // Mock process.exit to prevent test termination
 const originalExit = process.exit;
@@ -99,20 +108,30 @@ describe('Command Router Integration', () => {
     expect(commands.invokeFunction).not.toHaveBeenCalled();
   });
   
+  // routeCommand reports the error and returns { success: false, error } so the
+  // caller decides whether to exit; it does not call process.exit itself.
   it('should handle unknown commands', async () => {
-    await routeCommand('unknown-command');
+    const result = await routeCommand('unknown-command');
     
     expect(handleError).toHaveBeenCalled();
-    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(result.success).toBe(false);
+    expect(result.error.message).toContain('Unknown command');
   });
   
   it('should handle command execution errors', async () => {
     const testError = new Error('Command execution failed');
     commands.listFunctions.mockRejectedValueOnce(testError);
     
-    await routeCommand('list-functions');
+    const result = await routeCommand('list-functions');
     
     expect(handleError).toHaveBeenCalledWith(testError);
-    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(result).toEqual({ success: false, error: testError });
+  });
+  
+  it('should propagate errors when error handling is disabled', async () => {
+    const testError = new Error('Command execution failed');
+    commands.listFunctions.mockRejectedValueOnce(testError);
+    
+    await expect(routeCommand('list-functions', {}, false)).rejects.toThrow(testError);
   });
 });

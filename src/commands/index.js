@@ -45,7 +45,6 @@ export { default as deployApplet } from './applets/deployApplet.js';
 export { default as listApplets } from './applets/listApplets.js';
 export { default as updateApplet } from './applets/updateApplet.js';
 export { default as listAppletTemplates } from './applets/listAppletTemplates.js';
-export { default as selectApplet } from './applets/selectApplet.js';
 
 // Project management commands
 export { deployProject } from './projects/index.js';

@@ -29,17 +29,16 @@ export default async function testAndSetKvValue(options) {
     validateNamespace(namespace);
     validateKey(key);
     
-    if (oldValue === undefined) {
-      throw new ValidationError('Old value is required', { field: 'oldValue' }, {});
+    if (oldValue === undefined && newValue === undefined) {
+      throw new ValidationError(
+        'At least one of --old-value or --new-value is required',
+        { field: 'oldValue' }, {});
     }
     
-    if (newValue === undefined) {
-      throw new ValidationError('New value is required', { field: 'newValue' }, {});
-    }
-    
-    // Convert values to appropriate types
-    const convertedOldValue = convertValue(oldValue);
-    const convertedNewValue = convertValue(newValue);
+    // "null" is meaningful here: as oldValue it means "the key must not exist",
+    // and as newValue it means "delete the key".
+    const convertedOldValue = convertValue(oldValue, { allowNull: true });
+    const convertedNewValue = convertValue(newValue, { allowNull: true });
     
     // Get API client
     const apiConfig = await getApiConfig();

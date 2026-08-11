@@ -29,8 +29,7 @@ export const EXPORT_EVENT_TYPES = {
     schemaFile: 'engagement-start-schema.json',
     samplePayloadFile: 'engagement-start-sample.json',
     templateName: 'export-handler-engagement-start',
-    tags: ['export', 'webhook', 'engagement'],
-    documentation: 'https://docs.glia.com/reference/export-events#engagement-start'
+    tags: ['export', 'webhook', 'engagement']
   },
   'engagement-end': {
     displayName: 'Engagement End',
@@ -38,8 +37,7 @@ export const EXPORT_EVENT_TYPES = {
     schemaFile: 'engagement-end-schema.json',
     samplePayloadFile: 'engagement-end-sample.json',
     templateName: 'export-handler-engagement-end',
-    tags: ['export', 'webhook', 'engagement'],
-    documentation: 'https://docs.glia.com/reference/export-events#engagement-end'
+    tags: ['export', 'webhook', 'engagement']
   },
   'engagement-transfer': {
     displayName: 'Engagement Transfer',
@@ -47,8 +45,7 @@ export const EXPORT_EVENT_TYPES = {
     schemaFile: 'engagement-transfer-schema.json',
     samplePayloadFile: 'engagement-transfer-sample.json',
     templateName: 'export-handler-engagement-transfer',
-    tags: ['export', 'webhook', 'engagement', 'transfer'],
-    documentation: 'https://docs.glia.com/reference/export-events#engagement-transfer'
+    tags: ['export', 'webhook', 'engagement', 'transfer']
   },
   'presence-update': {
     displayName: 'Presence Update',
@@ -56,8 +53,31 @@ export const EXPORT_EVENT_TYPES = {
     schemaFile: 'presence-update-schema.json',
     samplePayloadFile: 'presence-update-sample.json',
     templateName: 'export-handler-presence-update',
-    tags: ['export', 'webhook', 'operator', 'presence'],
-    documentation: 'https://docs.glia.com/reference/export-events#presence-update'
+    tags: ['export', 'webhook', 'operator', 'presence']
+  },
+  'inbox-message': {
+    displayName: 'Inbox Message',
+    description: 'Triggered when a visitor leaves a message with no specific operator identified',
+    templateName: 'export-handler-inbox-message',
+    tags: ['export', 'webhook', 'message', 'visitor']
+  },
+  'operator-message': {
+    displayName: 'Operator Message',
+    description: 'Triggered when an operator sends a message during an engagement',
+    templateName: 'export-handler-operator-message',
+    tags: ['export', 'webhook', 'message', 'operator']
+  },
+  'voicemail': {
+    displayName: 'Voicemail',
+    description: 'Triggered when a visitor leaves a voicemail on an incoming phone number',
+    templateName: 'export-handler-voicemail',
+    tags: ['export', 'webhook', 'phone', 'voicemail']
+  },
+  'outbound-call-initialization': {
+    displayName: 'Outbound Call Initialization',
+    description: 'Triggered when an outbound call is initiated',
+    templateName: 'export-handler-outbound-call-initialization',
+    tags: ['export', 'webhook', 'phone', 'outbound']
   }
 };
 

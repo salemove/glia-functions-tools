@@ -1,0 +1,19 @@
+#!/bin/sh
+#
+# pre-push: the verification gate.
+#
+# This repository has no CI. `npm run verify` is the only thing standing between
+# a refactor and silent breakage, so it runs here rather than in a workflow.
+#
+# Install with: npm run install-hooks
+# Bypass for a genuine emergency with: git push --no-verify
+set -e
+
+# Run any pre-push hook inherited from a global core.hooksPath first, so
+# installing this one does not silently disable existing tooling.
+. "$(dirname "$0")/_delegate.sh"
+delegate_to_global_hook pre-push "$@"
+
+echo "pre-push: running npm run verify..."
+npm run --silent verify
+echo "pre-push: verify passed."

@@ -8,10 +8,11 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.24.3",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "zod": "^4.1.12"
   },
   "engines": {
-    "node": ">=16.0.0"
-  }
+    "node": ">=20.0.0"
+  },
+  "private": true
 }

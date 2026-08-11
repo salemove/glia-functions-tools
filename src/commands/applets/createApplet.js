@@ -14,7 +14,6 @@ import {
   listAppletTemplates
 } from '../../utils/unified-template-manager.js';
 import { validateTemplateVariables } from '../../utils/template-engine.js';
-import { input, select, checkbox, confirm } from '@inquirer/prompts';
 
 // Get the directory of this file
 const __filename = fileURLToPath(import.meta.url);
@@ -44,7 +43,7 @@ export async function createApplet(options) {
       
       command.info('\nAvailable applet templates:');
       templates.forEach(template => {
-        command.log(`- ${template.displayName}: ${template.description}`);
+        command.print(`- ${template.displayName}: ${template.description}`);
       });
       
       return { templates };
@@ -118,12 +117,12 @@ export async function createApplet(options) {
           
           // Install dependencies
           command.info('Installing dependencies...');
-          const { execSync } = require('child_process');
-          execSync('npm install', { stdio: 'inherit' });
+          const { execFileSync } = await import('node:child_process');
+          execFileSync('npm', ['install'], { stdio: 'inherit' });
           
           // Build the project
           command.info('Building project...');
-          execSync('npm run build', { stdio: 'inherit' });
+          execFileSync('npm', ['run', 'build'], { stdio: 'inherit' });
           
           // Reset working directory
           process.chdir(cwd);
@@ -291,14 +290,14 @@ async function main() {
         // Display success message
         if (result.applet) {
           command.success(`Applet "${name}" created and deployed with ID: ${result.applet.id}`);
-          command.log(`Output directory: ${result.outputDir}`);
+          command.print(`Output directory: ${result.outputDir}`);
         } else {
           command.success(`Applet "${name}" created successfully!`);
-          command.log(`Output directory: ${result.outputDir}`);
+          command.print(`Output directory: ${result.outputDir}`);
           
           if (!deploy) {
             command.info('\nTo deploy this applet, run:');
-            command.log(`glia-functions deploy-applet --path "${result.outputDir}/applet.html" --name "${name}" --owner-site-id <YOUR_SITE_ID>`);
+            command.print(`glia-functions deploy-applet --path "${result.outputDir}/applet.html" --name "${name}" --owner-site-id <YOUR_SITE_ID>`);
           }
         }
       } catch (error) {

@@ -15,7 +15,6 @@
 import { getApiConfig } from '../lib/config.js';
 import GliaApiClient from '../lib/api.js';
 import BaseCommand from '../cli/base-command.js';
-import { input, select, confirm, editor, checkbox } from '@inquirer/prompts';
 import colorizer from '../utils/colorizer.js';
 import fs from 'fs';
 import path from 'path';

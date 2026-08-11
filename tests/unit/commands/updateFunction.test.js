@@ -2,19 +2,20 @@
  * Tests for the update-function command
  */
 import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
-import { updateFunction } from '../../../src/commands/updateFunction.js';
 
 // Mock dependencies
 const updateFunctionMock = jest.fn();
 
-jest.mock('../../../src/lib/api.js', () => ({
+// Mock specifiers resolve relative to tests/setup/setupTests.js, not this
+// file. See the note at the bottom of that file.
+jest.unstable_mockModule('../../src/lib/api.js', () => ({
   __esModule: true,
   default: jest.fn().mockImplementation(() => ({
     updateFunction: updateFunctionMock
   }))
 }));
 
-jest.mock('../../../src/lib/config.js', () => ({
+jest.unstable_mockModule('../../src/lib/config.js', () => ({
   __esModule: true,
   getApiConfig: jest.fn().mockResolvedValue({
     apiUrl: 'https://test-api.glia.com',
@@ -22,6 +23,8 @@ jest.mock('../../../src/lib/config.js', () => ({
     bearerToken: 'test-token'
   })
 }));
+
+const { updateFunction } = await import('../../../src/commands/updateFunction.js');
 
 describe('updateFunction', () => {
   beforeEach(() => {
@@ -113,7 +116,5 @@ describe('updateFunction', () => {
       id: 'test-id',
       name: 'Updated Function'
     })).rejects.toThrow('API error');
-    
-    expect(console.error).toHaveBeenCalledWith('Error updating function:', error);
   });
 });

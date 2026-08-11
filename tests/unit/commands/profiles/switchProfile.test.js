@@ -1,18 +1,35 @@
 import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
 
-// Mock dependencies
-jest.mock('../../../../src/lib/config.js');
-jest.mock('../../../../src/cli/error-handler.js');
-jest.mock('../../../../src/lib/cache.js');
-jest.mock('../../../../src/lib/api.js');
+// Mock specifiers resolve relative to tests/setup/setupTests.js, not this file.
+// See the note at the bottom of that file. Automock does not exist for ESM, so
+// each mocked export is named explicitly.
+jest.unstable_mockModule('../../src/lib/config.js', () => ({
+  __esModule: true,
+  switchProfile: jest.fn(),
+  listProfiles: jest.fn()
+}));
 
-// Import the mocked dependencies
-import { switchProfile, listProfiles } from '../../../../src/lib/config.js';
-import { showSuccess, showError, showWarning, showInfo } from '../../../../src/cli/error-handler.js';
-import { ResponseCache } from '../../../../src/lib/cache.js';
+jest.unstable_mockModule('../../src/cli/error-handler.js', () => ({
+  __esModule: true,
+  showSuccess: jest.fn(),
+  showError: jest.fn(),
+  showWarning: jest.fn(),
+  showInfo: jest.fn(),
+  handleError: jest.fn()
+}));
 
-// Import the command to test
-import switchProfileCommand from '../../../../src/commands/profiles/switchProfile.js';
+jest.unstable_mockModule('../../src/lib/cache.js', () => ({
+  __esModule: true,
+  ResponseCache: jest.fn().mockImplementation(() => ({ clear: jest.fn() })),
+  DEFAULT_CACHE_CONFIG: {}
+}));
+
+const { switchProfile, listProfiles } = await import('../../../../src/lib/config.js');
+const { showSuccess, showError, showWarning, showInfo } =
+  await import('../../../../src/cli/error-handler.js');
+const { ResponseCache } = await import('../../../../src/lib/cache.js');
+const { default: switchProfileCommand } =
+  await import('../../../../src/commands/profiles/switchProfile.js');
 
 describe('switchProfile command', () => {
   beforeEach(() => {

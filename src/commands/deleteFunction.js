@@ -51,18 +51,10 @@ async function main() {
         command.warning(`You are about to delete function ${options.id}`);
         command.warning('This action cannot be undone!');
 
-        // Confirm deletion unless --yes flag is passed
+        // --yes is required for non-interactive deletion.
         if (!options.yes) {
-          const { confirm } = await import('@inquirer/prompts');
-          const shouldDelete = await confirm({
-            message: 'Are you sure you want to delete this function?',
-            default: false
-          });
-
-          if (!shouldDelete) {
-            command.info('Function deletion cancelled');
-            return;
-          }
+          command.error('Refusing to delete without --yes. This action is not reversible.');
+          return;
         }
 
         // Show operation status

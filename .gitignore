@@ -7,7 +7,10 @@ function-out.js
 .vscode
 .DS_Store
 function-out.js
-docs
+docs/api
+docs/design
 CLAUDE.md
 backup
 coverage
+.kiro/
+specs/

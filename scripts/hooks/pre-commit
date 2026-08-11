@@ -1,0 +1,10 @@
+#!/bin/sh
+#
+# pre-commit: no checks of its own.
+#
+# It exists only so that pointing core.hooksPath at this directory does not
+# disable a pre-commit hook inherited from a global hooks directory.
+set -e
+
+. "$(dirname "$0")/_delegate.sh"
+delegate_to_global_hook pre-commit "$@"

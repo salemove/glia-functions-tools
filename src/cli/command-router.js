@@ -95,9 +95,6 @@ export async function routeCommand(commandName, options = {}, handleErrors = tru
       case 'update-applet':
         result = await commands.updateApplet(options);
         break;
-      case 'select-applet':
-        result = await commands.selectApplet(options);
-        break;
 
       // KV Store commands
       case 'kv:get':

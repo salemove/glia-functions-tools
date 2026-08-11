@@ -112,9 +112,9 @@ Main function that processes incoming requests, checks surveys, searches for con
 - Create a Survey Question asking if a ticket should be submitted. It should be a boolean question (Yes/No)
 - Add Survey Question to the Operator Survey
 - Update your .env file with the information in Installation guide above
-- Create a new function (See: <a href="https://docs.glia.com/glia-dev/docs/glia-functions">Glia Functions Documentation</a>)
-- Gather the invocation uri from the create function (See: <a href="https://docs.glia.com/glia-how-to/docs/writing-and-deploying-glia-functions">Writing and Deploying Glia Functions</a>)
-- Create an Export in Glia Hub (See: <a href="https://docs.glia.com/glia-how-to/docs/connecting-glia-functions-to-exports#step-3-configure-an-export">Setting up Glia Functions in Exports</a>)
+- Create a new function
+- Gather the invocation uri from the create function
+- Create an Export in Glia Hub
 
 
 ## Error Handling

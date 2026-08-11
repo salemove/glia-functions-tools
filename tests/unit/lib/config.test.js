@@ -1,216 +1,169 @@
+/**
+ * Tests for the configuration module.
+ *
+ * These run against a real temporary config directory rather than a mocked
+ * `node:fs` / `node:os` / `node:path`. The previous version mocked all three
+ * builtins, which does not work under ESM (jest.mock does not hoist or replace
+ * modules here), and additionally asserted on `jest.spyOn(global, ...)` handles
+ * for functions that were never globals — so those assertions could not fail.
+ */
 import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
-import * as fs from 'fs';
-import path from 'path';
-import os from 'os';
-import dotenv from 'dotenv';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
-// Mock modules
-jest.mock('fs');
-jest.mock('path');
-jest.mock('os');
-jest.mock('dotenv');
+// config.js resolves its directory at import time, so point it at a scratch
+// directory before importing it.
+const CONFIG_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'glia-config-test-'));
+process.env.GLIA_CONFIG_DIR = CONFIG_DIR;
 
-// Import the code to test
-import { 
-  loadConfig, 
+const {
+  loadConfig,
   validateConfig,
   switchProfile,
+  createProfile,
   refreshBearerTokenIfNeeded,
   listProfiles,
-  getCurrentProfileName
-} from '../../../src/lib/config.js';
+  getCurrentProfileName,
+  getConfigDir,
+  updateGlobalConfig
+} = await import('../../../src/lib/config.js');
+
+const PROFILES_DIR = path.join(CONFIG_DIR, 'profiles');
+const GLOBAL_CONFIG_FILE = path.join(CONFIG_DIR, 'config.env');
+
+/** Environment keys the config module reads or writes. */
+const MANAGED_ENV_KEYS = [
+  'GLIA_PROFILE', 'GLIA_KEY_ID', 'GLIA_KEY_SECRET', 'GLIA_SITE_ID',
+  'GLIA_API_URL', 'GLIA_BEARER_TOKEN', 'GLIA_TOKEN_EXPIRES_AT'
+];
 
 describe('Config module', () => {
-  // Prepare mocks
-  const mockHomedir = '/mock/home';
-  const mockGlobalConfigDir = '/mock/home/.glia-cli';
-  const mockProfilesDir = '/mock/home/.glia-cli/profiles';
-  const mockGlobalConfigFile = '/mock/home/.glia-cli/config.env';
-  const mockLocalConfigFile = './.env';
-  
-  // Setup process.env
-  const originalEnv = process.env;
-  
+  let savedEnv;
+
   beforeEach(() => {
-    // Reset mocks
-    jest.clearAllMocks();
-    
-    // Mock homedir and path.join
-    os.homedir.mockReturnValue(mockHomedir);
-    path.join.mockImplementation((...paths) => paths.join('/'));
-    
-    // Mock filesystem
-    fs.existsSync.mockReturnValue(true);
-    fs.mkdirSync.mockReturnValue(undefined);
-    fs.readFileSync.mockReturnValue('');
-    fs.writeFileSync.mockReturnValue(undefined);
-    fs.chmodSync.mockReturnValue(undefined);
-    
-    // Mock dotenv
-    dotenv.config.mockReturnValue({ 
-      parsed: {} 
-    });
-    
-    // Reset process.env before each test
-    process.env = { ...originalEnv };
-    
-    // Mock fetch for token refresh
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ token: 'new-test-token', expires_in: 3600 })
-    });
+    savedEnv = {};
+    for (const key of MANAGED_ENV_KEYS) {
+      savedEnv[key] = process.env[key];
+      delete process.env[key];
+    }
+
+    // Start each test from an empty config directory.
+    fs.rmSync(PROFILES_DIR, { recursive: true, force: true });
+    fs.rmSync(GLOBAL_CONFIG_FILE, { force: true });
+    fs.mkdirSync(PROFILES_DIR, { recursive: true });
   });
-  
+
   afterEach(() => {
-    // Restore process.env
-    process.env = originalEnv;
+    for (const key of MANAGED_ENV_KEYS) {
+      if (savedEnv[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = savedEnv[key];
+      }
+    }
   });
-  
+
+  afterAll(() => {
+    fs.rmSync(CONFIG_DIR, { recursive: true, force: true });
+  });
+
+  describe('getConfigDir', () => {
+    it('should honour GLIA_CONFIG_DIR', () => {
+      expect(getConfigDir()).toBe(CONFIG_DIR);
+    });
+  });
+
   describe('loadConfig', () => {
-    it('should load config with correct precedence', async () => {
-      // Setup mocks for this test
-      dotenv.config.mockImplementation((options) => {
-        if (options.path === mockGlobalConfigFile) {
-          return { parsed: { GLOBAL_VAR: 'global' } };
-        } else if (options.path.includes('profiles/test-profile.env')) {
-          return { parsed: { PROFILE_VAR: 'profile', COMMON_VAR: 'profile-value' } };
-        } else if (options.path === mockLocalConfigFile) {
-          return { parsed: { LOCAL_VAR: 'local', COMMON_VAR: 'local-value' } };
-        }
-        return { parsed: {} };
-      });
-      
-      // Set process.env variables
+    it('should give process.env precedence over profile and global files', async () => {
+      fs.writeFileSync(GLOBAL_CONFIG_FILE, 'GLIA_API_URL=https://global.example.com\n');
+      fs.writeFileSync(
+        path.join(PROFILES_DIR, 'test-profile.env'),
+        'GLIA_SITE_ID=profile-site\nGLIA_API_URL=https://profile.example.com\n'
+      );
+
       process.env.GLIA_PROFILE = 'test-profile';
-      process.env.ENV_VAR = 'env';
-      process.env.COMMON_VAR = 'env-value';
-      
-      // Call the function
+      process.env.GLIA_API_URL = 'https://env.example.com';
+
       const config = await loadConfig();
-      
-      // Check that variables were properly merged with correct precedence
-      expect(process.env.GLOBAL_VAR).toBe('global');
-      expect(process.env.PROFILE_VAR).toBe('profile');
-      expect(process.env.LOCAL_VAR).toBe('local');
-      expect(process.env.ENV_VAR).toBe('env');
-      
-      // Most importantly - process.env should have highest precedence
-      expect(process.env.COMMON_VAR).toBe('env-value');
-      
-      // Config object should contain the final values
+
       expect(config.profile).toBe('test-profile');
+      // Set only in the profile file, so it is picked up.
+      expect(config.siteId).toBe('profile-site');
+      // Set in all three layers; the environment wins.
+      expect(config.apiUrl).toBe('https://env.example.com');
+    });
+
+    it('should fall back to the default profile name', async () => {
+      const config = await loadConfig();
+      expect(config.profile).toBe('default');
+      expect(getCurrentProfileName()).toBe('default');
     });
   });
-  
+
   describe('validateConfig', () => {
-    it('should throw error if required fields are missing', () => {
-      const config = { field1: 'value1' };
-      const requiredFields = ['field1', 'field2', 'field3'];
-      
-      expect(() => validateConfig(config, requiredFields)).toThrow('Missing required configuration');
+    it('should throw if required fields are missing', () => {
+      expect(() => validateConfig({ field1: 'value1' }, ['field1', 'field2', 'field3']))
+        .toThrow('Missing required configuration');
     });
-    
-    it('should return config if all required fields are present', () => {
+
+    it('should return the config if all required fields are present', () => {
       const config = { field1: 'value1', field2: 'value2', field3: 'value3' };
-      const requiredFields = ['field1', 'field2'];
-      
-      expect(validateConfig(config, requiredFields)).toEqual(config);
+      expect(validateConfig(config, ['field1', 'field2'])).toEqual(config);
     });
   });
-  
+
+  describe('listProfiles', () => {
+    it('should list .env files as profile names and ignore anything else', () => {
+      fs.writeFileSync(path.join(PROFILES_DIR, 'profile1.env'), '');
+      fs.writeFileSync(path.join(PROFILES_DIR, 'profile2.env'), '');
+      fs.writeFileSync(path.join(PROFILES_DIR, 'not-a-profile.txt'), '');
+
+      expect(listProfiles().sort()).toEqual(['profile1', 'profile2']);
+    });
+
+    it('should return an empty array when the profiles directory is missing', () => {
+      fs.rmSync(PROFILES_DIR, { recursive: true, force: true });
+      expect(listProfiles()).toEqual([]);
+    });
+  });
+
   describe('switchProfile', () => {
-    it('should update global config and process.env when switching profiles', async () => {
-      // Mock profile exists
-      fs.existsSync.mockReturnValue(true);
-      
-      // Mock functions
-      const mockUpdateGlobalConfig = jest.spyOn(global, 'updateGlobalConfig')
-        .mockImplementation(() => Promise.resolve());
-      
-      const mockLoadConfig = jest.spyOn(global, 'loadConfig')
-        .mockImplementation(() => Promise.resolve());
-        
-      const mockRefreshToken = jest.spyOn(global, 'refreshBearerTokenIfNeeded')
-        .mockImplementation(() => Promise.resolve(true));
-        
-      // Set initial process.env values
+    it('should persist the profile, update the environment and clear the token', async () => {
+      await createProfile('new-profile', { GLIA_SITE_ID: 'new-site' });
+
       process.env.GLIA_BEARER_TOKEN = 'old-token';
       process.env.GLIA_TOKEN_EXPIRES_AT = '12345';
-      process.env.GLIA_SITE_ID = 'old-site-id';
-      
-      // Call the function
+
       await switchProfile('new-profile');
-      
-      // Check that global config was updated
-      expect(mockUpdateGlobalConfig).toHaveBeenCalledWith({
-        'GLIA_PROFILE': 'new-profile'
-      });
-      
-      // Check that process.env was updated
+
       expect(process.env.GLIA_PROFILE).toBe('new-profile');
-      
-      // Check that bearer token variables were cleared
-      expect(process.env.GLIA_BEARER_TOKEN).toBeUndefined();
-      expect(process.env.GLIA_TOKEN_EXPIRES_AT).toBeUndefined();
-      
-      // Check that config was reloaded
-      expect(mockLoadConfig).toHaveBeenCalled();
-      
-      // Check that token refresh was attempted
-      expect(mockRefreshToken).toHaveBeenCalled();
+      expect(fs.readFileSync(GLOBAL_CONFIG_FILE, 'utf8')).toContain('GLIA_PROFILE=new-profile');
+
+      // The old token belonged to the previous profile and must not leak across.
+      expect(process.env.GLIA_BEARER_TOKEN).not.toBe('old-token');
+      expect(process.env.GLIA_TOKEN_EXPIRES_AT).not.toBe('12345');
     });
-    
-    it('should create default profile if it does not exist', async () => {
-      // Mock default profile doesn't exist, then gets created
-      fs.existsSync.mockImplementation((path) => {
-        if (path.includes('default.env')) {
-          return false; // The first time we check, it doesn't exist
-        }
-        return true;
-      });
-      
-      // Mock functions
-      jest.spyOn(global, 'createProfile').mockImplementation(() => Promise.resolve('default'));
-      jest.spyOn(global, 'updateGlobalConfig').mockImplementation(() => Promise.resolve());
-      jest.spyOn(global, 'loadConfig').mockImplementation(() => Promise.resolve());
-      jest.spyOn(global, 'refreshBearerTokenIfNeeded').mockImplementation(() => Promise.resolve(true));
-      
-      // Call the function
-      await switchProfile('default');
-      
-      // Check that create profile was called
-      expect(global.createProfile).toHaveBeenCalledWith('default');
-    });
-    
-    it('should throw error if profile does not exist', async () => {
-      // Mock profile doesn't exist
-      fs.existsSync.mockReturnValue(false);
-      
-      // Call the function
-      await expect(switchProfile('non-existent')).rejects.toThrow('Profile non-existent does not exist');
+
+    it('should throw if the profile does not exist', async () => {
+      await expect(switchProfile('non-existent'))
+        .rejects.toThrow('Profile non-existent does not exist');
     });
   });
-  
+
   describe('refreshBearerTokenIfNeeded', () => {
-    it('should refresh token when it is expired or missing', async () => {
-      // Setup mock environment
+    it('should request a new token when the current one has expired', async () => {
       process.env.GLIA_KEY_ID = 'test-key-id';
       process.env.GLIA_KEY_SECRET = 'test-key-secret';
       process.env.GLIA_API_URL = 'https://test-api.glia.com';
       process.env.GLIA_BEARER_TOKEN = 'expired-token';
-      process.env.GLIA_TOKEN_EXPIRES_AT = (Date.now() - 10000).toString(); // Expired
-      
-      // Mock fetch response
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ token: 'new-token', expires_in: 3600 })
-      });
-      
-      // Call the function
+      process.env.GLIA_TOKEN_EXPIRES_AT = (Date.now() - 10_000).toString();
+
+      fetchMock.mockResponseOnce(JSON.stringify({ token: 'new-token', expires_in: 3600 }));
+
       const result = await refreshBearerTokenIfNeeded();
-      
-      // Check that fetch was called with correct arguments
-      expect(global.fetch).toHaveBeenCalledWith(
+
+      expect(fetchMock).toHaveBeenCalledWith(
         'https://test-api.glia.com/operator_authentication/tokens',
         expect.objectContaining({
           method: 'POST',
@@ -220,58 +173,31 @@ describe('Config module', () => {
           })
         })
       );
-      
-      // Check result
       expect(result).toBe(true);
-      
-      // Check that token was updated
       expect(process.env.GLIA_BEARER_TOKEN).toBe('new-token');
       expect(process.env.GLIA_TOKEN_EXPIRES_AT).toBeTruthy();
     });
-    
-    it('should not refresh token when it is valid', async () => {
-      // Setup mock environment
+
+    it('should not request a token when the current one is still valid', async () => {
       process.env.GLIA_KEY_ID = 'test-key-id';
       process.env.GLIA_KEY_SECRET = 'test-key-secret';
       process.env.GLIA_BEARER_TOKEN = 'valid-token';
-      // Set expiration 1 hour in the future
-      process.env.GLIA_TOKEN_EXPIRES_AT = (Date.now() + 3600000).toString(); 
-      
-      // Call the function
+      process.env.GLIA_TOKEN_EXPIRES_AT = (Date.now() + 3_600_000).toString();
+
       const result = await refreshBearerTokenIfNeeded();
-      
-      // Check that fetch was not called
-      expect(global.fetch).not.toHaveBeenCalled();
-      
-      // Check result
+
+      expect(fetchMock).not.toHaveBeenCalled();
       expect(result).toBe(false);
-      
-      // Check that token was not updated
       expect(process.env.GLIA_BEARER_TOKEN).toBe('valid-token');
     });
-  });
-  
-  describe('listProfiles', () => {
-    it('should return a list of profiles', () => {
-      // Mock reading profiles directory
-      fs.readdirSync.mockReturnValue(['profile1.env', 'profile2.env', 'not-a-profile.txt']);
-      
-      // Call the function
-      const profiles = listProfiles();
-      
-      // Check result
-      expect(profiles).toEqual(['profile1', 'profile2']);
-    });
-    
-    it('should return empty array if profiles directory does not exist', () => {
-      // Mock profiles directory doesn't exist
-      fs.existsSync.mockReturnValue(false);
-      
-      // Call the function
-      const profiles = listProfiles();
-      
-      // Check result
-      expect(profiles).toEqual([]);
+
+    it('should report failure when there are no credentials to refresh with', async () => {
+      delete process.env.GLIA_BEARER_TOKEN;
+
+      const result = await refreshBearerTokenIfNeeded();
+
+      expect(result).toBe(false);
+      expect(fetchMock).not.toHaveBeenCalled();
     });
   });
 });

@@ -2,7 +2,6 @@
  * Unit tests for the BaseCommand class
  */
 import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
-import { BaseCommand } from '../../../src/cli/base-command.js';
 import { Command } from 'commander';
 
 // Mock console methods
@@ -12,26 +11,27 @@ const mockConsoleError = jest.spyOn(console, 'error').mockImplementation(() => {
 // Mock process.exit
 const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {});
 
-// Mock API client
-jest.mock('../../../src/lib/api.js', () => {
-  return jest.fn().mockImplementation(() => {
-    return {
-      listFunctions: jest.fn().mockResolvedValue({ functions: [] }),
-      createFunction: jest.fn().mockResolvedValue({ id: 'test-id', name: 'Test Function' }),
-    };
-  });
-});
+// Mock specifiers resolve relative to tests/setup/setupTests.js, not this
+// file. See the note at the bottom of that file. A mock factory must return a
+// module namespace, so a default export goes under `default`.
+jest.unstable_mockModule('../../src/lib/api.js', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({
+    listFunctions: jest.fn().mockResolvedValue({ functions: [] }),
+    createFunction: jest.fn().mockResolvedValue({ id: 'test-id', name: 'Test Function' })
+  }))
+}));
 
-// Mock config
-jest.mock('../../../src/lib/config.js', () => {
-  return {
-    getApiConfig: jest.fn(() => ({
-      bearerToken: 'test-token',
-      apiUrl: 'https://api.glia.com',
-      siteId: 'test-site'
-    }))
-  };
-});
+jest.unstable_mockModule('../../src/lib/config.js', () => ({
+  __esModule: true,
+  getApiConfig: jest.fn(async () => ({
+    bearerToken: 'test-token',
+    apiUrl: 'https://api.glia.com',
+    siteId: 'test-site'
+  }))
+}));
+
+const { BaseCommand } = await import('../../../src/cli/base-command.js');
 
 describe('BaseCommand', () => {
   // Reset mocks before each test
@@ -67,7 +67,10 @@ describe('BaseCommand', () => {
     const helpText = command.command.helpInformation();
     expect(helpText).toContain('--name');
     expect(helpText).toContain('Name option');
-    expect(helpText).toContain('required');
+    // Commander does not annotate required options in help text, so check the
+    // option itself rather than the rendered string.
+    const option = command.command.options.find(o => o.long === '--name');
+    expect(option.mandatory).toBe(true);
   });
 
   test('should create an API client', async () => {
@@ -170,12 +173,6 @@ describe('BaseCommand', () => {
   });
 
   test('should handle action with error handling', async () => {
-    // Mock handleError
-    const mockHandleError = jest.fn();
-    jest.mock('../../../src/cli/error-handler.js', () => ({
-      handleError: mockHandleError
-    }));
-    
     const command = new BaseCommand('test', 'Test command');
     const mockAction = jest.fn().mockImplementation(() => {
       throw new Error('Test error');
@@ -184,8 +181,9 @@ describe('BaseCommand', () => {
     command.action(mockAction);
     
     // Simulate running the action by calling the commander action directly
+    // Commander invokes the handler with the parsed positional arguments.
     const commanderAction = command.command._actionHandler;
-    await commanderAction();
+    await commanderAction([]);
     
     expect(mockAction).toHaveBeenCalled();
     expect(mockExit).toHaveBeenCalledWith(1);

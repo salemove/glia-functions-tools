@@ -22,14 +22,38 @@ import * as fs from 'fs';
 import path from 'path';
 import os from 'os';
 
+/**
+ * Verbose configuration tracing. Off unless GLIA_DEBUG_CONFIG=true: switching
+ * profiles used to print six [DEBUG:config] lines unconditionally.
+ *
+ * @param {...any} args - Arguments forwarded to console.log
+ */
+const configDebug = (...args) => {
+  if (process.env.GLIA_DEBUG_CONFIG === 'true') console.log(...args);
+};
+
 // Default configuration values
 const DEFAULT_CONFIG = {
   apiUrl: 'https://api.glia.com',
   defaultProfile: 'default'
 };
 
+/**
+ * Root directory for global configuration and profiles.
+ *
+ * Overridable with GLIA_CONFIG_DIR. This exists so the CLI can be pointed at a
+ * scratch directory in tests and sandboxes instead of the real home directory —
+ * previously the only way to isolate it was to mock `node:os`, which is why the
+ * config tests mocked builtins and stopped working under ESM.
+ *
+ * @returns {string} Absolute path to the configuration directory
+ */
+export function getConfigDir() {
+  return process.env.GLIA_CONFIG_DIR || path.join(os.homedir(), '.glia-cli');
+}
+
 // Global config paths
-const GLOBAL_CONFIG_DIR = path.join(os.homedir(), '.glia-cli');
+const GLOBAL_CONFIG_DIR = getConfigDir();
 const GLOBAL_CONFIG_FILE = path.join(GLOBAL_CONFIG_DIR, 'config.env');
 const PROFILES_DIR = path.join(GLOBAL_CONFIG_DIR, 'profiles');
 export const LOCAL_CONFIG_FILE = './.env';
@@ -613,7 +637,7 @@ export async function switchProfile(profileName) {
     throw new ConfigurationError('Profile name is required');
   }
   
-  console.log(`[DEBUG:config] Switching to profile: ${profileName}`);
+  configDebug(`[DEBUG:config] Switching to profile: ${profileName}`);
   
   const profilePath = getProfilePath(profileName);
   
@@ -631,7 +655,7 @@ export async function switchProfile(profileName) {
   // Read the profile's contents before updating global config
   // This is important to capture the site ID before we reset environment
   const profileEnv = loadEnvFile(profilePath);
-  console.log(`[DEBUG:config] Profile site ID before switch: ${profileEnv.GLIA_SITE_ID || 'none'}`);
+  configDebug(`[DEBUG:config] Profile site ID before switch: ${profileEnv.GLIA_SITE_ID || 'none'}`);
   
   // Update global config to use this profile
   await updateGlobalConfig({
@@ -640,7 +664,7 @@ export async function switchProfile(profileName) {
   
   // Record the current process environment before changing anything
   const originalSiteId = process.env.GLIA_SITE_ID;
-  console.log(`[DEBUG:config] Current process.env site ID: ${originalSiteId || 'none'}`);
+  configDebug(`[DEBUG:config] Current process.env site ID: ${originalSiteId || 'none'}`);
   
   // Completely clear all Glia-related environment variables
   const GLIA_ENV_VARS = [
@@ -650,7 +674,7 @@ export async function switchProfile(profileName) {
   
   GLIA_ENV_VARS.forEach(key => {
     if (process.env[key]) {
-      console.log(`[DEBUG:config] Clearing ${key} from process.env`);
+      configDebug(`[DEBUG:config] Clearing ${key} from process.env`);
       delete process.env[key];
     }
   });
@@ -665,11 +689,11 @@ export async function switchProfile(profileName) {
   await refreshBearerTokenIfNeeded();
   
   // Verify the site ID was properly loaded
-  console.log(`[DEBUG:config] Profile switch complete. New site ID: ${newConfig.siteId || 'none'}`);
+  configDebug(`[DEBUG:config] Profile switch complete. New site ID: ${newConfig.siteId || 'none'}`);
   
   // If the site ID changed, show a notification
   if (originalSiteId !== newConfig.siteId) {
-    console.log(`[DEBUG:config] Site ID changed during profile switch: ${originalSiteId || 'none'} -> ${newConfig.siteId || 'none'}`);
+    configDebug(`[DEBUG:config] Site ID changed during profile switch: ${originalSiteId || 'none'} -> ${newConfig.siteId || 'none'}`);
   }
   
   return profileName;
@@ -717,15 +741,17 @@ export async function deleteProfile(profileName) {
 }
 
 /**
- * Gets the CLI version from package.json
- * 
+ * Gets the CLI version from the package's own package.json.
+ *
+ * Resolved relative to this module rather than the working directory, so the
+ * reported version is correct when the CLI is run from another project.
+ *
  * @returns {string} The CLI version
  */
 export function getCliVersion() {
   try {
-    const packageJson = JSON.parse(
-      fs.readFileSync(path.resolve('./package.json'), 'utf8')
-    );
+    const packageJsonPath = new URL('../../package.json', import.meta.url);
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
     return packageJson.version || '0.1.0';
   } catch (error) {
     // Default to development version if we can't read package.json

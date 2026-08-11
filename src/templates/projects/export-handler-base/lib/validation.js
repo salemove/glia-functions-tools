@@ -49,12 +49,20 @@ if (fs.existsSync(baseSchemaPath)) {
 // Cache for compiled validators
 const validators = {};
 
-// Mapping from export_type values to schema file names
+// Mapping from event type to schema file names.
+//
+// Both spellings are accepted for each event: the value that appears on the wire
+// in `export_type` / `action`, and the internal name used by EVENT_TYPE_DETECTION
+// and by callers. Without the aliases, `getSamplePayload('engagement_end')` and
+// anything routed through auto-detection looked for `engagement_end-schema.json`
+// and `user_presence_update-schema.json`, neither of which exists.
 const EVENT_TYPE_TO_SCHEMA_MAP = {
   'engagement_start': 'engagement-start',
   'engagement': 'engagement-end',
+  'engagement_end': 'engagement-end',
   'engagement_transfer': 'engagement-transfer',
-  'presence_update': 'presence-update'
+  'presence_update': 'presence-update',
+  'user_presence_update': 'presence-update'
 };
 
 // Export event type detection map

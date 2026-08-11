@@ -3,16 +3,8 @@
  */
 
 import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
-import path from 'path';
-import fs from 'fs';
 
-// Mock the path resolution
-jest.mock('path', () => ({
-  ...jest.requireActual('path'),
-  resolve: jest.fn((_, p) => p)
-}));
-
-// Import the module after mocking
+// The registry is pure data plus path joins, so it needs no mocking at all.
 import { 
   EXPORT_EVENT_TYPES,
   getExportEventTypes,
@@ -20,7 +12,7 @@ import {
   getSchemaPath,
   getSamplePayloadPath,
   filterEventTypesByTag
-} from '../../../src/utils/export-events-registry';
+} from '../../../src/utils/export-events-registry.js';
 
 describe('Export Events Registry', () => {
   beforeEach(() => {
@@ -51,8 +43,8 @@ describe('Export Events Registry', () => {
     });
   });
 
-  it('should get export event metadata for a valid event type', () => {
-    const metadata = getExportEventMetadata('engagement-start');
+  it('should get export event metadata for a valid event type', async () => {
+    const metadata = await getExportEventMetadata('engagement-start');
     
     expect(metadata).toBeDefined();
     expect(metadata.displayName).toBe('Engagement Start');
@@ -62,37 +54,33 @@ describe('Export Events Registry', () => {
     expect(metadata.tags).toContain('webhook');
   });
 
-  it('should return null for an invalid event type', () => {
-    const metadata = getExportEventMetadata('invalid-event-type');
+  it('should return null for an invalid event type', async () => {
+    const metadata = await getExportEventMetadata('invalid-event-type');
     expect(metadata).toBeNull();
   });
 
-  it('should return all event types', () => {
-    const eventTypes = getExportEventTypes();
+  it('should return all event types', async () => {
+    const eventTypes = await getExportEventTypes();
     
     expect(eventTypes).toBe(EXPORT_EVENT_TYPES);
     expect(Object.keys(eventTypes).length).toBeGreaterThanOrEqual(4);
   });
 
-  it('should get schema path for an event type', () => {
-    path.resolve.mockImplementation((dir, file) => `${dir}/${file}`);
-    
-    const schemaPath = getSchemaPath('engagement-start');
+  it('should get schema path for an event type', async () => {
+    const schemaPath = await getSchemaPath('engagement-start');
     
     expect(schemaPath).toContain('engagement-start-schema.json');
   });
 
-  it('should get sample payload path for an event type', () => {
-    path.resolve.mockImplementation((dir, file) => `${dir}/${file}`);
-    
-    const samplePath = getSamplePayloadPath('engagement-start');
+  it('should get sample payload path for an event type', async () => {
+    const samplePath = await getSamplePayloadPath('engagement-start');
     
     expect(samplePath).toContain('engagement-start-sample.json');
   });
 
-  it('should filter event types by tag', () => {
+  it('should filter event types by tag', async () => {
     // Filter by 'engagement' tag
-    const engagementEvents = filterEventTypesByTag('engagement');
+    const engagementEvents = await filterEventTypesByTag('engagement');
     
     // Should include engagement events but not presence events
     expect(Object.keys(engagementEvents)).toContain('engagement-start');
@@ -101,15 +89,15 @@ describe('Export Events Registry', () => {
     expect(Object.keys(engagementEvents)).not.toContain('presence-update');
     
     // Filter by 'presence' tag
-    const presenceEvents = filterEventTypesByTag('presence');
+    const presenceEvents = await filterEventTypesByTag('presence');
     
     // Should include presence events but not engagement events
     expect(Object.keys(presenceEvents)).toContain('presence-update');
     expect(Object.keys(presenceEvents)).not.toContain('engagement-start');
   });
 
-  it('should return all events when tag is empty', () => {
-    const allEvents = filterEventTypesByTag('');
+  it('should return all events when tag is empty', async () => {
+    const allEvents = await filterEventTypesByTag('');
     
     expect(Object.keys(allEvents).length).toBe(Object.keys(EXPORT_EVENT_TYPES).length);
   });
