@@ -1,0 +1,22 @@
+---
+QueueTicketEnqueued: &base_queue_ticket
+  created_at: 2017-02-20T00:00:00Z
+  id: 59b0d786-e59a-4c62-a064-05e4f47488a2
+  media: video
+  site_id: 51138845-3c46-4c21-8bd8-1cf45957f62e
+  source: hotlink
+  state: enqueued
+  queue_ids:
+    - cd564dd0-c8c1-44d2-88a9-074243e029b8
+  visitor_authentication:
+    Authorization: "Bearer
+      eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ2aXNpdG9yOjVmOGE2YmM2LTAxNTYtNDM0ZC04N2RkLWMyYWEzMjQwMD\
+      JkOSIsInJvbGVzIjpbeyJ0eXBlIjoidmlzaXRvciIsInZpc2l0b3JfaWQiOiI1ZjhhNmJjNi0wMTU2LTQzNGQtODdkZC1jMmFhMzI0MDAyZDkif\
+      Sx7InR5cGUiOiJzaXRlX3Zpc2l0b3IiLCJzaXRlX2lkIjoiZWEwY2FiMTctMzAxYy00YzNiLWI2ZWItNmNlZjZkZDkzYjVjIn1dLCJpc3MiOiJT\
+      YWxlTW92ZSBWaXNpdC1SZWdpc3RyeSIsImlhdCI6MTU0MTE2NDE1NSwiZXhwIjoxNTQyMzczNzU1fQ.hjILobSmfLBTZwQtMSHxdg6bAo7W5Uys\
+      LOmIaktRdPNuAN3iEWOC6A-PXfwPM98MKFs5QgKX_H-q4JJ_gixB0w"
+  engagement_id: null
+QueueTicketFinished:
+  <<: *base_queue_ticket
+  state: finished
+  engagement_id: abc12121-e888-43ae-99e0-07a676e9a111

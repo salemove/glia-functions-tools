@@ -1,0 +1,399 @@
+---
+create:
+  summary: Create function
+  tags:
+    - Functions
+  # yamllint disable rule:line-length
+  description: |
+    Creates a Glia function with provided values.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or site's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+      * Access permissions: `functions:create`
+    * [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens), requires:
+      * Scope: `functions:create`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../schemas/functions.yaml#/create_request'
+  responses:
+    '201':
+      description: Glia function was created.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/functions.yaml#/function_response'
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+    '500':
+      $ref: '../../../common_components/responses/errors.yaml#/500_internal_server_error'
+    '502':
+      $ref: '../../../common_components/responses/errors.yaml#/502_bad_gateway'
+    '503':
+      $ref: '../../../common_components/responses/errors.yaml#/503_service_unavailable'
+
+list:
+  summary: List functions
+  tags:
+    - Functions
+  # yamllint disable rule:line-length
+  description: |
+    Fetches Glia functions by their site IDs.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or site's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+      * Access permissions: `functions:read`
+    * [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens), requires:
+      * Scope: `functions:read`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/functions.yaml#/site_ids'
+      required: true
+      in: query
+  responses:
+    '200':
+      description: Functions were fetched.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/functions.yaml#/list_response'
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+
+fetch:
+  summary: Fetch function
+  tags:
+    - Functions
+  # yamllint disable rule:line-length
+  description: |
+    Fetches a Glia function by its ID.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or site's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+      * Access permissions: `functions:read`
+    * [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens), requires:
+      * Scope: `functions:read`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/functions.yaml#/function_id'
+      required: true
+      in: path
+  responses:
+    '200':
+      description: Function was fetched.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/functions.yaml#/function_response'
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '404':
+      $ref: '../../../common_components/responses/errors.yaml#/404_not_found'
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+
+update:
+  summary: Update function
+  tags:
+    - Functions
+  # yamllint disable rule:line-length
+  description: |
+    Updates a specified Glia function.
+
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * Access permissions: `functions:update`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/functions.yaml#/function_id'
+      required: true
+      in: path
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../schemas/functions.yaml#/update_request'
+  responses:
+    '200':
+      description: Function was updated.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/functions.yaml#/function_response'
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '404':
+      $ref: '../../../common_components/responses/errors.yaml#/404_not_found'
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+
+logs:
+  summary: List function logs
+  tags:
+    - Functions
+  # yamllint disable rule:line-length
+  description: |
+    Fetches log messages generated by the specified Glia function.
+
+    > ℹ️
+    > Note that logs are available only for 24 hours.
+
+    The results are [paginated](#interpreting-the-output) and sorted by log timestamp in ascending order.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or site's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+      * Access permissions: `functions:read`
+    * [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens), requires:
+      * Scope: `functions:read`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+
+    ### Interpreting the Output
+
+    #### Pagination
+
+    * If the results are more than one page, the `next_page` will not be `null` and can be used to fetch the next batch.
+    * **Never** try to use any information that the `next_page` could contain. The format of the `next_page` is subject to change at any point in time.
+    * To fetch the next page of results, use the `next_page` from the previous request's response.
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/functions.yaml#/function_id'
+      required: true
+      in: path
+    - $ref: '../../src/parameters/functions.yaml#/from'
+      in: query
+    - $ref: '../../src/parameters/functions.yaml#/to'
+      in: query
+    - $ref: '../../src/parameters/functions.yaml#/per_page'
+      in: query
+  responses:
+    '200':
+      description: Function logs were fetched.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/functions.yaml#/logs_response'
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '404':
+      $ref: '../../../common_components/responses/errors.yaml#/404_not_found'
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+    '500':
+      $ref: '../../../common_components/responses/errors.yaml#/500_internal_server_error'
+
+fetch_stats:
+  summary: Function invocation statistics
+  tags:
+    - Functions
+  # yamllint disable rule:line-length
+  description: |
+    Returns Glia function's invocation statistics for the current month.
+
+    The response will include the dates of function invocations and the number of invocations on that day.
+
+    To get the data for specific functions, provide `function_ids` containing the list of the functions' IDs in the request body. Otherwise, the response will include the statistics for all the functions that belong to the requester account.
+
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * Access permissions: `functions:read`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          $ref: '../schemas/functions.yaml#/fetch_stats'
+  responses:
+    '200':
+      description: Functions statistics were fetched.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/functions.yaml#/fetch_stats_response'
+    '500':
+      $ref: '../../../common_components/responses/errors.yaml#/500_internal_server_error'
+
+fetch_task:
+  summary: Fetch function version creation task
+  tags:
+    - Functions
+  # yamllint disable rule:line-length
+  description: |
+    Fetches the status of a Glia function version creation task.
+
+    Response will include the created function version once the task has finished.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or site's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+      * Access permissions: `functions:read`
+    * [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens), requires:
+      * Scope: `functions:read`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/functions.yaml#/function_id'
+      required: true
+      in: path
+    - $ref: '../../src/parameters/functions.yaml#/task_id'
+      required: true
+      in: path
+  responses:
+    '200':
+      description: Function version creation is still in progress.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/functions.yaml#/task_processing_response'
+    '303':
+      description: Function version creation has successfully completed.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/functions.yaml#/task_completed_response'
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '404':
+      $ref: '../../../common_components/responses/errors.yaml#/404_not_found'
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+
+deployments:
+  summary: Change current version of the function
+  tags:
+    - Functions
+  # yamllint disable rule:line-length
+  description: |
+    Changes the version ID of a specified Glia function.
+
+    Note that on function and version creation, no current version is set for the function, and it has to be changed manually using this endpoint.
+
+    Response includes an URI that can be used to invoke the function with new version. The URI is specific to a function, so it will not change by changing the current version.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or site's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+      * Access permissions: `functions:update`
+    * [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens), requires:
+      * Scope: `functions:update`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/functions.yaml#/function_id'
+      required: true
+      in: path
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../schemas/functions.yaml#/deployments_request'
+  responses:
+    '200':
+      description: Current version of the function was updated.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/functions.yaml#/deployments_response'
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+    '500':
+      $ref: '../../../common_components/responses/errors.yaml#/500_internal_server_error'
+    '502':
+      $ref: '../../../common_components/responses/errors.yaml#/502_bad_gateway'
+    '503':
+      $ref: '../../../common_components/responses/errors.yaml#/503_service_unavailable'
+
+invoke:
+  summary: Invoke function
+  tags:
+    - Functions
+  # yamllint disable rule:line-length
+  description: |
+    Invokes the function code. The invocation URI is generated on function creation - note that the ID of this resource is **NOT** a function's ID.
+
+    > ℹ️
+    > Returned response is the result of the code's execution and it could be anything.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or site's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+      * Access permissions: `functions_invoke:create`
+    * [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens), requires:
+      * Scope: `functions:invoke`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/functions.yaml#/integration_id'
+      required: true
+      in: path
+  responses:
+    '500':
+      $ref: '../../../common_components/responses/errors.yaml#/500_internal_server_error'

@@ -1,0 +1,10 @@
+---
+properties:
+  id:
+    $ref: '../properties/transfer_request.yaml#/properties/id'
+  timeout:
+    $ref: '../properties/transfer_request.yaml#/properties/timeout'
+
+required:
+  - id
+  - timeout

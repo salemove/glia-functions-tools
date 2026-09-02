@@ -1,0 +1,75 @@
+---
+bearer_token:
+  '200':
+    description: >
+      OK
+
+      Use the bearer token (`access_token`) within next 24 hours to make requests on behalf of the visitor with the
+      given ID (`id`).
+
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          oneOf:
+            - $ref: '../schemas/site_visitors.yaml#/schemas/BearerToken'
+            - $ref: '../schemas/site_visitors.yaml#/schemas/AuthenticatedVisitorBearerToken'
+            - $ref: '../schemas/site_visitors.yaml#/schemas/AuthenticationFailedVisitorBearerToken'
+        examples:
+          $ref: '../examples/site_visitors.yaml#/CreateVisitorResponse'
+
+bearer_token_renew:
+  '200':
+    description: >
+      OK
+
+      Use the bearer token (`access_token`) within next 24 hours to make requests on behalf of the visitor with the
+      given ID (`id`).
+
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          oneOf:
+            - $ref: '../schemas/site_visitors.yaml#/schemas/BearerTokenRenew'
+            - $ref: '../schemas/site_visitors.yaml#/schemas/AuthenticatedVisitorBearerToken'
+        examples:
+          $ref: '../examples/site_visitors.yaml#/RenewVisitorTokenResponse'
+
+get_visitor:
+  '200':
+    description: >
+      OK
+      Details of the visitor with ID `visitor_id` on the site with the ID `site_id`.
+
+
+      For authenticated visitors the attributes and tokens fetched from the authentication provider are included in the `authenticated_attributes` block.
+
+      Note that whenever the `authenticated_attributes` block is present, the returned `name` and `email` also contain the values of the `visitor_name` and `visitor_email` respectively from this block instead of the actual values stored in the database.
+
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          $ref: '../schemas/site_visitors.yaml#/schemas/GetVisitor'
+
+search_visitors:
+  '200':
+    description: >
+      OK
+
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          $ref: '../schemas/site_visitors.yaml#/schemas/SearchVisitors'
+
+patch_visitor:
+  '200':
+    description: >
+      Visitor's information was updated.
+
+      For authenticated visitors the attributes and tokens fetched from the authentication provider are included in the `authenticated_attributes` block.
+
+      Note that whenever the `authenticated_attributes` block is present, the returned `name` and `email` also contain the values of the `visitor_name` and `visitor_email` respectively from this block instead of the actual values stored in the database.
+
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          $ref: '../schemas/site_visitors.yaml#/schemas/PatchVisitorResponse'

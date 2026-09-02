@@ -1,0 +1,49 @@
+---
+type: object
+properties:
+  id:
+    $ref: '../properties/queue.yaml#/id'
+  name:
+    $ref: '../properties/queue.yaml#/name'
+  site_id:
+    $ref: '../properties/queue.yaml#/site_id'
+  description:
+    $ref: '../properties/queue.yaml#/description'
+  is_default:
+    $ref: '../properties/queue.yaml#/is_default'
+  priority:
+    $ref: '../properties/queue.yaml#/priority'
+  capacity:
+    $ref: '../properties/queue.yaml#/capacity'
+  capacity_policy:
+    $ref: '../properties/queue.yaml#/capacity_policy'
+  routing_policy:
+    $ref: '../properties/queue.yaml#/routing_policy'
+  available_properties:
+    $ref: '../properties/queue.yaml#/available_properties'
+  status:
+    $ref: '../properties/queue.yaml#/status'
+  self_status:
+    $ref: '../properties/queue.yaml#/self_status'
+  display_phone_number:
+    $ref: '../properties/queue.yaml#/display_phone_number'
+  when_unstaffed:
+    $ref: '../properties/queue.yaml#/when_unstaffed'
+  operator_ranking_enabled:
+    $ref: '../properties/queue.yaml#/operator_ranking_enabled'
+  welcome_message:
+    $ref: '../properties/queue.yaml#/welcome_message'
+  scheduling_policy_id:
+    $ref: '../properties/queue.yaml#/scheduling_policy_id'
+  scheduling_exception_policy_id:
+    $ref: '../properties/queue.yaml#/scheduling_exception_policy_id'
+  fallback_queue_id:
+    $ref: '../properties/queue.yaml#/fallback_queue_id'
+  operator_affinity:
+    $ref: '../properties/operator_affinity.yaml'
+  partition_id:
+    $ref: '../properties/queue.yaml#/partition_id'
+  created_at:
+    $ref: '../../../common_components/properties.yaml#/created_at'
+  updated_at:
+    $ref: '../../../common_components/properties.yaml#/updated_at'

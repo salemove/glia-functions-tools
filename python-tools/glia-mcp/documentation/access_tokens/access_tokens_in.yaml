@@ -1,0 +1,137 @@
+---
+openapi: 3.0.0
+info:
+  title: Access Tokens
+  version: '1.0'
+
+# Base URLs
+servers:
+  - url: 'https://api.glia.com'
+    description: For users worldwide, except Europe
+  - url: 'https://api.glia.eu'
+    description: For users in Europe
+
+paths:
+  # tag: Bearer tokens
+  /operator_authentication/tokens:
+    post:
+      security: []
+      tags:
+        - Bearer tokens
+      summary: Create user's bearer access token
+      # yamllint disable rule:line-length
+      description: |
+        Creates a bearer access token for the user.
+
+        Bearer access token which has a limited lifetime (one hour) is used in the `Authorization` header to perform most of Glia REST API calls.
+
+        To obtain bearer access token, use a [user API key](https://docs.glia.com/glia-dev/reference/user-api-keys).
+
+        ### User API key
+
+        * Each user can have user API keys.
+        * The user API key has a long lifetime and it is only used to obtain a bearer access token, which is needed to make REST API calls on behalf of the user.
+        * Glia does not enforce any kind of user API key rotation, thus once you have created the key it will not expire. Please rotate the user API keys according to your company's policy.
+
+
+        ### Bearer access token
+
+        * A user's bearer access token can be obtained by providing the ID and the secret of a user API key.
+        * By default the scope of the bearer access token includes all the sites that the user is assigned to. Optionally you can provide the list of site IDs to limit the scope within the assigned sites.
+
+        See more about the tokens used in Glia REST API `Authorization` headers in [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+      # yamllint enable rule:line-length
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                api_key_id:
+                  type: string
+                  description: The ID of the user API key.
+                  example: ac8726c6-26e1-40c2-87f1-6fea09089470
+                api_key_secret:
+                  type: string
+                  description: The secret of the user API key.
+                  example: glu_tTx2NnZCxsMFUb7qpuFLRA1qVFGwUW0AIcFy
+                site_ids:
+                  type: array
+                  description: List of IDs of the sites to limit the scope of the bearer access token.
+                  items:
+                    type: string
+                  example: ['defb7236-r888-4fe8-b26c-fc462e286907']
+              required:
+                - api_key_id
+                - api_key_secret
+      responses:
+        '200':
+          description: Bearer access token was created.
+          content:
+            application/vnd.salemove.v1+json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: The user's bearer access token, valid for 1 hour.
+              example:
+                token: 'eyJhbGciOi<truncated>'
+
+  /sites/tokens:
+    post:
+      security: []
+      tags:
+        - Bearer tokens
+      summary: Create site's bearer access token
+      # yamllint disable rule:line-length
+      description: |
+        Creates a bearer access token for the site application. To obtain the bearer access token, use a [site API key](https://docs.glia.com/glia-dev/reference/site-api-keys).
+
+        The bearer access token will inherit the scope from the site API key that was used for issuing the token.
+
+        * Site API key has a long lifetime and it is only used to obtain a bearer access token, which is needed to make REST API calls on behalf of the corresponding site application.
+        * Glia does not enforce any kind of site API key rotation, thus once you have created the key it will not expire. Please rotate the site API keys according to your company's policy.
+
+
+        ### Bearer Access Token
+
+        * A site's bearer access token can be obtained by providing the ID and the secret of a site API key.
+        * The bearer access token will inherit the scope from the site API key that was used for issuing the token.
+
+        * See more about the tokens used in Glia REST API `Authorization` headers in [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+      # yamllint enable rule:line-length
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                api_key_id:
+                  type: string
+                  description: The ID of the site API key.
+                api_key_secret:
+                  type: string
+                  description: The secret of the site API key.
+              required:
+                - api_key_id
+                - api_key_secret
+            example:
+              api_key_id: ff8bb154-0874-49ad-b5c1-a0eccfd87ac
+              api_key_secret: gls_iSx2NnZCxsMFUb7qpuFLRA1qVFGwUW0AIcFoa
+
+      responses:
+        '200':
+          description: Bearer access token was created.
+          content:
+            application/vnd.salemove.v1+json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: The site's bearer access token, valid for 1 hour.
+              example:
+                access_token: 'afJhbGciOi<truncated>'

@@ -1,0 +1,52 @@
+---
+upload_screenshot:
+  summary: Upload visitor video screenshot
+  tags:
+    - Video
+  # yamllint disable rule:line-length
+  description: |
+    Uploads a screenshot of the visitor's video, which will be sent in the chat as an attachment of an operator-only system message.
+
+    A prerequisite for the screenshot to be included in the system message attachment is the successful passing of the security scan ([FileSecurityScanResultEvent](https://docs.glia.com/glia-dev/reference/webhooks#filesecurityscanresultevent)).
+
+
+    ### Authorization and Permissions
+
+    <a href="https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens" target="post_operator-authentication-tokens"> User's bearer access token</a> - To upload a file on behalf of an operator, requires:
+    * The user is the host operator of the engagement.
+    * Base of the user's role, one of:
+      * `operator`
+      * `manager`
+      * `super_manager`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/engagements.yaml#/engagement_id'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            file_contents:
+              type: string
+              description: |
+                Screenshot to be uploaded in Base64 format.
+
+                Maximum file size is 25 MB. Only files with MIME type of 'image/jpeg' can be uploaded.
+              example: '/9j/4A=='
+          required:
+            - file_contents
+  responses:
+    '200':
+      description: >
+        OK
+
+
+        The screenshot has been uploaded and the security scan has started.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/screenshot_upload_response.yaml'

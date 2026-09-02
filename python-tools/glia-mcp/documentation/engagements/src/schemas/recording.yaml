@@ -1,0 +1,55 @@
+---
+pause:
+  title: 'Pause the engagement recording'
+  type: object
+  properties:
+    action:
+      type: string
+      description: Must be `pause`.
+      default: pause
+      enum:
+        - pause
+
+  required:
+    - action
+
+resume:
+  title: 'Resume the engagement recording'
+  type: object
+  properties:
+    action:
+      type: string
+      description: Must be `resume`.
+      default: resume
+      enum:
+        - resume
+
+  required:
+    - action
+
+stop:
+  title: 'Stop the engagement recording'
+  type: object
+  properties:
+    action:
+      type: string
+      description: Must be `stop`.
+      default: stop
+      enum:
+        - stop
+
+  required:
+    - action
+
+response:
+  properties:
+    recording_state:
+      type: string
+      description: Recording state.
+      enum:
+        - recording
+        - paused
+        - stopped
+
+  required:
+    - recording_state

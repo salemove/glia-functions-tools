@@ -1,0 +1,327 @@
+---
+schemas:
+  OpenIdConnectProviderParams:
+    title: OpenID Connect
+    properties:
+      name:
+        $ref: '../properties/providers.yaml#/name'
+      type:
+        $ref: '../properties/providers.yaml#/openid_connect_type'
+      authorize_url:
+        $ref: '../properties/providers.yaml#/authorize_url'
+      access_token_url:
+        $ref: '../properties/providers.yaml#/access_token_url'
+      scope:
+        $ref: '../properties/providers.yaml#/openid_connect_scope'
+      client_id:
+        $ref: '../properties/providers.yaml#/client_id'
+      client_secret:
+        $ref: '../properties/providers.yaml#/client_secret'
+      default_provider:
+        $ref: '../properties/providers.yaml#/default_provider'
+    required:
+      - name
+      - type
+      - authorize_url
+      - access_token_url
+      - scope
+      - client_id
+      - client_secret
+      - default_provider
+
+  OAuth2ProviderParams:
+    title: OAuth2
+    properties:
+      name:
+        $ref: '../properties/providers.yaml#/name'
+      type:
+        $ref: '../properties/providers.yaml#/oauth2_type'
+      authorize_url:
+        $ref: '../properties/providers.yaml#/authorize_url'
+      access_token_url:
+        $ref: '../properties/providers.yaml#/access_token_url'
+      userinfo_url:
+        $ref: '../properties/providers.yaml#/userinfo_url'
+      scope:
+        $ref: '../properties/providers.yaml#/oauth2_scope'
+      client_id:
+        $ref: '../properties/providers.yaml#/client_id'
+      client_secret:
+        $ref: '../properties/providers.yaml#/client_secret'
+      default_provider:
+        $ref: '../properties/providers.yaml#/default_provider'
+    required:
+      - name
+      - type
+      - authorize_url
+      - access_token_url
+      - scope
+      - client_id
+      - client_secret
+      - default_provider
+
+  DirectIdTokenProviderParams:
+    title: Direct ID Token
+    description: >
+      For more information on how to set up visitor authentication with the Direct ID Token, see: <a href="https://docs.glia.com/glia-how-to/docs/implementing-direct-id-token-authentication" target="implementing-direct-id-token-authentication">Implementing Direct ID Authentication</a>
+    properties:
+      name:
+        $ref: '../properties/providers.yaml#/name'
+      type:
+        $ref: '../properties/providers.yaml#/direct_id_token_type'
+      default_provider:
+        $ref: '../properties/providers.yaml#/default_provider'
+      jwt_key_autofetch_enabled:
+        $ref: '../properties/providers.yaml#/jwt_key_autofetch_enabled'
+      jwt_key_url:
+        $ref: '../properties/providers.yaml#/jwt_key_url'
+      jwt_verification_keys:
+        $ref: '../properties/providers.yaml#/jwt_verification_keys'
+    required:
+      - name
+      - type
+      - default_provider
+      - jwt_key_autofetch_enabled
+
+  OpenIdConnectProviderResponse:
+    title: OpenID Connect
+    properties:
+      id:
+        $ref: '../properties/providers.yaml#/id'
+      site_id:
+        $ref: '../properties/providers.yaml#/site_id'
+      name:
+        $ref: '../properties/providers.yaml#/name'
+      type:
+        $ref: '../properties/providers.yaml#/openid_connect_type'
+      authorize_url:
+        $ref: '../properties/providers.yaml#/authorize_url'
+      access_token_url:
+        $ref: '../properties/providers.yaml#/access_token_url'
+      scope:
+        $ref: '../properties/providers.yaml#/openid_connect_scope'
+      client_id:
+        $ref: '../properties/providers.yaml#/client_id'
+      client_secret:
+        $ref: '../properties/providers.yaml#/client_secret'
+      default_provider:
+        $ref: '../properties/providers.yaml#/default_provider'
+      created_by:
+        $ref: '../../../common_components/properties.yaml#/created_by'
+      created_at:
+        $ref: '../../../common_components/properties.yaml#/created_at'
+      updated_by:
+        $ref: '../../../common_components/properties.yaml#/updated_by'
+      updated_at:
+        $ref: '../../../common_components/properties.yaml#/updated_at'
+
+  OAuth2ProviderResponse:
+    title: OAuth2
+    properties:
+      id:
+        $ref: '../properties/providers.yaml#/id'
+      site_id:
+        $ref: '../properties/providers.yaml#/site_id'
+      name:
+        $ref: '../properties/providers.yaml#/name'
+      type:
+        $ref: '../properties/providers.yaml#/oauth2_type'
+      authorize_url:
+        $ref: '../properties/providers.yaml#/authorize_url'
+      access_token_url:
+        $ref: '../properties/providers.yaml#/access_token_url'
+      userinfo_url:
+        $ref: '../properties/providers.yaml#/userinfo_url'
+      scope:
+        $ref: '../properties/providers.yaml#/oauth2_scope'
+      client_id:
+        $ref: '../properties/providers.yaml#/client_id'
+      client_secret:
+        $ref: '../properties/providers.yaml#/client_secret'
+      default_provider:
+        $ref: '../properties/providers.yaml#/default_provider'
+      created_by:
+        $ref: '../../../common_components/properties.yaml#/created_by'
+      created_at:
+        $ref: '../../../common_components/properties.yaml#/created_at'
+      updated_by:
+        $ref: '../../../common_components/properties.yaml#/updated_by'
+      updated_at:
+        $ref: '../../../common_components/properties.yaml#/updated_at'
+
+  DirectIdTokenProviderResponse:
+    title: Direct ID Token
+    properties:
+      id:
+        $ref: '../properties/providers.yaml#/id'
+      site_id:
+        $ref: '../properties/providers.yaml#/site_id'
+      name:
+        $ref: '../properties/providers.yaml#/name'
+      type:
+        $ref: '../properties/providers.yaml#/direct_id_token_type'
+      default_provider:
+        $ref: '../properties/providers.yaml#/default_provider'
+      jwt_key_autofetch_enabled:
+        $ref: '../properties/providers.yaml#/jwt_key_autofetch_enabled'
+      jwt_key_url:
+        $ref: '../properties/providers.yaml#/jwt_key_url'
+      jwt_verification_keys:
+        $ref: '../properties/providers.yaml#/jwt_verification_keys'
+      created_by:
+        $ref: '../../../common_components/properties.yaml#/created_by'
+      created_at:
+        $ref: '../../../common_components/properties.yaml#/created_at'
+      updated_by:
+        $ref: '../../../common_components/properties.yaml#/updated_by'
+      updated_at:
+        $ref: '../../../common_components/properties.yaml#/updated_at'
+
+  # For "List providers" endpoint
+  ProviderResponseArray:
+    type: array
+    items:
+      oneOf:
+        - $ref: '#/schemas/OpenIdConnectProviderResponse'
+        - $ref: '#/schemas/OAuth2ProviderResponse'
+        - $ref: '#/schemas/DirectIdTokenProviderResponse'
+    example:
+      - id: 4f0caef8-f888-4dff-b238-d112fdfae623
+        site_id: def34343-e888-43ae-99e0-07a676e9a111
+        name: Authentication provider settings for example.com
+        type: openid_connect
+        authorize_url: https://example.com/authorize_url
+        access_token_url: https://example.com/access_token_url
+        scope: openid email profile
+        default_provider: true
+        client_id: 0oan31sqxd7s1gkg30x7
+        created_at: 2019-11-15T07:16:55Z
+        created_by: ec317122-e777-4b43-996d-34a2ed3b76d8
+        updated_at: 2019-11-15T07:16:55Z
+        updated_by: ec317122-e777-4b43-996d-34a2ed3b76d8
+      - id: 4f0caef8-f777-4dff-b238-d112fdfae623
+        site_id: def34343-e888-43ae-99e0-07a676e9a111
+        name: OAuth 2.0 provider settings for example.com
+        type: oauth2
+        authorize_url: https://example.com/oauth2/v1/authorize
+        access_token_url: https://example.com/oauth2/v1/token
+        userinfo_url: https://example.com/oauth2/v1/userinfo
+        scope: name email
+        client_id: 7s1gkg30x70oan31sqxd
+        default_provider: false
+        created_at: 2022-06-20T01:32:38Z
+        created_by: ec317122-e777-4b43-996d-34a2ed3b76d8
+        updated_at: 2022-06-21T01:32:38Z
+        updated_by: ec317122-e777-4b43-996d-34a2ed3b76d8
+      - id: 4f0caef8-f666-4dff-b238-d112fdfae623
+        site_id: def34343-e888-43ae-99e0-07a676e9a111
+        name: Direct ID Token provider settings for example.com
+        type: direct_id_token
+        default_provider: false
+        jwt_key_autofetch_enabled: false
+        jwt_key_url: https://example.com/jwt_key_url
+        jwt_verification_keys:
+          [
+            {
+              key: '-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEARBJTVqyfU9nGRdtRxKeWRQFr3fR\n02XzT2qCnKvme8tpWkZ23VCbIPcJYR0/qGhLatyhevIVQysY8iPgiLCJ0e==\n-----END PUBLIC KEY-----\n',
+              algorithm: 'es256',
+            },
+          ]
+        created_at: 2022-06-20T01:32:38Z
+        created_by: ec317122-e777-4b43-996d-34a2ed3b76d8
+        updated_at: 2022-06-21T01:32:38Z
+        updated_by: ec317122-e777-4b43-996d-34a2ed3b76d8
+
+examples:
+  Provider:
+    openid_connect:
+      summary: OpenID Connect
+      value:
+        name: OpenID Connect provider settings for example.com
+        type: openid_connect
+        authorize_url: https://example.com/oauth2/v1/authorize
+        access_token_url: https://example.com/oauth2/v1/token
+        scope: openid email profile
+        client_id: 0oan31sqxd7s1gkg30x7
+        client_secret: 25af3b86e11884ef5e8ef70a0ad06cba81b89ed6af3781a0
+        default_provider: true
+    oauth2:
+      summary: OAuth 2.0
+      value:
+        name: OAuth 2.0 provider settings for example.com
+        type: oauth2
+        authorize_url: https://example.com/oauth2/v1/authorize
+        access_token_url: https://example.com/oauth2/v1/token
+        userinfo_url: https://example.com/oauth2/v1/userinfo
+        scope: name email
+        client_id: 7s1gkg30x70oan31sqxd
+        client_secret: 0ad06cba81b89ed6af3781a025af3b86e11884ef5e8ef70a
+        default_provider: false
+    direct_id_token:
+      summary: Direct ID Token
+      value:
+        name: Direct ID Token provider settings for example.com
+        type: direct_id_token
+        jwt_key_autofetch_enabled: false
+        jwt_key_url: https://example.com/jwt_key_url
+        jwt_verification_keys:
+          [
+            {
+              key: '-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEARBJTVqyfU9nGRdtRxKeWRQFr3fR\n02XzT2qCnKvme8tpWkZ23VCbIPcJYR0/qGhLatyhevIVQysY8iPgiLCJ0e==\n-----END PUBLIC KEY-----\n',
+              algorithm: 'es256',
+            },
+          ]
+        default_provider: false
+
+  ProviderResponse:
+    OpenID Connect:
+      value:
+        id: 4f0caef8-f888-4dff-b238-d112fdfae623
+        site_id: def34343-e888-43ae-99e0-07a676e9a111
+        name: Authentication provider settings for example.com
+        type: openid_connect
+        authorize_url: https://example.com.com/oauth2/v1/authorize
+        access_token_url: https://example.com.com/oauth2/v1/token
+        scope: openid email profile
+        default_provider: true
+        client_id: 0oan31sqxd7s1gkg30x7
+        created_at: 2019-11-20T01:32:38Z
+        created_by: ec317122-e777-4b43-996d-34a2ed3b76d8
+        updated_at: 2019-11-20T01:32:38Z
+        updated_by: ec317122-e777-4b43-996d-34a2ed3b76d8
+    OAuth 2.0:
+      value:
+        id: 4f0caef8-f777-4dff-b238-d112fdfae623
+        site_id: def34343-e888-43ae-99e0-07a676e9a111
+        name: OAuth 2.0 provider settings for example.com
+        type: oauth2
+        authorize_url: https://example.com/oauth2/v1/authorize
+        access_token_url: https://example.com/oauth2/v1/token
+        userinfo_url: https://example.com/oauth2/v1/userinfo
+        scope: name email
+        client_id: 7s1gkg30x70oan31sqxd
+        default_provider: false
+        created_at: 2022-06-20T01:32:38Z
+        created_by: ec317122-e777-4b43-996d-34a2ed3b76d8
+        updated_at: 2022-06-21T01:32:38Z
+        updated_by: ec317122-e777-4b43-996d-34a2ed3b76d8
+    Direct ID Token:
+      value:
+        id: 4f0caef8-f666-4dff-b238-d112fdfae623
+        site_id: def34343-e888-43ae-99e0-07a676e9a111
+        name: Direct ID Token provider settings for example.com
+        type: direct_id_token
+        jwt_key_autofetch_enabled: false
+        jwt_key_url: https://example.com/jwt_key_url
+        jwt_verification_keys:
+          [
+            {
+              key: '-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEARBJTVqyfU9nGRdtRxKeWRQFr3fR\n02XzT2qCnKvme8tpWkZ23VCbIPcJYR0/qGhLatyhevIVQysY8iPgiLCJ0e==\n-----END PUBLIC KEY-----\n',
+              algorithm: 'es256',
+            },
+          ]
+        default_provider: false
+        created_at: 2022-06-20T01:32:38Z
+        created_by: ec317122-e777-4b43-996d-34a2ed3b76d8
+        updated_at: 2022-06-21T01:32:38Z
+        updated_by: ec317122-e777-4b43-996d-34a2ed3b76d8

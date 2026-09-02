@@ -1,0 +1,26 @@
+[
+  {
+    "op": "set",
+    "key": "user_123_profile",
+    "value": "Alice Johnson"
+  },
+  {
+    "op": "set", 
+    "key": "config_theme",
+    "value": "dark"
+  },
+  {
+    "op": "get",
+    "key": "session_token"
+  },
+  {
+    "op": "testAndSet",
+    "key": "counter",
+    "oldValue": "5",
+    "newValue": "6"
+  },
+  {
+    "op": "delete",
+    "key": "temp_data"
+  }
+]

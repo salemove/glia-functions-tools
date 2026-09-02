@@ -1,0 +1,138 @@
+---
+visitor:
+  title: 'Visitor creates request'
+  type: object
+  properties:
+    visitor_id:
+      $ref: '../properties/engagement_request.yaml#/properties/visitor_id'
+    operator_id:
+      $ref: '../properties/engagement_request.yaml#/properties/operator_id'
+    site_id:
+      $ref: '../properties/engagement_request.yaml#/properties/site_id'
+    media:
+      $ref: '../properties/engagement_request.yaml#/properties/media'
+    media_options:
+      $ref: '../properties/engagement_request.yaml#/properties/media_options'
+    source:
+      $ref: '../properties/engagement.yaml#/properties/input_source'
+    webhooks:
+      $ref: '../properties/engagement_request.yaml#/properties/webhooks'
+    visitor_context_asset_id:
+      $ref: '../../../common_components/properties.yaml#/visitor_context_asset_id'
+
+  required:
+    - operator_id
+    - site_id
+    - media
+
+operator:
+  title: 'Operator creates request'
+  type: object
+  properties:
+    visitor_id:
+      $ref: '../properties/engagement_request.yaml#/properties/visitor_id'
+    operator_id:
+      $ref: '../properties/engagement_request.yaml#/properties/operator_id'
+    site_id:
+      $ref: '../properties/engagement_request.yaml#/properties/site_id'
+    media:
+      $ref: '../properties/engagement_request.yaml#/properties/media'
+    media_options:
+      $ref: '../properties/engagement_request.yaml#/properties/media_options'
+    source:
+      $ref: '../properties/engagement.yaml#/properties/input_source'
+    webhooks:
+      $ref: '../properties/engagement_request.yaml#/properties/webhooks'
+
+  required:
+    - visitor_id
+    - site_id
+    - media
+
+search_request_initial:
+  title: Initial Request
+  description: >
+    This is the first request to make when you start searching for engagement requests. The response
+    includes a `next_page_token` which you can use to fetch the next page of results via the
+    **Paginated Request**. All search properties included in the **Initial Request** are passed to the
+    subsequent **Paginated Request** through the `page_token`.
+  type: object
+  properties:
+    site_ids:
+      $ref: '../properties/engagement_request.yaml#/properties/site_ids'
+    operator_ids:
+      $ref: '../properties/engagement_request.yaml#/properties/operator_ids'
+    sources:
+      $ref: '../properties/engagement_request.yaml#/properties/sources'
+    from_requested_at:
+      $ref: '../properties/engagement_request.yaml#/properties/from_requested_at'
+    to_requested_at:
+      $ref: '../properties/engagement_request.yaml#/properties/to_requested_at'
+    include_missed_reactive_requests:
+      $ref: '../properties/engagement_request.yaml#/properties/include_missed_reactive_requests'
+    order:
+      $ref: '../properties/engagement_request.yaml#/properties/order'
+    per_page:
+      $ref: '../../../common_components/properties.yaml#/pagination/per_page'
+  required:
+    - site_ids
+
+search_request_paginated:
+  title: Paginated Request
+  description: >
+    Use the `next_page_token` from the response of the **Initial Request** or previous
+    **Paginated Request** to pass as the value for the `page_token` property. This will retrieve the next
+    page of results with all the original filters from the **Initial Request**.
+  type: object
+  properties:
+    page_token:
+      $ref: '../../../common_components/properties.yaml#/pagination/page_token'
+  required:
+    - page_token
+
+search_response:
+  properties:
+    engagement_requests:
+      type: array
+      description: List of engagement requests that correspond to the search.
+      items:
+        type: object
+        properties:
+          id:
+            $ref: '../properties/engagement_request.yaml#/properties/id'
+          type:
+            $ref: '../properties/engagement_request.yaml#/search_response/type'
+          site_id:
+            $ref: '../properties/engagement_request.yaml#/search_response/site_id'
+          source:
+            $ref: '../properties/engagement_request.yaml#/search_response/source'
+          requested_at:
+            $ref: '../properties/engagement_request.yaml#/search_response/requested_at'
+          outcome:
+            $ref: '../properties/engagement_request.yaml#/search_response/outcome'
+          outcome_resolved_at:
+            $ref: '../properties/engagement_request.yaml#/search_response/outcome_resolved_at'
+          operator:
+            $ref: '../properties/engagement_request.yaml#/search_response/operator'
+          visitor:
+            $ref: '../properties/engagement_request.yaml#/search_response/visitor'
+          queues:
+            $ref: '../properties/engagement_request.yaml#/search_response/queues'
+          offered_media:
+            $ref: '../properties/engagement_request.yaml#/search_response/offered_media'
+          accepted_media:
+            $ref: '../properties/engagement_request.yaml#/search_response/accepted_media'
+          interaction_id:
+            $ref: '../properties/engagement_request.yaml#/search_response/interaction_id'
+        required:
+          - id
+          - type
+          - site_id
+          - requested_at
+          - operator
+          - visitor
+          - offered_media
+    next_page_token:
+      $ref: '../../../common_components/properties.yaml#/pagination/next_page_token'
+  required:
+    - engagement_requests

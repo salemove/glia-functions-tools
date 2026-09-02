@@ -1,0 +1,22 @@
+---
+type: object
+properties:
+  id:
+    type: string
+    description: Operator ID.
+  rank:
+    type: integer
+    description: >
+      Operator position.
+
+
+      Operators with the highest position (1) are considered first and operators with the lowest position (10) are considered last when assigning an engagement request.
+
+
+      If `null` is set, the operator position will be removed and not included in the collection anymore.
+
+
+      Operators with position 10 and no position are treated as having the same position.
+    nullable: true
+    minimum: 1
+    maximum: 10

@@ -1,0 +1,86 @@
+---
+id:
+  type: string
+  description: Exception policy ID.
+site_id:
+  type: string
+  description: >
+    ID of the site to which the queue scheduling exception policy belongs.
+name:
+  type: string
+  description: Name of the queue scheduling exception policy.
+description:
+  type: string
+  description: Description of the queue scheduling exception policy.
+exception_rules:
+  type: array
+  maxItems: 150
+  description: A collection of exception rules that define closures or changes to business hours. Up to 150 rules per exceptions policy are allowed. The specified times of the rules must not overlap.
+  items:
+    type: object
+    properties:
+      name:
+        type: string
+        description: Name of the exception rule.
+      type:
+        type: string
+        description: >
+          Type of the exception rule.
+
+
+          `queue_closed` - Closes the queue for the day.
+
+          `hours_changed` - Changes the opening hours for the day.
+        enum:
+          - queue_closed
+          - hours_changed
+      date:
+        type: string
+        format: date
+        description: A date in ISO-8601 format. Specifies the date when the exception rule applies.
+        example: '2019-05-30'
+      opens_at:
+        type: string
+        description: >
+          Start of the interval.
+
+
+          Required only when the rule type is `hours_changed`.
+
+
+          Must be in the format `HH:MM:SS`, where `HH` represents the hours on a 24-hour clock (`00 - 24`), `MM`
+          represents the minutes (`00 - 59`), and `SS` represents the seconds (`00 - 59`).
+
+
+          The interval is closed-open type - i.e. inclusive lower bound, exclusive upper bound.
+        example: '15:30:00'
+      closes_at:
+        type: string
+        description: |
+          End of the interval.
+
+          Required only when the rule type is `hours_changed`.
+
+          Must be in the same format as `opens_at`.
+        example: '19:45:00'
+      repeat_yearly:
+        type: boolean
+        description: |
+          If `true`, then this rule is applied every year on the same day.
+
+          If `false`, then rule is applied only on specified day and year.
+        example: false
+    required:
+      - name
+      - type
+      - date
+      - repeat_yearly
+
+created_at:
+  $ref: '../../../common_components/properties.yaml#/created_at'
+created_by:
+  $ref: '../../../common_components/properties.yaml#/created_by'
+updated_at:
+  $ref: '../../../common_components/properties.yaml#/updated_at'
+updated_by:
+  $ref: '../../../common_components/properties.yaml#/updated_by'

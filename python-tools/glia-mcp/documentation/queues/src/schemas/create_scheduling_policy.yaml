@@ -1,0 +1,40 @@
+---
+type: object
+properties:
+  site_id:
+    $ref: '../properties/scheduling_policy.yaml#/site_id'
+  name:
+    $ref: '../properties/scheduling_policy.yaml#/name'
+  description:
+    $ref: '../properties/scheduling_policy.yaml#/description'
+  timezone:
+    $ref: '../properties/scheduling_policy.yaml#/timezone'
+  business_hours:
+    $ref: '../properties/scheduling_policy.yaml#/business_hours'
+required:
+  - site_id
+  - name
+  - timezone
+  - business_hours
+example:
+  site_id: def34343-e888-43ae-99e0-07a676e9a111
+  name: Default Policy
+  description: 08-18 with a lunch-break
+  timezone: America/New_York
+  business_hours:
+    - opens_at: '08:00:00'
+      closes_at: '12:00:00'
+      days_of_week:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri
+    - opens_at: '13:00:00'
+      closes_at: '18:00:00'
+      days_of_week:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri

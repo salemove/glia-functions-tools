@@ -1,0 +1,16 @@
+---
+properties:
+  id:
+    $ref: '../properties/engagement_request.yaml#/properties/request_id'
+  timeout:
+    $ref: '../properties/engagement_request.yaml#/properties/request_id'
+  site_id:
+    $ref: '../properties/engagement_request.yaml#/properties/site_id'
+  platform:
+    $ref: '../properties/engagement_request.yaml#/properties/platform'
+
+required:
+  - id
+  - timeout
+  - site_id
+  - platform

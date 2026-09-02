@@ -1,0 +1,111 @@
+---
+upgrade_request:
+  summary: Create upgrade request
+  tags:
+    - Media upgrade
+  # yamllint disable rule:line-length
+  description: |
+    Creates a media upgrade request to an engagement participant.
+
+    When engagement participant creates a new request before the previous request was accepted/declined then the previous request is canceled.
+
+    Note that when an operator makes the request, the `audio_type`, `phone_number`, and `phone_extension` are retrieved from their settings. This data is not shared with the visitor.
+
+    See [Webhooks](ref:webhooks) for receiving media upgrade requests via webhook events.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or visitor's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens) - For operator to send the media upgrade request to the visitor. Requires:
+      * The user is engagement's participant.
+      * Base of the user's role:
+        * `operator`
+        * `manager`
+        * `super_manager`
+    * [Visitor's bearer access token](https://docs.glia.com/glia-dev/reference/post_visitors) - For visitor to send the media upgrade request to the operator.
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/engagements.yaml#/engagement_id'
+  requestBody:
+    content:
+      application/json:
+        schema:
+          $ref: '../schemas/media_upgrade_request.yaml'
+        example:
+          audio: two_way
+          video: two_way
+          audio_type: browser
+          phone_number: null
+          phone_extension: null
+  responses:
+    '200':
+      description: |
+        OK
+
+        Media upgrade request successfully sent.
+    '401':
+      $ref: '../../engagements_in.yaml#/components/responses/401NotAuthorized'
+    '403':
+      $ref: '../../engagements_in.yaml#/components/responses/403NotPartOfEngagement'
+    '422':
+      $ref: '../../engagements_in.yaml#/components/responses/422InvalidInput'
+    '500':
+      $ref: '../../engagements_in.yaml#/components/responses/500InternalError'
+    '503':
+      $ref: '../../engagements_in.yaml#/components/responses/503ServiceUnavailable'
+
+upgrade_or_not:
+  summary: Answer upgrade request
+  tags:
+    - Media upgrade
+  # yamllint disable rule:line-length
+  description: |
+    Accepts or declines a media upgrade request.
+
+    When operator accepts the request, the `audio_type`, `phone_number`, and `phone_extension` are retrieved from their settings. This data is not shared with the visitor.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or visitor's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens) - For operator to accept or decline the media upgrade request, requires:
+      * The user is receiving the media upgrade request from a visitor.
+      * Base of the user's role, one of:
+        * `operator`
+        * `manager`
+        * `super_manager`
+    * [Visitor's bearer access token](https://docs.glia.com/glia-dev/reference/post_visitors) - For visitor to accept or reject the media upgrade request from the operator.
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/engagements.yaml#/engagement_id'
+    - $ref: '../parameters/engagements.yaml#/media_upgrade_request_id'
+  requestBody:
+    content:
+      application/json:
+        schema:
+          $ref: '../schemas/media_upgrade_request_answer.yaml'
+        example:
+          action: accept
+  responses:
+    '200':
+      description: |
+        OK
+
+        Media upgrade either accepted or declined.
+    '401':
+      $ref: '../../engagements_in.yaml#/components/responses/401NotAuthorized'
+    '403':
+      $ref: '../../engagements_in.yaml#/components/responses/403NotPartOfEngagement'
+    '422':
+      $ref: '../../engagements_in.yaml#/components/responses/422InvalidInput'
+    '500':
+      $ref: '../../engagements_in.yaml#/components/responses/500InternalError'
+    '503':
+      $ref: '../../engagements_in.yaml#/components/responses/503ServiceUnavailable'

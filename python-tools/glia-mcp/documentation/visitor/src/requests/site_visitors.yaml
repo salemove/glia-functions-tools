@@ -1,0 +1,15 @@
+---
+search_visitors:
+  required: true
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          site_id:
+            $ref: '../properties/site_visitors.yaml#/properties/site_id'
+          search_string:
+            $ref: '../properties/site_visitors.yaml#/properties/search_string'
+        required:
+          - site_id
+          - search_string

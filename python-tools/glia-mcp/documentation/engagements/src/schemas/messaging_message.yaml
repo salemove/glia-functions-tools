@@ -1,0 +1,56 @@
+---
+schema:
+  type: object
+  properties:
+    content:
+      $ref: '../properties/messaging.yaml#/properties/content'
+    source:
+      $ref: '../properties/messaging.yaml#/properties/source'
+    queue_ids:
+      $ref: '../properties/messaging.yaml#/properties/queue_ids'
+    attachment:
+      $ref: '../properties/messaging.yaml#/properties/visitor_attachment'
+    webhooks:
+      $ref: '../properties/messaging.yaml#/properties/webhooks'
+  required:
+    - content
+    - source
+    - queue_ids
+
+examples:
+  chat_message:
+    summary: Message only
+    value: &base_chat_message
+      queue_ids: [f58d4671-e888-4e87-96dc-1d41027bebc5]
+      content: Hi, I would like some suggestions regarding insurance.
+      source: visitor_integrator
+
+  file_attachment:
+    summary: Message with file attachment
+    value:
+      attachment:
+        type: files
+        files:
+          - id: 53b236ee-f888-45ec-8e0f-5bf4d5e16a2e
+      <<: *base_chat_message
+      content: ''
+
+  single_choice_response_attachment:
+    summary: Message with single choice response attachment
+    value:
+      attachment:
+        type: single_choice_response
+        selected_option: choice_2
+      <<: *base_chat_message
+      content: Choice 2
+
+  webhooks:
+    summary: Message with webhooks
+    value:
+      webhooks:
+        - url: 'https://example.com'
+          method: 'POST'
+          events:
+            - 'engagement.start'
+      <<: *base_chat_message
+      content: ''

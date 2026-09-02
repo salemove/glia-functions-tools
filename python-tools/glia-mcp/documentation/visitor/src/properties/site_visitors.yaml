@@ -1,0 +1,238 @@
+---
+properties:
+  visitor_id:
+    type: string
+    description: The unique ID of the visitor.
+    example: c2c9106e-e888-47b2-8db3-089fb49dc9a5
+  bearer_token:
+    type: string
+    description: The visitor's bearer access token to be used for the next 24 hours.
+    example: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.. truncated'
+  authenticated_externally:
+    type: boolean
+    description: >
+      Present with value `true` only if the visitor was successfully authenticated and mapped to Glia visitor identity
+      using the `id_token` provided in the request payload.
+    example: true
+  authentication_failure_reason:
+    type: string
+    description: >
+      Present with value `invalid_id_token`, when `id_token` was passed in the request, but was either invalid
+      or validation of this token was not successful.
+    example: 'invalid_id_token'
+  secret:
+    type: string
+    description: >
+      Visitor secret. Should be provided when renewing the access token for a given visitor using [Renew token](https://docs.glia.com/glia-dev/reference/post_visitors-visitor-id-token) endpoint.
+    example: WBO2PpcmABDEnuToFCq5LmuPMJcM88 #gitleaks:allow
+  name: &base_name
+    type: string
+    description: The visitor's name.
+    example: 'John Smith'
+  email: &base_email
+    type: string
+    description: The visitor's email.
+    example: 'john.smith@example.com'
+  phone:
+    type: string
+    description: The visitor's phone number.
+    example: '+0015555555555'
+  note:
+    type: string
+    description: The notes associated with the visitor.
+    example: 'Bought insurance previously; considering upgrade.'
+  custom_attributes:
+    type: object
+    description: >
+      An object with custom key-value pairs to be assigned to the visitor. The server treats both keys and values as
+      either strings or numbers and returns them as such. Nested key-value pairs are not supported. Keys cannot be empty or null.
+
+      The maximum length for the whole stored hash is 60k characters.
+    example:
+      home_address: Washington, DC
+  id:
+    type: string
+    description: The unique ID of the visitor.
+    example: c2c9106e-e888-47b2-8db3-089fb49dc9a5
+  href:
+    type: string
+    description: The visitor's information URL.
+    example: 'https://api.glia.com/sites/c2c9106e-e888-47b2-8db3-089fb49dc9a5/visitors/c2c9106e-e888...'
+  authenticated_attributes:
+    type: object
+    description: >
+      Visitor's attributes and tokens fetched from the authentication provider, if the visitor is authenticated. Empty,
+      if the visitor is not yet authenticated.
+      If the visitor was authenticated using Direct ID Token (the authentication provider type is `direct_id_token`), then this block always returns the authenticated attributes,
+      even when the `id_token` is expired.
+    properties:
+      visitor_authentication_id:
+        type: string
+        description: >
+          ID of the authentication request used to authenticate the visitor.
+        example: c2c9106e-v888-47b2-8db3-089fb49dc9a5
+      visitor_name:
+        type: string
+        description: >
+          Visitor's authenticated name.
+        example: 'John Smith'
+      visitor_preferred_name:
+        type: string
+        description: >
+          Visitor's authenticated preferred name.
+        example: 'John Smith'
+      visitor_email:
+        type: string
+        description: >
+          Visitor's authenticated email.
+        example: 'john.smith@example.com'
+      lookup_id:
+        type: string
+        description: An ID that can be a member ID or username of a visitor.
+        example: 'jsmith23'
+      authentication_provider_id:
+        type: string
+        description: >
+          The ID of the authentication provider used to authenticate visitor.
+        example: 06c22a28-fc0c-4338-9380-dc9449184689
+      issuer:
+        type: string
+        description: >
+          Issuer as returned by the authentication provider during visitor authentication.
+        example: null
+      subject:
+        type: string
+        description: >
+          Subject as returned by the authentication provider during visitor authentication.
+        example: 'john.smith'
+      id_token:
+        type: string
+        description: >
+          The ID token that the authentication provider issued. It corresponds to the OpenID Connect standard if the authentication provider type is `openid_connect`. It is a clone of the issued `id_token` but with the signature removed if the authentication provider type is `direct_id_token`.
+        example: 'eyJhbGciOiJub25lIn0.eyJuYW...'
+      access_token:
+        type: string
+        description: >
+          The access token to retrieve additional visitor context or perform operations on behalf of a visitor.
+        example: null
+      authenticated_at:
+        type: string
+        description: >
+          The UTC timestamp of the visitor's authentication.
+        example: '2024-09-01T07:38:51Z'
+  limited_authenticated_attributes:
+    type: object
+    properties:
+      visitor_name:
+        $ref: '#/properties/authenticated_attributes/properties/visitor_name'
+      visitor_preferred_name:
+        $ref: '#/properties/authenticated_attributes/properties/visitor_preferred_name'
+      visitor_email:
+        $ref: '#/properties/authenticated_attributes/properties/visitor_email'
+      lookup_id:
+        $ref: '#/properties/authenticated_attributes/properties/lookup_id'
+      authentication_provider_id:
+        $ref: '#/properties/authenticated_attributes/properties/authentication_provider_id'
+      issuer:
+        $ref: '#/properties/authenticated_attributes/properties/issuer'
+      subject:
+        $ref: '#/properties/authenticated_attributes/properties/subject'
+      authenticated_at:
+        $ref: '#/properties/authenticated_attributes/properties/authenticated_at'
+  banned:
+    type: boolean
+    description: Shows if the visitor is banned from the site.
+    enum:
+      - true
+      - false
+  note_update_method:
+    type: string
+    description: >
+      Specifies a method for updating the visitor's note.
+
+      * `replace` - the notes for the visitor will be overwritten by the field `note` in the request.
+
+      * `append` - the line break (`\n`) will be added and the field `note` in the request will be appended to the existing
+      visitor's notes.
+    default: replace
+    enum:
+      - replace
+      - append
+  custom_attributes_update_method:
+    type: string
+    description: >
+      Specifies the method for updating custom attributes.
+
+      * `replace` - all custom attributes for the visitor will be overwritten by the field `custom_attributes` in the
+      request.
+      * `merge` - only custom attributes present in the request will be added or updated. In the case of `merge`, it is
+      possible to remove a custom attribute by setting its value to `null`.
+    default: replace
+    enum:
+      - replace
+      - merge
+  context:
+    type: object
+    # yamllint disable rule:line-length
+    description: >
+      An object with the visitor's browser context.
+
+      The `context` and `custom_attributes` are needed to trigger `visitor_custom_attributes_changed` business rule
+      event.
+      Content for this can be obtained from [Visitor JS SDK](https://sdk-docs.glia.com/visitor-js-api/current/Salemove.html#getBrowserContext).
+    # yamllint enable rule:line-length
+  native_mobile_visitor:
+    type: object
+    description: >
+      Extra visitor information that should be specified when creating or renewing a visitor token from a native mobile
+      application. This information is needed to register webhooks for sending push notifications to the mobile device.
+
+
+      Push notifications are supported for both [Apple iOS
+      (APNS)](https://docs.glia.com/glia-dev/reference/webhooks#apple-push-notification-webhook) and [Android
+      (FCM)](https://docs.glia.com/glia-dev/reference/webhooks#firebase-cloud-messaging-webhook) devices.
+    properties:
+      device_token:
+        type: string
+        description: >
+          A token that uniquely identifies a mobile app and a mobile device pair. For Apple iOS (APNS), this is the
+          device token. For Android (FCM), this is the registration token.
+
+
+          The maximum length is 255 characters.
+        example: '912e991a1a9d87568085afb9cc8bd738bb7ab08988dce04778f78522ab6405b7'
+  id_token:
+    type: string
+    description: >
+      A signed JWT that can be used to verify whether the visitor has been authenticated externally. The JWT must
+      include a `sub` claim containing a unique identifier that is mapped to the visitor's identity in Glia.
+      Note that the value of the `exp` claim from the provided ID token will be used as the value of the `exp` claim of the issued Glia visitor access token (`access_token`) in the response.
+    example: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJlbWFpbCI6ImpvaG4uc21pdGhAZXhhbXBsZS5jb20iLCJuYW1lIjoiSm9obiBTbWl0aCIsImdpdmVuX25hbWUiOiJKb2huIiwiZmFtaWx5X25hbWUiOiJTbWl0aCIsInN1YiI6ImpvaG4uc21pdGhAZXhhbXBsZS5jb206Sm9oblNtaXRoIiwiaWF0IjoxNjQ3NDE4MjU1LCJleHAiOjE2NDc0MjE4NTV9.IE0c2KJS9-xQEqyynFRi_iUaXwgqusPtMz9i3yjIrOvSNF76PP3SkcQpOuvidsBgXDuljI63g0TnU-AVyiUunQ'
+  external_access_token:
+    type: string
+    description: >
+      An access token that can be used to make authenticated requests to other systems on behalf of the authenticated visitor.
+    example: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJlbWFpbCI6ImpvaG4uc21pdGhAZXhhbXBsZS5jb20iLCJuYW1lIjoiSm9obiBTbWl0aCIsImdpdmVuX25hbWUiOiJKb2huIiwiZmFtaWx5X25hbWUiOiJTbWl0aCIsInN1YiI6ImpvaG4uc21pdGhAZXhhbXBsZS5jb206Sm9oblNtaXRoIiwiaWF0IjoxNjQ3NDE4MjU1LCJleHAiOjE2NDc0MjE4NTV9.IE0c2KJS9-xQEqyynFRi_iUaXwgqusPtMz9i3yjIrOvSNF76PP3SkcQpOuvidsBgXDuljI63g0TnU-AVyiUunQ'
+  search_string:
+    type: string
+    description: >
+      String used to search for visitors.
+
+      The string is used to match visitor's name, email, or external ID.
+
+      The search string must be between 2 and 250 characters.
+    example: John Smith
+  site_id:
+    $ref: '../../../common_components/properties.yaml#/site_id'
+  patch_name:
+    <<: *base_name
+    description: >
+      The visitor's name.
+
+      Note that if the visitor is authenticated, their name is set by the authentication JWT and cannot be updated using this endpoint.
+  patch_email:
+    <<: *base_email
+    description: >
+      The visitor's email.
+
+      Note that if the visitor is authenticated, their email is set by the authentication JWT and cannot be updated using this endpoint.

@@ -1,0 +1,264 @@
+---
+search:
+  summary: Search engagements
+  tags:
+    - Engagement
+  # yamllint disable rule:line-length
+  description: |
+    Fetches engagements that match the filters you apply.
+
+    The results are paginated and by default are sorted by the engagement's start time in descending order.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or site's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens) - Returns the engagements of the user's assigned sites. Requires:
+      * Base of the user's role, one of:
+        * `operator`
+        * `manager`
+        * `super_manager`
+    * [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens) - Returns the engagements that have at least one engagement leg which took place on the site of the site API key. Requires:
+      * Scope: `engagements:read`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+
+
+    ### Interpreting the Output
+
+    #### Pagination
+
+    * If the search results are more than one page, the `next_page_token` will not be `null` and can be used to fetch the next batch.
+    * **Never** try to use any information that the `next_page_token` could contain. The format of the `next_page_token` is subject to change at any point in time.
+    * To fetch the next page of results, use the `next_page_token` from the previous request's response to pass as a `page_token` body parameter for the **Paginated Request** call.
+    * See also [Pagination](ref:pagination).
+  # yamllint enable rule:line-length
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          oneOf:
+            - $ref: '../schemas/engagement.yaml#/EngagementSearchRequest/InitialRequest'
+            - $ref: '../schemas/engagement.yaml#/EngagementSearchRequest/PaginatedRequest'
+  responses:
+    '200':
+      description: One or more engagements were found.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/engagement.yaml#/EngagementSearchResponse'
+          example:
+            $ref: '../examples/engagement_example.yaml#/EngagementSearch'
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+
+list:
+  summary: List engagements
+  tags:
+    - Engagement
+  # yamllint disable rule:line-length
+  description: |
+    > ⚠️
+    >
+    > Use <a href="https://docs.glia.com/glia-dev/reference/post_engagements-search" target="post_engagements-search">`POST /engagements/search`</a> instead.
+
+    Fetches engagements by their site IDs.
+
+    The results are sorted by the engagement's start time in descending order, and paginated.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or site's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens) - Returns the engagements that the user can access. Requires:
+      * Base of the user's role, one of:
+        * `operator`
+        * `manager`
+        * `super_manager`
+      * For the user with the `operator` or `manager` base, the following condition must be true:
+        * The user was part of the engagement.
+    * [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens) - Returns the engagements that have at least one engagement leg which took place on the site of the site API key. Requires:
+      * Scope: `engagements:read`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+
+    ### Interpreting the Output
+
+    #### Pagination
+
+    * In case you want to paginate the engagements' list, you will see the `next_page` link in the first batch of engagements to use to fetch the next batch.
+    * **Always** use the `next_page` link as is to fetch the next batch of engagements.
+    * **Never** try to parse the page numbers or other values in the `next_page` to construct the URL for next page or jump to an intermediate page. This will break the continuity of the data you want to fetch (records may be missed). Note that the format of the `next_page` URL is also subject to change at any point in time.
+    * See also [Pagination](ref:pagination).
+
+
+    #### Checking for duplicates
+
+    * It may happen that few engagements are visible in two subsequent pages, thus becoming a duplicate in the whole set of engagements.
+    * Although it does not happen often, we recommend to check for duplicates while fetching the list of engagements.
+
+
+    ##### Example
+
+    * Set up few `GET /engagements` jobs setting `start_date` and `end_date` so that the periods do not overlap.
+    * Each job has a script using the `next_page` to fetch another batch of engagements.
+    * One possibility for setting up the script to use `next_page`, see Glia example on how to use JavaScript and `next_page`:
+      - [Example](https://github.com/salemove/examples/blob/master/rest_api/node/fetch_engagements.js).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/engagements.yaml#/site_ids'
+    - $ref: '../parameters/engagements.yaml#/operator_ids'
+    - $ref: '../parameters/engagements.yaml#/start_date'
+    - $ref: '../parameters/engagements.yaml#/end_date'
+    - $ref: '../parameters/engagements.yaml#/include_ongoing'
+    - $ref: '../parameters/engagements.yaml#/per_page'
+    - $ref: '../parameters/engagements.yaml#/order'
+  responses:
+    '200':
+      description: Engagements were fetched.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/engagement.yaml#/EngagementListResponse'
+          example:
+            $ref: '../examples/engagement_example.yaml#/EngagementList'
+
+fetch:
+  summary: Fetch engagement
+  tags:
+    - Engagement
+  # yamllint disable rule:line-length
+  description: |
+    Fetches an engagement by its ID. Can be used to fetch both the ongoing and already ended engagements.
+
+    Note that in case the engagement has multiple legs, they will be listed in reverse chronological order:
+      - The latest leg is on top of the list.
+      - The first leg is at the bottom of the list.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or site's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens) - Returns the engagement of the user. Requires:
+      * Base of the user's role, one of:
+        * `operator`
+        * `manager`
+        * `super_manager`
+      * For the user with the `operator` or `manager` base, the following must be true:
+        * The user was part of the engagement.
+    * [Site's bearer access token](https://docs.glia.com/glia-dev/reference/post_sites-tokens) -  Access is allowed if at least one leg of the engagement took place on the site with the site API key. Requires:
+      * Scope: `engagements:read`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/engagements.yaml#/engagement_id'
+  responses:
+    '200':
+      description: >
+        Engagement was fetched.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/engagement.yaml#/EngagementFetchResponse'
+          example:
+            $ref: '../examples/engagement_example.yaml#/Engagement1'
+
+update:
+  summary: Update engagement
+  tags:
+    - Engagement
+  # yamllint disable rule:line-length
+  description: |
+    Updates a specified engagement using various actions. See the schema below for the list of available actions.
+
+    For example, ends or transfers the engagement or reports a technical issue related to it.
+
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a user's or visitor's bearer access token is needed in the `Authorization` request header.
+
+    * [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+      * Base of the user's role, one of:
+        * `operator`
+        * `manager`
+        * `super_manager`
+      * For the user with the `operator` base, the following must be true:
+        * The user is a participant in the engagement.
+    * [Visitor's bearer access token](https://docs.glia.com/glia-dev/reference/post_visitors)
+      * A visitor can only end the engagement (`action` is `end`).
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/engagements.yaml#/engagement_id'
+  requestBody:
+    required: true
+    description: |
+      There are multiple schemas available depending on the action.
+      Please choose schema type to see available body parameters.
+    content:
+      application/json:
+        schema:
+          oneOf:
+            - $ref: '../schemas/engagement.yaml#/UpdateEngagementRequest/End'
+            - $ref: '../schemas/engagement.yaml#/UpdateEngagementRequest/TransferToGuest'
+            - $ref: '../schemas/engagement.yaml#/UpdateEngagementRequest/TransferOut'
+            - $ref: '../schemas/engagement.yaml#/UpdateEngagementRequest/MarkFlagged'
+        examples:
+          $ref: '../examples/engagement_example.yaml#/UpdateEngagement'
+  responses:
+    '200':
+      description: >
+        Engagement was updated.
+
+export:
+  summary: Export engagement
+  tags:
+    - Engagement
+  # yamllint disable rule:line-length
+  description: |
+    Exports a specified engagement.
+
+    The format and destination of the export are specified by the configuration of the site on which the engagement began.
+
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+      * Base of the user's role, one of:
+        * `operator`
+        * `manager`
+        * `super_manager`
+      * For the user with the `operator` base, the following must be true:
+        * The user is a participant in the engagement.
+
+    If the engagement was transferred to other sites, and the requesting user does not have access to all of them, then the export will contain only the data that belongs to the site(s) for which the user is authorized.
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/engagements.yaml#/engagement_id'
+  responses:
+    '200':
+      description: |
+        Engagement was exported.
+
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../schemas/engagement.yaml#/ExportEngagementResponse'
+          example:
+            $ref: '../examples/engagement_example.yaml#/ExportEngagementSuccess'
+    '401':
+      $ref: '../../engagements_in.yaml#/components/responses/401NotAuthorized'

@@ -1,0 +1,360 @@
+---
+EngagementSearchRequest:
+  InitialRequest:
+    title: Initial Request
+    description: >
+      This is the first request to make when you start searching for engagements. The response includes a
+      `next_page_token` which you can use to fetch the next page of results via the **Paginated Request**.
+      All of the search properties included in the **Initial Request** are passed to the subsequent
+      **Paginated Request** through the `page_token`.
+    type: object
+    properties:
+      search_string:
+        $ref: '../properties/engagement.yaml#/properties/search_string'
+      site_ids:
+        $ref: '../../../common_components/properties.yaml#/site_ids'
+      operator_ids:
+        $ref: '../properties/engagement.yaml#/properties/operator_ids'
+      visitor_ids:
+        $ref: '../properties/engagement.yaml#/properties/visitor_ids'
+      queue_ids:
+        $ref: '../../../common_components/properties.yaml#/queue_ids'
+      team_ids:
+        $ref: '../../../common_components/properties.yaml#/team_ids'
+      from_start_time:
+        $ref: '../properties/engagement.yaml#/properties/from_start_time'
+      to_start_time:
+        $ref: '../properties/engagement.yaml#/properties/to_start_time'
+      from_end_time:
+        $ref: '../properties/engagement.yaml#/properties/from_end_time'
+      to_end_time:
+        $ref: '../properties/engagement.yaml#/properties/to_end_time'
+      include_ongoing:
+        $ref: '../properties/engagement.yaml#/properties/include_ongoing'
+      order:
+        $ref: '../properties/engagement.yaml#/properties/order'
+      order_by:
+        $ref: '../properties/engagement.yaml#/properties/order_by'
+      per_page:
+        $ref: '../../../common_components/properties.yaml#/pagination/per_page'
+    required:
+      - site_ids
+  PaginatedRequest:
+    title: Paginated Request
+    description: >
+      Use the `next_page_token` from the response of the **Initial Request** or previous **Paginated Request** to pass as the value for the `page_token` property.
+      This will retrieve the next page of results with all of the original filters from the **Initial Request**.
+    type: object
+    properties:
+      page_token:
+        $ref: '../../../common_components/properties.yaml#/pagination/page_token'
+    required:
+      - page_token
+
+EngagementListResponse:
+  properties:
+    engagements:
+      type: array
+      items:
+        $ref: '#/EngagementResponse'
+    next_page:
+      type: string
+      format: URL
+
+EngagementResponse:
+  properties: &base_EngagementResponse
+    id:
+      $ref: '../properties/engagement.yaml#/properties/id'
+    account_id:
+      $ref: '../properties/engagement.yaml#/properties/account_id'
+    engagement_type:
+      $ref: '../properties/engagement.yaml#/properties/engagement_type'
+    callback_used:
+      $ref: '../properties/engagement.yaml#/properties/callback_used'
+    created_at:
+      $ref: '../properties/engagement.yaml#/properties/created_at'
+    visitor_name:
+      $ref: '../properties/engagement.yaml#/properties/visitor_name'
+    visitor_browser:
+      $ref: '../properties/engagement.yaml#/properties/visitor_browser'
+    visitor_device_type:
+      $ref: '../properties/engagement.yaml#/properties/visitor_device_type'
+    visitor_engagement_phone_number:
+      $ref: '../properties/engagement.yaml#/properties/visitor_engagement_phone_number'
+    glia_engagement_phone_number:
+      $ref: '../properties/engagement.yaml#/properties/glia_engagement_phone_number'
+    visitor_id:
+      $ref: '../properties/engagement.yaml#/properties/visitor_id'
+    duration:
+      $ref: '../properties/engagement.yaml#/properties/duration'
+    queue_wait_time:
+      $ref: '../properties/engagement.yaml#/properties/total_queue_wait_time'
+    audio_recording_urls:
+      $ref: '../properties/engagement.yaml#/properties/audio_recording_urls'
+    audio_recordings:
+      $ref: '../properties/engagement.yaml#/properties/audio_recordings'
+    flagged:
+      $ref: '../properties/engagement.yaml#/properties/flagged'
+    crm_forwarded:
+      $ref: '../properties/engagement.yaml#/properties/crm_forwarded'
+    summary_forwarded:
+      $ref: '../properties/engagement.yaml#/properties/summary_forwarded'
+    platform:
+      $ref: '../properties/engagement.yaml#/properties/platform'
+    visitor:
+      $ref: '../properties/engagement.yaml#/properties/visitor'
+    chat_transcript:
+      $ref: '../properties/engagement.yaml#/properties/chat_transcript'
+    operators:
+      $ref: '../properties/engagement.yaml#/properties/operators'
+    source:
+      $ref: '../properties/engagement.yaml#/properties/output_source'
+    queues:
+      $ref: '../properties/engagement.yaml#/properties/queues'
+    display_phone_numbers:
+      $ref: '../properties/engagement.yaml#/properties/display_phone_numbers'
+    legs: &base_legs
+      type: array
+      items:
+        type: object
+        $ref: '#/EngagementLeg'
+      description: >
+        A list of engagement legs.
+
+
+        Engagement starts with one leg. A leg is added each time the engagement is transferred.
+        The legs are ordered chronologically by the timestamp of `accepted_at` within each leg.
+    cobrowsing_used:
+      $ref: '../properties/engagement.yaml#/properties/cobrowsing_used'
+    video_used:
+      $ref: '../properties/engagement.yaml#/properties/video_used'
+    audio_used:
+      $ref: '../properties/engagement.yaml#/properties/audio_used'
+    ended_at:
+      $ref: '../properties/engagement.yaml#/properties/ended_at'
+    end_reason:
+      $ref: '../properties/engagement.yaml#/properties/end_reason'
+    visitor_survey_configured:
+      $ref: '../properties/engagement.yaml#/properties/visitor_survey_configured'
+    operator_survey_configured:
+      $ref: '../properties/engagement.yaml#/properties/operator_survey_configured'
+    manager_survey_configured:
+      $ref: '../properties/engagement.yaml#/properties/manager_survey_configured'
+    operator_surveys:
+      $ref: '../properties/engagement.yaml#/properties/operator_surveys'
+    audio_recording_outcome:
+      $ref: '../properties/engagement.yaml#/properties/audio_recording_outcome'
+    recording_paused:
+      $ref: '../properties/engagement.yaml#/properties/recording_paused'
+    heads_up_for_agents:
+      $ref: '../properties/engagement.yaml#/properties/heads_up_for_agents'
+  required:
+    - id
+    - engagement_type
+    - created_at
+    - visitor_name
+    - visitor_browser
+    - visitor_device_type
+    - visitor_id
+    - duration
+    - audio_recording_urls
+    - audio_recordings
+    - flagged
+    - crm_forwarded
+    - summary_forwarded
+    - platform
+    - visitor
+    - chat_transcript
+    - operators
+    - legs
+    - cobrowsing_used
+    - video_used
+    - audio_used
+    - audio_recording_outcome
+    - recording_paused
+
+EngagementSearchResponse:
+  properties:
+    engagements:
+      type: array
+      items:
+        properties:
+          <<: *base_EngagementResponse
+          interaction_id:
+            $ref: '../properties/engagement.yaml#/properties/interaction_id'
+    next_page_token:
+      $ref: '../../../common_components/properties.yaml#/pagination/next_page_token'
+
+EngagementLeg:
+  properties: &base_EngagementLeg
+    id:
+      $ref: '../properties/engagement.yaml#/properties/leg_id'
+    operator:
+      $ref: '../properties/engagement.yaml#/properties/leg_operator_in_search_result'
+    guests:
+      type: array
+      items:
+        type: object
+        $ref: '#/EngagementGuest'
+      description: >
+        A list of guests who participated in an engagement leg.
+    site:
+      $ref: '../properties/engagement.yaml#/properties/site'
+    accepted_at:
+      $ref: '../properties/engagement.yaml#/properties/accepted_at'
+    duration:
+      $ref: '../properties/engagement.yaml#/properties/leg_duration'
+    used_cobrowsing:
+      $ref: '../properties/engagement.yaml#/properties/cobrowsing_used'
+    ended_at:
+      $ref: '../properties/engagement.yaml#/properties/ended_at'
+    end_reason:
+      $ref: '../properties/engagement.yaml#/properties/end_reason'
+    requested_at:
+      $ref: '../properties/engagement.yaml#/properties/requested_at'
+    request_type:
+      $ref: '../properties/engagement.yaml#/properties/request_type'
+    offered_media_type:
+      $ref: '../properties/engagement.yaml#/properties/offered_media_type'
+    accepted_media_type:
+      $ref: '../properties/engagement.yaml#/properties/accepted_media_type'
+    request_queues:
+      $ref: '../properties/engagement.yaml#/properties/request_queues'
+    queue_wait_time:
+      $ref: '../properties/engagement.yaml#/properties/leg_queue_wait_time'
+    request_source:
+      $ref: '../properties/engagement.yaml#/properties/output_source'
+    highest_visitor_media_type:
+      $ref: '../properties/engagement.yaml#/properties/highest_visitor_media_type'
+    highest_operator_media_type:
+      $ref: '../properties/engagement.yaml#/properties/highest_operator_media_type'
+    transfer_request:
+      $ref: '../properties/engagement.yaml#/properties/transfer_request'
+  required:
+    - id
+    - operator
+    - site
+    - accepted_at
+    - duration
+    - used_cobrowsing
+    - ended_at
+    - end_reason
+    - requested_at
+    - request_type
+    - offered_media_type
+    - accepted_media_type
+    - request_queues
+    - queue_wait_time
+    - request_source
+    - highest_visitor_media_type
+    - highest_operator_media_type
+
+EngagementFetchResponse:
+  properties:
+    <<: *base_EngagementResponse
+    legs:
+      <<: *base_legs
+      items:
+        type: object
+        properties:
+          <<: *base_EngagementLeg
+          operator:
+            $ref: '../properties/engagement.yaml#/properties/leg_operator'
+
+EngagementGuest:
+  properties:
+    id:
+      $ref: '../properties/engagement.yaml#/properties/guest_id'
+    type:
+      $ref: '../properties/engagement.yaml#/properties/guest_type'
+    joined_at:
+      $ref: '../properties/engagement.yaml#/properties/guest_joined_at'
+    left_at:
+      $ref: '../properties/engagement.yaml#/properties/guest_left_at'
+
+UpdateEngagementRequest:
+  End:
+    title: 'End the engagement'
+    type: object
+    properties:
+      action:
+        type: string
+        description: Must be `end`.
+        enum:
+          - end
+      reason:
+        $ref: '../properties/engagement.yaml#/properties/end_reason'
+    required:
+      - action
+  TransferToGuest:
+    title: 'Transfer to a guest'
+    type: object
+    properties:
+      action:
+        type: string
+        description: Must be `transfer_to_guest`.
+        enum:
+          - transfer_to_guest
+      guest_id:
+        type: string
+        description: >
+          ID of the guest operator that the engagement is transferred to.
+      stay_as_guest:
+        type: boolean
+        description: >
+          Whether the current host operator stays in the engagement as a guest after transfer is complete.
+    required:
+      - action
+      - guest_id
+      - stay_as_guest
+  TransferOut:
+    title: 'Transfer to an external phone number'
+    type: object
+    properties:
+      action:
+        type: string
+        description: Must be `transfer_out`.
+        enum:
+          - transfer_out
+      name:
+        type: string
+        description: External contact's name displayed to the visitor as the operator's name.
+        example: 'Jordan Green'
+      phone_number:
+        type: string
+        description: >
+          Phone number to transfer the engagement to. Must be in [E.164](doc:glossary#phone-number) format.
+        example: '+12057543010'
+      phone_extension:
+        $ref: '../../../common_components/properties.yaml#/phone_extension'
+    required:
+      - action
+      - phone_number
+  MarkFlagged:
+    title: 'Report a technical issue with the engagement'
+    type: object
+    properties:
+      action:
+        type: string
+        description: Must be `mark_flagged`.
+        enum:
+          - mark_flagged
+      description:
+        type: string
+        description: >
+          Description of the issue.
+    required:
+      - action
+      - description
+
+ExportEngagementResponse:
+  properties:
+    success:
+      type: boolean
+      description: >
+        Indicates whether the engagement was exported successfully or not.
+      enum:
+        - false
+        - true
+  required:
+    - success

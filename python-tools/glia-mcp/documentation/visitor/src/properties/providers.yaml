@@ -1,0 +1,133 @@
+---
+id:
+  type: string
+  description: >
+    The ID of the authentication provider.
+
+site_id:
+  type: string
+  description: >
+    The ID of the site for which the authentication providers are fetched.
+
+name:
+  description: Descriptive name of the authentication provider.
+  type: string
+
+# The `openid_connect_type`, `oauth2_type` and `direct_id_token_type` all represent the same `type` property of a Provider.
+# However, as other required fields depend on this property, hardcode different enum options here to use them in the correct context.
+openid_connect_type:
+  description: >
+    Type of the authentication provider. It is `openid_connect` in the case of OpenID Connect.
+  type: string
+  enum:
+    - openid_connect
+  example: openid_connect
+
+oauth2_type:
+  description: >
+    Type of the authentication provider. It is `oauth2` in the case of OAuth 2.
+  type: string
+  enum:
+    - oauth2
+  example: oauth2
+
+direct_id_token_type:
+  description: >
+    Type of the authentication provider. It is `direct_id_token` in the case of Direct ID Token.
+  type: string
+  enum:
+    - direct_id_token
+  example: direct_id_token
+
+authorize_url:
+  description: >
+    The URL where Glia directs the visitor to authenticate; is determined by the authentication provider.
+  type: string
+
+access_token_url:
+  type: string
+  description: >
+    The URL from where Glia will fetch the ID and/or access tokens; is determined by the authentication provider.
+
+userinfo_url:
+  type: string
+  description: >
+    The URL from where Glia will fetch user information; is determined by the authentication provider.
+    Note that in case `type` is `openid_connect` you find the same data within the ID token received via `access_token_url`.
+
+
+    Glia will request the URL from the authentication provider via HTTP GET method that contains
+    `Authorization: Bearer access_token` and `Accept: application/json` headers where `access_token`
+    was retrieved from `access_token_url` beforehand.
+
+
+    The response fields `name`, `email`, and `preferred_username` are used to show the visitor information in the
+    Glia Hub. Other response fields are ignored. An example response looks like this:
+
+
+      ```json
+      {
+        "name": "John Smith",
+        "email": "john.smith@example"
+      }
+      ```
+
+openid_connect_scope:
+  type: string
+  description: >
+    One or more OpenID Connect scopes separated by space. Determines which visitor's details (e.g. name or email) are retrieved in the ID token.
+    The scope must include at least `openid` but to receive visitor attributes also `email` and `profile` (separated by space) should be added.
+
+
+    See [openid.net](https://openid.net/specs/openid-connect-basic-1_0.html#Scopes) for details.
+
+oauth2_scope:
+  type: string
+  description: >
+    One or more OAuth 2.0 scopes separated by space. Determines which visitor's details (e.g. name or email) are granted by the access token issued to the application.
+
+
+    See [oauth.net](https://oauth.net/2/scope/) for details.
+
+client_id:
+  type: string
+  description: >
+    The client ID that Glia uses when fetching the ID and/or access tokens from the authentication provider.
+
+client_secret:
+  type: string
+  description: The client secret that goes with the client ID above.
+
+default_provider:
+  type: boolean
+  description: >
+    `true` if the added authentication provider should be the default one, `false` otherwise. There can be only one
+    default provider for each site.
+
+jwt_key_autofetch_enabled:
+  type: boolean
+  description: >
+    If `true`, the keys will be fetched from the endpoint defined in `jwt_key_url`. If `false`, the keys provided in `jwt_verification_keys` will be used.
+  example: false
+
+jwt_key_url:
+  type: string
+  description: >
+    The URL of the POST endpoint which returns the public key that Glia can use to verify the authenticated visitor's token (see `id_token` in [Create visitor](https://docs.glia.com/glia-dev/reference/post_visitors) and [Renew token](https://docs.glia.com/glia-dev/reference/post_visitors-visitor-id-token)).
+  example: https://example.com/jwt_key_url
+
+jwt_verification_keys:
+  type: array
+  description: >
+    Array of public key objects that Glia can use to verify the authenticated visitor's token. Only one public key is mandatory while two keys can be provided for key rotation.
+  items:
+    type: object
+    properties:
+      key:
+        type: string
+        description: Public key that Glia can use to verify the authenticated visitor's token. The key must be in the PEM format, including a line break after the footer row.
+        example: '-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEARBJTVqyfU9nGRdtRxKeWRQFr3fR\n02XzT2qCnKvme8tpWkZ23VCbIPcJYR0/qGhLatyhevIVQysY8iPgiLCJ0e==\n-----END PUBLIC KEY-----\n'
+      algorithm:
+        type: string
+        description: The public key algorithm used to sign and verify the authenticated visitor's token. <a href="https://datatracker.ietf.org/doc/html/rfc7518#section-3.4" target="rfc7518">ES256</a> (`es256`) is the only algorithm Glia currently supports.
+        example: es256

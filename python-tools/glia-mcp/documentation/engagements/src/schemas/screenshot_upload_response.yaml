@@ -1,0 +1,19 @@
+---
+title: 'Screenshot upload response'
+type: object
+properties:
+  file_id:
+    type: string
+    description: >
+      ID of the screenshot uploaded.
+    example: '53b236ee-f888-45ec-8e0f-5bf4d5e16a2e'
+  security_scanning_required:
+    type: boolean
+    description: >
+      Whether file security scan is required or not.
+
+
+      If the value of this field is `true`, the [FileSecurityScanResultEvent](https://docs.glia.com/glia-dev/reference/webhooks#filesecurityscanresultevent)
+      will be performed automatically in the background.
+      The scan result must be clean in order to send the screenshot as a system message to chat.
+    example: true

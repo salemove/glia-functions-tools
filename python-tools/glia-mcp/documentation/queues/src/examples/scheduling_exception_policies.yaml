@@ -1,0 +1,39 @@
+---
+DefaultExceptionPolicy:
+  id: a7319a39-e888-4659-8a39-d2515d323824
+  site_id: def34343-e888-43ae-99e0-07a676e9a111
+  name: Default Exception Policy
+  description: This is a default scheduling exception policy.
+  exception_rules:
+    - name: Christmas eve - shortened day
+      type: hours_changed
+      date: '2020-12-24'
+      opens_at: '08:00:00'
+      closes_at: '14:00:00'
+      repeat_yearly: false
+    - name: Christmas day
+      type: queue_closed
+      date: '2020-12-25'
+      repeat_yearly: true
+  created_at: '2017-02-20T00:00:00Z'
+  updated_at: '2017-02-20T00:00:00Z'
+  created_by: ec317122-e888-4b43-996d-34a2ed3b76d8
+  updated_by: ec317122-e888-4b43-996d-34a2ed3b76d8
+AnotherExceptionPolicy:
+  id: 1c12dd58-84c4-49fb-861d-4f941535fbca
+  site_id: def34343-e888-43ae-99e0-07a676e9a111
+  name: Another Exception Policy
+  description: This scheduling exception policy closes the queue only for Christmas day.
+  exception_rules:
+    - name: Christmas day
+      type: queue_closed
+      date: '2020-12-25'
+      repeat_yearly: true
+  created_at: '2017-02-20T00:00:00Z'
+  updated_at: '2017-02-20T00:00:00Z'
+  created_by: ec317122-e888-4b43-996d-34a2ed3b76d8
+  updated_by: ec317122-e888-4b43-996d-34a2ed3b76d8
+ExceptionPoliciesList:
+  scheduling_exception_policies:
+    - $ref: '#/DefaultExceptionPolicy'
+    - $ref: '#/AnotherExceptionPolicy'

@@ -1,0 +1,193 @@
+---
+properties:
+  id:
+    type: string
+    format: uuid
+    description: >
+      The ID of a chat message.
+    example: 'e27f2e0a-d888-408b-a584-51f68b15f669'
+
+  content:
+    type: string
+    description: >
+      The content the sender wishes to send to the recipient. This can be empty if the message contains a file
+      attachment and has to be empty if the message contains an SSML attachment.
+
+
+      There is a limit of 10000 characters when using regular chat functionality and 3000 characters when using
+      text-to-speech. The latter means that operator's `audio_source` is set to `tts_stt` (see `audio_source` under <a
+      href="./post_operators">`POST /operators`</a>), like in case of the virtual assistants that have audio enabled.
+    example: Hi, would you like any suggestions regarding insurance?
+  type_in_message:
+    type: string
+    # prettier-ignore
+    # yamllint disable rule:line-length
+    description: >
+      Chat message type. Type is only used when the target is `operator`.
+
+
+      * `chat` - A regular chat message.
+
+      * `event` - A message type used to communicate that an action has been performed by the visitor. Events can only
+      be sent by visitors.
+        - See: <a href="./post_engagements-engagement-id-events#post_engagements-engagement-id-events">`POST /engagements/{engagement_id}/events`</a>
+
+      * `prompt` - A message that is only visible to the operators (the host, guests, and monitors). Prompts are typically used to guide the operator through an engagement. For example, a prompt might suggest offering CoBrowsing to the visitor.
+        - See also: [AI prompt](doc:prompt)
+    # yamllint enable rule:line-length
+    enum:
+      - chat
+      - event
+      - prompt
+    default: chat
+
+  type_in_transcript:
+    type: string
+    # prettier-ignore
+    # yamllint disable rule:line-length
+    description: >
+      Message type as shown in the transcript.
+
+
+      * `user` - A regular message between the engagement's participants or a system message (e.g. two-way audio
+      has started).
+
+      * `event` - A message that was stored to indicate an event.
+
+          - See <a href="./post_engagements-engagement-id-events#post_engagements-engagement-id-events">`POST /engagements/{engagement_id}/events`</a>
+
+      * `suggestion` - A suggested response to the visitor. Suggestion is visible only to operator and can then be
+      selected and sent to the visitor. Also see [AI suggestion](doc:suggestion).
+
+      * `prompt` - A message that is only visible to the operators (the host, guests, and monitors). Prompts are typically used to guide the operator through an engagement. For example, a prompt might suggest offering CoBrowsing to the visitor.
+
+      Prompts may be sent by a user monitoring an engagement, also known as whispering, or an operator assistant
+      (see [AI prompt](doc:prompt)).
+
+      * `queued_message` - A queued chat message sent by the visitor that has not yet been transferred to an engagement.
+    # yamllint enable rule:line-length
+    enum:
+      - user
+      - event
+      - suggestion
+      - prompt
+      - queued_message
+
+  attachment:
+    type: object
+    description: >
+      Attachments let you add more context to a message, enhancing user experience and making it more interactive. A
+      message attachment must have `type` property that defines the behavior of the attachment.
+    oneOf:
+      - $ref: '../schemas/attachment_files.yaml#/engagement_files_attachment'
+      - $ref: '../schemas/attachment_single_choice.yaml'
+      - $ref: '../schemas/attachment_single_choice_response.yaml'
+      - $ref: '../schemas/attachment_ssml.yaml'
+      - $ref: '../schemas/attachment_transfer_ai_suggestion_usage.yaml'
+
+  # NOTE: The response (for transcript) attachment schema differs from the request attachment schema and this is also
+  # used for the messaging transcript response.
+  transcript_attachment:
+    type: object
+    description: >
+      Attachments let you add more context to a message, enhancing user experience and making it more interactive. A
+      message attachment must have `type` property that defines the behavior of the attachment.
+    oneOf:
+      - $ref: '../schemas/transcript_attachment_files.yaml'
+      - $ref: '../schemas/attachment_single_choice.yaml'
+      - $ref: '../schemas/attachment_single_choice_response.yaml'
+      - $ref: '../schemas/attachment_ssml.yaml'
+      - $ref: '../schemas/attachment_transfer_ai_suggestion_usage.yaml'
+
+  metadata:
+    type: object
+    description: >
+      Message metadata allows an integrator to add end to end data inside a JSON object. This information is only
+      relevant to the integrator and will be handled transparently inside Glia.
+
+
+      * When sender is an operator assistant (sender type `omniguide`), the message's metadata contains:
+
+      ```
+      provider: {name: provider_name}
+      ```
+
+      * One of the common metadata use cases is sending a custom response card, see a JSON payload example for it
+      in [Suggestions with Custom Response Card](doc:suggestion#response-cards).
+    example:
+      key: value
+
+  message:
+    type: string
+    description: |-
+      Text message that the engagement participant sent.
+    example: 'Hi, may I help you with the application?'
+
+  created_at:
+    type: string
+    description: |-
+      An ISO-8601 timestamp when the message was sent.
+    example: '2020-05-31T09:46:28Z'
+
+  delivered_at:
+    type: string
+    description: |-
+      An ISO-8601 timestamp of when the message was delivered to another participant.
+    example: '2020-05-31T09:46:28Z'
+
+  sender:
+    $ref: '../properties/sender.yaml'
+
+  speech_to_text:
+    type: boolean
+    description: >
+      If `true`, then the message was transcribed using speech-to-text (STT) functionality. For example, when the visitor was having
+      an audio engagement with a virtual assistant.
+    example: false
+
+  speech_to_text_details:
+    type: object
+    description: >
+      It is only set when `speech_to_text` is `true`, otherwise it is `null`.
+    properties:
+      visible_to_visitor:
+        type: boolean
+        description: >
+          If `true`, then the transcribed message is visible to the visitor.
+        example: false
+
+      transcribed_in_tts_stt_conference:
+        type: boolean
+        description: >
+          If `true`, then a speech-to-text (STT) technology other than LiveTranscribe was used to transcribe the message.
+          For example, if the message was transcribed by a virtual voice assistant.
+
+          If `false`, then LiveTranscribe feature was used for transcription.
+        example: false
+
+      transcribed_while_multiple_operators:
+        type: boolean
+        description: >
+          If `true`, then 2 or more operators were participating in the engagement when the message was transcribed.
+        example: false
+
+  text_to_speech:
+    type: boolean
+    description: >
+      If `true`, then the message was played to the visitor with text-to-speech (TTS) audio. For example, when the visitor was having an audio engagement with a virtual voice assistant.
+    example: false
+
+  target:
+    type: string
+    description: >
+      Target of the message. In case of system messages it tells if the recipient is the operator or visitor.
+    enum:
+      - visitor
+      - operator
+    example: visitor
+
+  leg_id:
+    type: string
+    description: >
+      The ID of the engagement leg where the message was sent.
+    example: 0ebe74fa-fdac-4970-b9af-ae2b547842ed

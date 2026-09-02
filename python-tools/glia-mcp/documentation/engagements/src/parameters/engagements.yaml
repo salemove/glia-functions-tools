@@ -1,0 +1,165 @@
+---
+engagement_id:
+  name: engagement_id
+  in: path
+  description: Engagement ID.
+  required: true
+  schema:
+    type: string
+  example: 'abc12121-e888-43ae-99e0-07a676e9a111'
+
+site_ids:
+  name: 'site_ids[]'
+  in: query
+  description: >
+    A list of site IDs whose engagements are requested.
+
+    The requester must be authorized to access the provided sites.
+  required: true
+  allowReserved: true
+  schema:
+    type: array
+    items:
+      type: string
+  style: form
+  explode: true
+  example:
+    - 'def34343-s888-43ae-99e0-07a676e9a111'
+    - 'def34343-s777-43ae-99e0-07a676e9a111'
+
+operator_ids:
+  name: 'operator_ids[]'
+  in: query
+  description: >
+    A list of user IDs whose engagements are requested.
+
+
+    * If the requester is a manager on the sites, or a site's bearer access token is used,  the
+    `operator_ids` filter can be either omitted or be an empty array to query engagements conducted by any user.
+
+    * If the requester is not a manager, they must specify their own ID in `operator_ids` filter.
+
+
+    Interpreting the response:
+
+    * The engagement is associated with a certain user only if they have been a host of at least one leg of this
+    engagement.
+
+  required: false
+  schema:
+    type: array
+    items:
+      type: string
+  example:
+    - 'ec317122-o888-4b43-996d-34a2ed3b76d8'
+    - 'ec317122-o777-4b43-996d-34a2ed3b76d8'
+
+start_date:
+  name: start_date
+  in: query
+  description: >
+    The response will include engagements that happened from the `start_date` (included) onward.
+  required: false
+  schema:
+    type: string
+  example: '2017-01-01T10:23:04Z'
+
+end_date:
+  name: end_date
+  in: query
+  description: >
+    The response will include engagements that happened before the `end_date` (not included).
+  required: false
+  schema:
+    type: string
+  example: '2017-01-07T03:30:05Z'
+
+include_ongoing:
+  name: include_ongoing
+  in: query
+  description: >
+    If set to true, ongoing engagements are included in the response. By default, ongoing engagements
+    are not included in the response.
+  required: false
+  schema:
+    type: boolean
+  example: 'false'
+
+per_page:
+  name: per_page
+  in: query
+  description: >
+    If pagination is used then this parameter specifies the number of engagements per page.
+  required: false
+  schema:
+    type: integer
+  example: 30
+
+order:
+  name: order
+  in: query
+  description: >
+    Specifies whether the results should be sorted in ascending (`asc`) or descending (`desc`) order. By default,
+    engagements are sorted by their start time in descending order.
+  required: false
+  schema:
+    type: string
+    enum:
+      - asc
+      - desc
+  example: asc
+
+participant_id:
+  name: participant_id
+  in: path
+  description: >
+    Engagement participant ID. Can be either host or guest operator ID or visitor ID.
+  required: true
+  schema:
+    type: string
+  example: 'c2c9106e-v888-47b2-8db3-089fb49dc9a5'
+
+message_id:
+  name: message_id
+  in: path
+  description: >
+    Client-generated message ID as a UUID version 4.
+
+
+    Submitting a message twice with the same ID does not create a duplicate message.
+  required: true
+  schema:
+    type: string
+  example: 'e27f2e0a-d888-408b-a584-51f68b15f669'
+
+command_id:
+  name: command_id
+  in: path
+  description: >
+    Client-generated custom command ID must be a version 4 UUID.
+
+
+    Submitting a custom command twice with the same ID does not execute duplicate commands.
+  required: true
+  schema:
+    type: string
+
+file_id:
+  name: file_id
+  in: path
+  description: >
+    ID of the file.
+  required: true
+  schema:
+    type: string
+  example: '53b236ee-f888-45ec-8e0f-5bf4d5e16a2e'
+
+media_upgrade_request_id:
+  name: media_upgrade_request_id
+  in: path
+  description: >
+    ID of the media upgrade request that you will accept or decline.
+  required: true
+  schema:
+    type: string
+  example: '66857eb9-m888-4fe5-b73e-a8ca8c4ea2ae'

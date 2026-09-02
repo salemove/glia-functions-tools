@@ -1,0 +1,199 @@
+---
+create:
+  summary: Create join request
+  tags:
+    - Join engagement
+  # yamllint disable rule:line-length
+  description: |
+    Creates a join request to invite another user or an external party to the engagement as a guest.
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * The user is the host operator of the engagement.
+    * Base of the user's role, one of:
+      * `operator`
+      * `manager`
+      * `super_manager`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/engagements.yaml#/engagement_id'
+  requestBody:
+    description: Parameters for creating the join request.
+    required: true
+    content:
+      application/json:
+        schema:
+          oneOf:
+            - title: Invite operator
+              description: |
+                Invite a specific Glia user to an ongoing engagement as a guest.
+              properties:
+                guest_id:
+                  $ref: '../../src/properties/join_requests.yaml#/properties/guest_id'
+                guest_type:
+                  $ref: '../../src/properties/join_requests.yaml#/properties/guest_type'
+                site_id:
+                  $ref: '../../../common_components/properties.yaml#/site_id'
+                  # yamllint disable rule:line-length
+                  description: |
+                    ID of the site where the operator is added from. Should the guest be made the host of the engagement later, then this site will be set as the site of the new leg.
+                    The site must be the current engagement's site or transferable from the current engagement's site.
+                  # yamllint enable rule:line-length
+                message:
+                  $ref: '../../src/properties/join_requests.yaml#/properties/message'
+                webhooks:
+                  $ref: '../../src/properties/join_requests.yaml#/properties/webhooks'
+              required:
+                - guest_id
+                - guest_type
+                - site_id
+            - title: Invite external guest
+              type: object
+              # yamllint disable rule:line-length
+              description: |
+                Invite someone who is not a Glia user into an engagement as a guest via a phone call.
+
+                * The first time an external party is invited to join an engagement on a certain site, they are registered in the Glia system as an operator resource with the `external` flag.
+                * For all consecutive invites to the same external party the previously created operator resource is reused.
+                * A unique external party is defined by their phone number and extension, and the ID of the Glia site where the engagement leg they joined took place.
+                * To learn more about external guests, see [Engagement Participants](https://docs.glia.com/glia-support/docs/engagement-participants).
+              # yamllint enable rule:line-length
+              properties:
+                external_guest:
+                  $ref: '../../src/properties/join_requests.yaml#/properties/external_guest'
+                guest_type:
+                  $ref: '../../src/properties/join_requests.yaml#/properties/guest_type'
+                site_id:
+                  $ref: '../../../common_components/properties.yaml#/site_id'
+                  # yamllint disable rule:line-length
+                  description: |
+                    ID of a site that is assigned to the operator that the external guest represents.
+                    Should the guest be made the host of the engagement later, then this site will be set as the site of the new leg.
+                    The site must be the current engagement's site or transferrable from the current engagement's site.
+                  # yamllint enable rule:line-length
+                webhooks:
+                  $ref: '../../src/properties/join_requests.yaml#/properties/webhooks'
+              required:
+                - external_guest
+                - guest_type
+                - site_id
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../../src/schemas/join_request.yaml'
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '409':
+      $ref: '../../../common_components/responses/errors.yaml#/409_conflict'
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+    '500':
+      $ref: '../../../common_components/responses/errors.yaml#/500_internal_server_error'
+    '503':
+      $ref: '../../../common_components/responses/errors.yaml#/503_service_unavailable'
+
+fetch_by_id:
+  summary: Fetch join request
+  tags:
+    - Join engagement
+  # yamllint disable rule:line-length
+  description: |
+    Fetches a join request for specified engagement by request's ID.
+
+    Can be requested by a user who initiated the request to see the state of the join request.
+
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * The user initiated the join request.
+    * Base of the user's role, one of:
+      * `operator`
+      * `manager`
+      * `super_manager`
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/engagements.yaml#/engagement_id'
+    - $ref: '../../src/parameters/join_requests.yaml#/parameters/join_request_id'
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../../src/schemas/join_request.yaml'
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+    '500':
+      $ref: '../../../common_components/responses/errors.yaml#/500_internal_server_error'
+    '503':
+      $ref: '../../../common_components/responses/errors.yaml#/503_service_unavailable'
+
+update_by_id:
+  summary: Answer join request
+  tags:
+    - Join engagement
+  # yamllint disable rule:line-length
+  description: |
+    Accepts or rejects the join request. If accepted, the user joins the engagement as a guest.
+
+
+    ### Authorization and Permissions
+
+    [User's bearer access token](https://docs.glia.com/glia-dev/reference/post_operator-authentication-tokens), requires:
+    * The user is the recipient of the join request.
+    * Base of the user's role, one of:
+      * `operator`
+      * `manager`
+      * `super_manager`
+
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../../src/parameters/engagements.yaml#/engagement_id'
+    - $ref: '../../src/parameters/join_requests.yaml#/parameters/join_request_id'
+  requestBody:
+    description: Action to be performed on the join request.
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            action:
+              $ref: '../../src/properties/join_requests.yaml#/properties/action'
+          required:
+            - action
+  responses:
+    '200':
+      description: OK
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            $ref: '../../src/schemas/join_request.yaml'
+    '401':
+      $ref: '../../../common_components/responses/errors.yaml#/401_unauthorized'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+    '500':
+      $ref: '../../../common_components/responses/errors.yaml#/500_internal_server_error'
+    '503':
+      $ref: '../../../common_components/responses/errors.yaml#/503_service_unavailable'

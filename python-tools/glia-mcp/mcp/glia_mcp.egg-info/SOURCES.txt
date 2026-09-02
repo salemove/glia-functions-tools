@@ -1,0 +1,8 @@
+README.md
+pyproject.toml
+glia_mcp.egg-info/PKG-INFO
+glia_mcp.egg-info/SOURCES.txt
+glia_mcp.egg-info/dependency_links.txt
+glia_mcp.egg-info/entry_points.txt
+glia_mcp.egg-info/requires.txt
+glia_mcp.egg-info/top_level.txt

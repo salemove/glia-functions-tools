@@ -1,0 +1,56 @@
+---
+schemas:
+  AuthRequest:
+    properties:
+      $ref: '../properties/authentication.yaml#/properties'
+      authentication_provider_id:
+        description: The ID of the authentication provider to be used.
+        type: string
+        example: 4f0caef8-f888-4dff-b238-d112fdfae623
+      webhooks:
+        description: |
+          Array of webhook objects described in HTTP Webhooks. Allowed events are:
+
+          * `visitor.authentication.success`
+          * `visitor.authentication.failure`
+
+          See details in [Webhooks](ref:webhooks).
+        type: array
+        items:
+          type: object
+          properties:
+            url:
+              type: string
+              description: The URL (including protocol) to which the HTTP request will be sent to. See more in [HTTP webhooks](ref:webhooks#registering).
+              example: http://example.com/webhook
+            method:
+              type: string
+              description: |
+                One of the HTTP methods, see [HTTP webhooks](ref:webhooks#registering).
+              example: POST
+            events:
+              type: array
+              description: |
+                Array of events, see see [HTTP webhooks](ref:webhooks#registering).
+              items:
+                type: string
+                enum:
+                  - visitor.authentication.success
+                  - visitor.authentication.failure
+                example: visitor.authentication.success
+
+  AuthResponse:
+    properties:
+      authentication_request_id:
+        type: string
+        example: 4bfa559f-0e22-43b2-935b-af3d627c0a85
+
+  AuthDeleteRequest:
+    properties:
+      $ref: '../properties/authentication.yaml#/properties'
+      fail_reason:
+        type: string
+        description: |
+          The reason why the authentication request is closed. Can be any string to clearly indicate the reason: a
+          human-readable explanation, error code, etc.
+        example: Reason why the authentication request has been closed

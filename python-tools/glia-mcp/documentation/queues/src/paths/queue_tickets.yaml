@@ -1,0 +1,126 @@
+---
+create:
+  summary: Create queue ticket
+  tags:
+    - Queue tickets
+  # yamllint disable rule:line-length
+  description: |
+    Creates a queue ticket entity and puts the visitor into the queue.
+
+    A queue ticket represents the visitor's request to connect with any available operator staffing any of the specified queues.
+
+    ### Authorization and Permissions
+
+    To use this endpoint, a [visitor's bearer access token](https://docs.glia.com/glia-dev/reference/post_visitors) is needed in the `Authorization` request header.
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  requestBody:
+    required: true
+    content:
+      application/vnd.salemove.v1+json:
+        schema:
+          type: object
+          $ref: '../schemas/create_queue_ticket.yaml'
+  responses:
+    '201':
+      description: Queue ticket was created.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            type: object
+            $ref: '../responses/queue_ticket.yaml'
+          example:
+            $ref: '../examples/queue_tickets.yaml#/QueueTicketEnqueued'
+    '200':
+      # yamllint disable rule:line-length
+      description: |
+        OK
+
+        Nothing to add, the visitor already has an existing active queue ticket with the same request criteria.
+      # yamllint enable rule:line-length
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            type: object
+            $ref: '../responses/queue_ticket.yaml'
+          example:
+            $ref: '../examples/queue_tickets.yaml#/QueueTicketEnqueued'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '409':
+      # yamllint disable rule:line-length
+      description: |
+        Conflict
+
+        The visitor has an active queue ticket with criteria conflicting with what was requested. The active queue ticket can be deleted and a subsequent request made with new criteria to replace it.
+      # yamllint enable rule:line-length
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Conflict
+    '422':
+      $ref: '../../../common_components/responses/errors.yaml#/422_unprocessable_entity'
+
+show:
+  summary: Fetch queue ticket
+  tags:
+    - Queue tickets
+  # yamllint disable rule:line-length
+  description: |
+    Fetches a queue ticket by its ID.
+
+
+    ### Authorization and Permissions
+
+    [Visitor's bearer access token](https://docs.glia.com/glia-dev/reference/post_visitors), requires:
+
+    * The visitor must be the same who created the queue ticket.
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/queue_ticket.yaml#/queue_ticket_id'
+  responses:
+    '200':
+      description: >
+        Queue ticket was fetched.
+      content:
+        application/vnd.salemove.v1+json:
+          schema:
+            type: object
+            $ref: '../responses/queue_ticket.yaml'
+          example:
+            $ref: '../examples/queue_tickets.yaml#/QueueTicketFinished'
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'
+    '404':
+      $ref: '../../../common_components/responses/errors.yaml#/404_not_found'
+
+delete:
+  summary: Delete queue ticket
+  tags:
+    - Queue tickets
+  # yamllint disable rule:line-length
+  description: |
+    Deletes a specified queue ticket and removes the visitor from the queue.
+
+    ### Authorization and Permissions
+
+    [Visitor's bearer access token](https://docs.glia.com/glia-dev/reference/post_visitors), requires:
+
+    * The visitor must be the same who created the queue ticket.
+
+    For more information about bearer access tokens, see [Authorization Header](https://docs.glia.com/glia-dev/reference/authorization-header).
+  # yamllint enable rule:line-length
+  parameters:
+    - $ref: '../parameters/queue_ticket.yaml#/queue_ticket_id'
+  responses:
+    '204':
+      description: Queue ticket was deleted.
+    '403':
+      $ref: '../../../common_components/responses/errors.yaml#/403_forbidden'

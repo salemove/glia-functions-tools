@@ -1,0 +1,6 @@
+---
+properties:
+  queue_id:
+    type: string
+    description: ID of the queue to which the engagement is transferred.
+    example: ce06d2a0-f9cf-4e4b-91b8-92a0543462a7

@@ -1,0 +1,8 @@
+---
+success:
+  '204':
+    description: >
+      OK
+
+
+      Request was successful and update for Direct ID validation public key has been triggered.

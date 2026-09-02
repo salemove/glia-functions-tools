@@ -1,0 +1,130 @@
+---
+schemas:
+  BearerToken:
+    title: Unauthenticated visitor
+    type: object
+    properties:
+      id:
+        $ref: '../properties/site_visitors.yaml#/properties/visitor_id'
+      access_token:
+        $ref: '../properties/site_visitors.yaml#/properties/bearer_token'
+      secret:
+        $ref: '../properties/site_visitors.yaml#/properties/secret'
+
+  BearerTokenRenew:
+    title: Unauthenticated visitor
+    type: object
+    properties:
+      id:
+        $ref: '../properties/site_visitors.yaml#/properties/visitor_id'
+      access_token:
+        $ref: '../properties/site_visitors.yaml#/properties/bearer_token'
+
+  AuthenticatedVisitorBearerToken:
+    title: Authenticated visitor
+    type: object
+    properties:
+      id:
+        $ref: '../properties/site_visitors.yaml#/properties/visitor_id'
+      access_token:
+        $ref: '../properties/site_visitors.yaml#/properties/bearer_token'
+      authenticated_externally:
+        $ref: '../properties/site_visitors.yaml#/properties/authenticated_externally'
+
+  AuthenticationFailedVisitorBearerToken:
+    title: Visitor authentication failed
+    type: object
+    properties:
+      id:
+        $ref: '../properties/site_visitors.yaml#/properties/visitor_id'
+      access_token:
+        $ref: '../properties/site_visitors.yaml#/properties/bearer_token'
+      authenticated_externally:
+        $ref: '../properties/site_visitors.yaml#/properties/authenticated_externally'
+      authentication_failure_reason:
+        $ref: '../properties/site_visitors.yaml#/properties/authentication_failure_reason'
+
+  CreateVisitorToken:
+    type: object
+    properties:
+      native_mobile_visitor:
+        $ref: '../properties/site_visitors.yaml#/properties/native_mobile_visitor'
+      id_token:
+        $ref: '../properties/site_visitors.yaml#/properties/id_token'
+      external_access_token:
+        $ref: '../properties/site_visitors.yaml#/properties/external_access_token'
+
+  UpdateVisitorToken:
+    allOf:
+      - $ref: '#/schemas/CreateVisitorToken'
+    properties:
+      secret:
+        type: string
+        description: >
+          The visitor's secret. It should be provided when renewing the access token for the given unauthenticated visitor. The secret is obtained using the [Create visitor](https://docs.glia.com/glia-dev/reference/post_visitors) endpoint.
+        example: WBO2PpcmABDEnuToFCq5LmuPMJcM88 #gitleaks:allow
+
+  VisitorResponseBase: &visitor_response_base
+    name:
+      $ref: '../properties/site_visitors.yaml#/properties/name'
+    email:
+      $ref: '../properties/site_visitors.yaml#/properties/email'
+    phone:
+      $ref: '../properties/site_visitors.yaml#/properties/phone'
+    note:
+      $ref: '../properties/site_visitors.yaml#/properties/note'
+    custom_attributes:
+      $ref: '../properties/site_visitors.yaml#/properties/custom_attributes'
+    id:
+      $ref: '../properties/site_visitors.yaml#/properties/id'
+    banned:
+      $ref: '../properties/site_visitors.yaml#/properties/banned'
+    authenticated_attributes:
+      $ref: '../properties/site_visitors.yaml#/properties/authenticated_attributes'
+
+  GetVisitor:
+    type: object
+    properties:
+      <<: *visitor_response_base
+      href:
+        $ref: '../properties/site_visitors.yaml#/properties/href'
+      id:
+        $ref: '../properties/site_visitors.yaml#/properties/id'
+
+  PatchVisitor:
+    type: object
+    properties:
+      name:
+        $ref: '../properties/site_visitors.yaml#/properties/patch_name'
+      email:
+        $ref: '../properties/site_visitors.yaml#/properties/patch_email'
+      phone:
+        $ref: '../properties/site_visitors.yaml#/properties/phone'
+      note:
+        $ref: '../properties/site_visitors.yaml#/properties/note'
+      note_update_method:
+        $ref: '../properties/site_visitors.yaml#/properties/note_update_method'
+      custom_attributes:
+        $ref: '../properties/site_visitors.yaml#/properties/custom_attributes'
+      custom_attributes_update_method:
+        $ref: '../properties/site_visitors.yaml#/properties/custom_attributes_update_method'
+      context:
+        $ref: '../properties/site_visitors.yaml#/properties/context'
+
+  PatchVisitorResponse:
+    type: object
+    properties:
+      <<: *visitor_response_base
+
+  SearchVisitors:
+    type: object
+    properties:
+      visitors:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              $ref: '../properties/site_visitors.yaml#/properties/id'
+            authenticated_attributes:
+              $ref: '../properties/site_visitors.yaml#/properties/limited_authenticated_attributes'

@@ -1,0 +1,70 @@
+---
+properties:
+  audio:
+    type: string
+    nullable: true
+    description: |
+      * `two_way` - audio is to be used.
+      * `null` - audio is not to be used.
+    enum:
+      - two_way
+      - null
+  video:
+    type: string
+    nullable: true
+    description: |
+      * `two_way` - visitor and operator share their video with each other.
+      * `one_way` - operator shares their video with the visitor.
+      * `null` - video is not to be used.
+    enum:
+      - two_way
+      - one_way
+      - null
+  audio_type:
+    type: string
+    enum:
+      - browser
+      - phone
+    description: >
+      Specifies the type of audio to be used for the participant making the request.
+
+
+      This property is required when visitor creates a media upgrade request.
+
+
+      This property is ignored when operator creates a media upgrade request. The operator's audio type can be
+      configured in their Glia Hub account settings.
+
+
+      Available audio types:
+
+
+      * `browser` - the participant will use browser audio.
+
+
+      * `phone` - the participant will use phone audio.
+  phone_number:
+    type: string
+    description: >
+      Phone number of the participant. The supported format is [E.164](doc:glossary#phone-number).
+
+
+      Must be set if and only if `audio_type` is `phone`.
+  phone_extension:
+    type: string
+    description: >
+      The phone number extension of the participant.
+
+
+      A valid extension contains 1-25 digits or hashes and any number of `,` characters.
+
+
+      There is an initial two second delay time before the first extension character is processed. Each `,` character in
+      the extension adds a two second wait time before the next character is processed. Maximum length is 25 characters.
+
+
+      Can only be set if `audio_type` is `phone`.
+
+required:
+  - audio
+  - video

@@ -1,0 +1,181 @@
+---
+average_wait_time:
+  type: integer
+  description: |
+    Average waiting duration of currently queued visitors (in seconds).
+id:
+  type: string
+  description: |
+    Queue ID (in UUID v4 format). Cannot be modified after creation.
+name:
+  type: string
+  description: Queue name.
+site_id:
+  type: string
+  description: |
+    ID of the site the queue belongs to. Can not be modified after creation.
+description:
+  type: string
+  description: Queue description.
+is_default:
+  type: boolean
+  description: >
+    If `true`, then the website visitors are routed by default to this queue upon page load. This is useful when
+    visitors don't need to be assigned to a queue based on any specific criteria. To introduce additional logic
+    regarding how and when visitors are assigned to a specific queue, use [Web Business
+    Rules](https://docs.glia.com/glia-support/docs/web-business-rules). Assigning visitor to a specific queue overwrites
+    prior assigned queues, including default queues.
+
+
+    A site can have multiple default queues. In such a case the visitor might be enqueued to multiple of them and the
+    exact routing mechanism depends on several aspects, including but not limited to queue availability, visitor's media
+    choice and set of operators staffing the queues; see detailed description in Glia's Knowledge Base article [Routing
+    with Queues](https://docs.glia.com/glia-support/docs/routing-with-queues).
+priority:
+  type: integer
+  description: >
+    Determines the priority of the queue among other queues. 0 is the lowest priority and 10 is the highest. The default
+    priority is 0.
+
+
+    Tickets in a higher priority queue are served before tickets in a lower priority queue. Ticket priority is inherited
+    from the queue to which the ticket is assigned. If a ticket is assigned to multiple queues, then the ticket inherits
+    the priority of the queue that has the highest priority.
+
+
+    Please note that queue prioritization takes effect only in the context of teams (operators) staffing the same
+    queues. In other words, if the same operators are staffing the same queues, then tickets in a higher priority queue
+    are served before the tickets in a lower priority queue.
+  minimum: 0
+  maximum: 10
+  nullable: true
+  default: 0
+capacity:
+  type: integer
+  deprecated: true
+  description: |
+    The maximum number of concurrent visitors allowed into the queue. Use `capacity_policy` instead.
+capacity_policy:
+  $ref: './capacity_policy.yaml#/capacity_policy'
+routing_policy:
+  $ref: './routing_policy.yaml'
+available_properties:
+  $ref: './available_properties.yaml'
+status:
+  type: string
+  description: >
+    Current queue status. If the current queue is full, unstaffed, or closed, the status reflects that of its fallback queue.
+    This process continues recursively through any additional fallback queues until either an available queue is found or no more fallback queues exist.
+  enum:
+    - opened
+    - full
+    - unstaffed
+    - closed
+self_status:
+  type: string
+  description: |
+    Current queue status without taking into account the status of fallback queue(s). Always `closed` for new queues.
+  enum:
+    - opened
+    - full
+    - unstaffed
+    - closed
+display_phone_number:
+  $ref: './display_phone_number.yaml#/display_phone_number'
+when_unstaffed:
+  type: string
+  description: >
+    A strategy to apply to visitors when queue becomes unstaffed (i.e. when there are no operators online who match
+    queue routing policy). Can not be `accept` when `capacity_policy` is of type `none`.
+  enum:
+    - accept
+    - reject
+operator_ranking_enabled:
+  type: boolean
+  default: false
+  description: |
+    If `true`, queued visitor will be engaged with the first available operator who has the highest rank in the queue.
+welcome_message:
+  type: string
+  description: >
+    If specified, this message will be sent automatically at the start of each engagement in this queue.
+
+
+    Welcome message can be specified as a <a href="../docs/suggestion#response-cards">Response Card</a> or <a
+    href="../docs/suggestion#speech-synthesis-markup-language">SSML</a> in JSON format.
+scheduling_policy_id:
+  type: string
+  description: >
+    ID of the queue scheduling policy (in UUID v4 format).
+
+
+    See [`POST /queues/scheduling_policies`](ref:queue-scheduling#post_queues-scheduling-policies) on how to create a
+    scheduling policy for the queue.
+scheduling_exception_policy_id:
+  type: string
+  description: >
+    ID of the queue scheduling exception policy (in UUID v4 format).
+
+
+    See [`POST /queues/scheduling_exception_policies`](ref:queue-scheduling-exceptions#post_queues-scheduling-exception-policies)
+    on how to create a scheduling exception policy for the queue.
+
+
+    Can only have value when `scheduling_policy_id` is set.
+fallback_queue_id:
+  type: string
+  description: >
+    ID of a fallback queue (in UUID v4 format).
+
+
+    Fallback queue is a queue to which visitors are re-routed when the Primary queue is full, unstaffed or closed.
+
+    Fallback queue must be a queue that does not have the Primary queue as a direct or indirect fallback, or in other
+    words there can be no fallback cycles.
+
+
+    For example if:
+
+      Queue B is assigned as a fallback queue to queue A
+
+      Queue C is assigned as a fallback queue to queue B
+
+    Then queue A cannot be assigned as a fallback queue of queue C as this creates a fallback cycle: `A -> B -> C -> A`
+operator_affinity:
+  $ref: './operator_affinity.yaml'
+visitors_count:
+  type: integer
+  description: Number of visitors currently in the queue.
+available_operators_count:
+  deprecated: true
+  type: integer
+  description: >
+    Use [`GET /api/v2/queues/staffing`](https://docs.glia.com/glia-dev/reference/get_api-v2-queues-staffing) instead. The number of available operators that are assigned to the given queue and whose media availability matches at least one of queue's medias.
+temporarily_unavailable_operators_count:
+  deprecated: true
+  type: integer
+  description: >
+    Use [`GET /api/v2/queues/staffing`](https://docs.glia.com/glia-dev/reference/get_api-v2-queues-staffing) instead. The number of temporarily unavailable operators that are assigned to the given queue and whose media availability matched at least one of the queue's medias prior to becoming temporarily unavailable.
+unavailable_operators_count:
+  deprecated: true
+  type: integer
+  description: >
+    Use [`GET /api/v2/queues/staffing`](https://docs.glia.com/glia-dev/reference/get_api-v2-queues-staffing) instead. The number of unavailable operators that are assigned to the queue.
+created_at:
+  $ref: '../../../common_components/properties.yaml#/created_at'
+updated_at:
+  $ref: '../../../common_components/properties.yaml#/updated_at'
+messaging_sla_sec:
+  type: integer
+  description: >
+    Target response timeout (in seconds) for queue tickets which `media` is `messaging`.
+
+
+    Initially `messaging` tickets have a lower priority than other tickets but after the target response time has
+    passed, the ticket is re-positioned in the queue based on its creation time within all the tickets whose target
+    response time has passed or whose timeout has not been defined.
+  minimum: 1
+  maximum: 2419200
+partition_id:
+  description: ID of the related partition.
+  type: string

@@ -1,0 +1,28 @@
+---
+scheduling_policy_id:
+  name: scheduling_policy_id
+  in: path
+  required: true
+  description: Scheduling policy ID.
+  schema:
+    type: string
+    example: dafcae2c-56cb-4cc7-8162-f2d37a96b030
+
+view:
+  name: view
+  in: query
+  required: false
+  # yamllint disable rule:line-length
+  description: |
+    Specifies the amount of data that will be returned.
+
+    * `full` - Returns all of the data about the scheduling policy. Requires the `scheduling_policies:read` permission.
+    * `list` - Returns only the ID, name and the site ID of the scheduling policy. Requires the `list:scheduling_policies` permission.
+  # yamllint enable rule:line-length
+  schema:
+    type: string
+    enum:
+      - full
+      - list
+    example: list
+    default: full

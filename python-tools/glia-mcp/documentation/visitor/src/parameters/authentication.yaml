@@ -1,0 +1,11 @@
+---
+parameters:
+  authentication_request_id:
+    name: authentication_request_id
+    in: path
+    required: true
+    description: |
+      ID of the authentication request, generated during creation.
+    example: 33f268c6-6a80-4430-95a8-44e1dd854053
+    schema:
+      type: string

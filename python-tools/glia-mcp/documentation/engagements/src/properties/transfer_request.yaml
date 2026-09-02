@@ -1,0 +1,95 @@
+---
+properties:
+  id:
+    type: string
+    description: Transfer request ID.
+    example: defb7236-r888-4fe8-b26c-fc462e286907
+
+  engagement_id:
+    type: string
+    description: |
+      The ID of the engagement which is transferred.
+    example: abc12121-e888-43ae-99e0-07a676e9a111
+
+  site_id:
+    type: string
+    description: |
+      The site ID on which the engagement continues. The site must be the current engagement's site or transferrable from the current engagement's site. Should the engagement end, survey and export configuration from the provided site is used.
+    example: def34343-s888-43ae-99e0-07a676e9a111
+
+  operator_id:
+    type: string
+    description: |
+      The ID of the operator who the request will be sent to.
+    example: ec317122-o888-4b43-996d-34a2ed3b76d8
+
+  media:
+    type: string
+    description: |
+      The media type with which the engagement continues. The target operator must be available for the specified media.
+      Visitor media type is retained or reduced to match the operator media level.
+    enum:
+      - text
+      - phone
+      - audio
+      - video
+
+  message:
+    type: string
+    description: |
+      A message for the receiving operator. Used to give context about the engagement.
+
+  ai_suggestion_usage:
+    type: string
+    description: >
+      Indicates whether Cortex Transfer Summary was used to generate the `message`, and whether it was passed as is, or modified.
+    default: none
+    enum:
+      - none
+      - as-is
+      - modified
+
+  skip_confirmation:
+    type: boolean
+    description: |
+      Whether the initiator of the transfer request must confirm the transfer after the target operator has accepted the
+      request.
+
+      If true, the engagement is transferred immediately when the target operator accepts the transfer request.
+    default: false
+
+  webhooks:
+    $ref: '../../../common_components/properties.yaml#/webhooks'
+    description: |
+      Can only be provided when creating a transfer request or when updating it with the `accept` action.
+
+      * Creating a transfer request:
+        * The requester can get notified when the status of the transfer request changes.
+
+      * Updating a transfer request with the `accept` action:
+        * The target of the transfer request can get notified when the transfer completes and can also also register
+        hooks for engagement events that occur after the transfer.
+      * When transfer request is accepted, `engagement.transfer_request.accepted` event is fired.
+      * When transfer request is confirmed, `engagement.transfer` event is fired.
+
+      See [Webhooks](ref:webhooks) section for more information.
+
+  outcome:
+    type: string
+    description: Outcome of the transfer request.
+    enum:
+      - requested
+      - accepted
+      - confirmed
+      - declined
+      - canceled
+      - timed_out
+    example: requested
+
+  timeout:
+    type: number
+    description: |
+      After how many seconds after the request is created in Glia servers, the
+      transfer request is timed out unless it has been accepted, declined or
+      canceled.
+    example: 30

@@ -1,0 +1,30 @@
+---
+properties:
+  id:
+    $ref: '../../src/properties/join_requests.yaml#/properties/id'
+  message:
+    $ref: '../../src/properties/join_requests.yaml#/properties/message'
+  guest_id:
+    $ref: '../../src/properties/join_requests.yaml#/properties/guest_id'
+  guest_type:
+    $ref: '../../src/properties/join_requests.yaml#/properties/guest_type'
+  site_id:
+    $ref: '../../../common_components/properties.yaml#/site_id'
+  accept_timeout:
+    $ref: '../../src/properties/join_requests.yaml#/properties/accept_timeout'
+  requested_at:
+    $ref: '../../src/properties/join_requests.yaml#/properties/requested_at'
+  accepted_at:
+    $ref: '../../src/properties/join_requests.yaml#/properties/accepted_at'
+    example: null
+  failed_at:
+    $ref: '../../src/properties/join_requests.yaml#/properties/failed_at'
+  fail_reason:
+    $ref: '../../src/properties/join_requests.yaml#/properties/fail_reason'
+required:
+  - id
+  - guest_id
+  - guest_type
+  - site_id
+  - accept_timeout
+  - requested_at

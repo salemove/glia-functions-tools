@@ -1,0 +1,10 @@
+---
+parameters:
+  visitor_id:
+    name: visitor_id
+    in: path
+    required: true
+    description: ID of the visitor.
+    example: 55555555-0000-4f8e-8526-e52146d5cb4d
+    schema:
+      type: string

@@ -1,0 +1,46 @@
+---
+title: 'Single choice'
+type: object
+properties:
+  type:
+    type: string
+    description: |
+      Type of an attachment.
+
+      To present the user with the list of options to make a simplified decision for the next interaction, type must
+      be `single_choice`. Selected option will be sent back to the other party as a regular chat message containing
+      single choice response attachment.
+    enum:
+      - single_choice
+    # Example set so that one download value would not have to be selected. As of writing it is impacted by Readme's
+    # bug that does not set the type in the example request by default.
+    example: single_choice
+
+  options:
+    type: array
+    description: |
+      A list of all available choices for the user to choose from.
+    items:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Text displayed to user as a choice label.
+          example: I am interested in insurance policies.
+        value:
+          type: string
+          description: Value of the choice sent as a response on user interaction.
+          example: insurance
+      required:
+        - text
+        - value
+
+  image_url:
+    type: string
+    description: |
+      URL of an image displayed on top of the choices expressing clear intent of the cards.
+    example: https://example.com/files/image.png
+
+required:
+  - type
+  - options
